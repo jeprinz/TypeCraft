@@ -1,0 +1,90 @@
+/* exp */
+
+.exp,
+.cursor,
+.select-top,
+.select-bot,
+.query,
+.query-result,
+.query-out {
+    display: inline;
+}
+
+/* indent */
+
+.indent {
+    display: inline;
+    white-space: pre;
+}
+
+/* cursor */
+
+.cursor {
+    box-shadow: 0 0 0 1px blue;
+    background: white;
+}
+
+/* select */
+
+.select-top {
+    box-shadow: 0 0 0 1px blue;
+    background: rgb(200, 200, 255);
+}
+
+.select-bot {
+    box-shadow: 0 0 0 1px blue;
+    background: white;
+}
+
+/* query */
+
+.query {
+    white-space: pre;
+}
+
+.query-result {}
+
+.query-out {}
+
+.query-result-insert {
+    background-color: rgb(116, 181, 116);
+}
+
+
+.query-result-insert .query-out {
+    box-shadow: 0 0 0 1px blue;
+    background-color: white;
+}
+
+.query-result-invalid {
+    padding-right: 0.25rem;
+    background-color: rgb(233, 187, 48);
+}
+
+.query-result-replace {
+    padding-right: 0.25rem;
+    background-color: rgb(116, 181, 116);
+}
+
+.query-result-replace+.query-out,
+.query-result-invalid+.query-out {
+    padding-left: 0.25rem;
+}
+
+.query-result-replace+.query-out {
+    background-color: rgb(220, 220, 220);
+}
+
+/* console */
+
+.console {
+    position: absolute;
+    bottom: 0;
+
+    padding: 2rem;
+    width: calc(100vw - 4rem);
+    max-height: 40rem;
+    overflow: scroll;
+
+    background-color: rgb(193, 193, 193);
+}

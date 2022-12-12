@@ -1,0 +1,193 @@
+/* node */
+
+.node {
+  display: inline;
+
+  /* box-decoration-break: slice;
+  -webkit-box-decoration-break: slice;
+  -o-box-decoration-break: slice; */
+}
+
+/* node cursor */
+
+.node-cursor {
+  box-shadow: -2px 0 0 0 black, 2px 0 0 0 black;
+  border-radius: 0.2rem;
+  background-color: white;
+}
+
+.node-cursorable:hover {
+  /* box-shadow: 0 0 0 2px purple; */
+  box-shadow: -2px 0 0 0 purple, 2px 0 0 0 purple;
+  border-radius: 0.2rem;
+}
+
+.node-cursorable:hover>.node-cursorable:hover {
+  box-shadow: -2px 0 0 0 red, 2px 0 0 0 red;
+  border-radius: 0.2rem;
+}
+
+/* node select */
+
+.node-select-top {
+  box-shadow: -2px 0 0 0 black, 2px 0 0 0 black;
+  border-radius: 0.2rem;
+  background-color: rgb(211, 211, 255);
+}
+
+.node-select-top-invalid {
+  background-color: rgb(255, 100, 100);
+}
+
+.node-select-bot {
+  box-shadow: -2px 0 0 0 black, 2px 0 0 0 black;
+  border-radius: 0.2rem;
+  background-color: white;
+}
+
+.node-select-bot-invalid {
+  /* same as .node-select-bot */
+  background-color: white;
+}
+
+.node-selectable-top {
+  box-shadow: -2px 0 0 0 purple, 2px 0 0 0 purple;
+  border-radius: 0.2rem;
+  background-color: rgb(211, 211, 255);
+}
+
+.node-selectable-bot {
+  box-shadow: -2px 0 0 0 purple, 2px 0 0 0 purple;
+  border-radius: 0.2rem;
+  background-color: white;
+}
+
+/* node query */
+
+.node-query-replace-new {
+  /* padding-right: 0.2rem; */
+  margin-right: 0.2rem;
+
+  box-shadow: -2px 0 0 0 black, 2px 0 0 0 black;
+  border-radius: 0.2rem;
+  background-color: rgb(255, 197, 89);
+}
+
+
+.node-query-replace-old {
+  /* padding-left: -0.2rem; */
+  box-shadow: -2px 0 0 0 black, 2px 0 0 0 black;
+  border-radius: 0.2rem;
+  background-color: rgb(186, 186, 186);
+}
+
+.node-query-insert-top {
+  box-shadow: -2px 0 0 0 black, 2px 0 0 0 black;
+  border-radius: 0.2rem;
+  background-color: rgb(255, 197, 89);
+}
+
+.node-query-insert-bot {
+  box-shadow: -2px 0 0 0 black, 2px 0 0 0 black;
+  border-radius: 0.2rem;
+  background-color: white;
+}
+
+.node-query-insert-bot>.node-select-top {
+  box-shadow: -2px 0 0 0 black, 2px 0 0 0 black;
+  border-radius: 0.2rem;
+  /* background-color: rgb(211, 211, 255); */
+  background-color: rgb(186, 186, 186);
+}
+
+.node-query-invalid-string {
+  background-color: #ff9696;
+  box-shadow: -2px 0 0 0 black, 2px 0 0 0 black;
+  margin-right: 0.2rem;
+}
+
+.node-query-invalid-exp {}
+
+/* grammar */
+/* TODO: impl */
+
+.tm-dat-bnd {
+  margin-right: 0.3rem;
+}
+
+.tm-let-tm-bnd {
+  margin-right: 0.3rem;
+}
+
+.tm-let-ty-bnd {
+  margin-right: 0.3rem;
+}
+
+/* punctuation */
+
+.punc {
+  display: inline;
+  color: rgb(110, 110, 110);
+}
+
+.punc-paren {}
+
+.punc-paren-left {}
+
+.punc-paren-right {}
+
+.punc-space {
+  white-space: pre;
+}
+
+.punc-app {}
+
+.punc-mapsto {
+  display: inline-block;
+  padding: 0 0.3rem;
+}
+
+.punc-let {
+  font-style: italic;
+  padding-right: 043rem;
+}
+
+.punc-type {
+  font-style: italic;
+  padding-right: 0.4rem;
+}
+
+.punc-data {
+  font-style: italic;
+  padding-right: 0.4rem;
+}
+
+.punc-equal {
+  padding-left: 0.3rem;
+  padding-right: 0.4rem;
+}
+
+.punc-in {
+  font-style: italic;
+  padding: 0 0.3rem;
+}
+
+.punc-indent {
+  white-space: pre;
+}
+
+.punc-colon {
+  padding: 0 0.3rem;
+}
+
+.punc-comma {
+  padding-right: 0.3rem;
+}
+
+.punc-newline {
+  /* display: block */
+}
+
+.punc-lambda {
+  padding-right: 0.3rem;
+}

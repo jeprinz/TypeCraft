@@ -1,0 +1,60 @@
+html {
+  user-select: none;
+}
+
+body {}
+
+.app {}
+
+/* editor */
+
+.editor {
+  width: 100%;
+  height: 100%;
+  /* width: 500px;
+  height: 500px; */
+  line-height: 1.2rem;
+
+  overflow: scroll;
+
+  white-space: pre;
+  font-family: monospace;
+  font-size: 12pt;
+  /* line-height: 15pt; */
+}
+
+.editor-inner {
+  padding: 2rem;
+  padding-bottom: 20rem;
+}
+
+.editor-inner div {
+  display: inline;
+}
+
+/* misc */
+
+table,
+tbody,
+tr,
+td {
+  text-align: left;
+  vertical-align: top;
+
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+
+td {
+  padding: 0.25rem;
+}
+
+.table-key {
+  /* font-style: italic; */
+  /* text-decoration: underline; */
+  font-weight: 400;
+}
+
+.code {
+  font-family: monospace;
+}
