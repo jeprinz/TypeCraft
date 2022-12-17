@@ -4,12 +4,12 @@ import Prelude
 import Prim hiding (Type)
 import Data.Tuple.Nested (type (/\), (/\))
 
-import TypeCraft.Purescript.Grammar (Change(..), ChangeParam(..), KindChange(..), Type(..), TypeParam(..), freshTypeHoleID)
+import TypeCraft.Purescript.Grammar (Change(..), ChangeParam(..), KindChange(..), Type(..), TypeArg(..), freshTypeHoleID)
 import TypeCraft.Purescript.Context
 import Data.Map.Internal (lookup)
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.MD (defaultHoleMD, defaultTypeParamMD)
+import TypeCraft.Purescript.MD (defaultHoleMD, defaultTypeArgMD)
 import Data.List (List(..), (:))
 
 -- could avoid returning Type (because you can get it from the change with getEndpoints), if I put metadata into Change
@@ -23,7 +23,7 @@ chType kctx startType@(TNeu md x args) =
     case lookup x kctx of
     Nothing -> unsafeThrow "shouldn't get here! all variables should be bound in the context!"
     Just (TVarKindChange kindChange) ->
-        let args' /\ cargs = chTypeParams kctx kindChange args in
+        let args' /\ cargs = chTypeArgs kctx kindChange args in
         TNeu md x args' /\ CNeu x cargs
     Just TVarDelete ->
         let x = freshTypeHoleID unit in
@@ -32,18 +32,18 @@ chType kctx startType@(TNeu md x args) =
     (Just (TVarTypeChange _)) -> unsafeThrow "I need to figure out what is the deal with TVarTypeChange!!!"
 
 
-chTypeParams :: KindChangeCtx -> KindChange -> List TypeParam -> List TypeParam /\ List ChangeParam
-chTypeParams kctx KCType Nil = Nil /\ Nil
-chTypeParams kctx (KPlus kc) params =
-    let tparams /\ cparams = chTypeParams kctx kc params in
+chTypeArgs :: KindChangeCtx -> KindChange -> List TypeArg -> List TypeArg /\ List ChangeParam
+chTypeArgs kctx KCType Nil = Nil /\ Nil
+chTypeArgs kctx (KPlus kc) params =
+    let tparams /\ cparams = chTypeArgs kctx kc params in
     let x = freshTypeHoleID unit in
     let newType = THole defaultHoleMD x in
-    (TypeParam defaultTypeParamMD newType : tparams) /\ (PlusParam newType : cparams)
-chTypeParams kctx (KCArrow kc) (TypeParam md t : params) =
+    (TypeArg defaultTypeArgMD newType : tparams) /\ (PlusParam newType : cparams)
+chTypeArgs kctx (KCArrow kc) (TypeArg md t : params) =
     let t' /\ c = chType kctx t in
-    let tparams /\ cparams = chTypeParams kctx kc params in
-    ((TypeParam md t') : tparams) /\ (ChangeParam c) : cparams
-chTypeParams kctx (KMinus kc) (TypeParam md t : params) =
-    let tparams /\ cparams = chTypeParams kctx kc params in
+    let tparams /\ cparams = chTypeArgs kctx kc params in
+    ((TypeArg md t') : tparams) /\ (ChangeParam c) : cparams
+chTypeArgs kctx (KMinus kc) (TypeArg md t : params) =
+    let tparams /\ cparams = chTypeArgs kctx kc params in
     tparams /\ (MinusParam t) : cparams
-chTypeParams kctx _ _ = unsafeThrow "shouldn't get here: types didn't line up with kindchanges (or I missed a case)"
+chTypeArgs kctx _ _ = unsafeThrow "shouldn't get here: types didn't line up with kindchanges (or I missed a case)"

@@ -4,7 +4,7 @@ import Prelude
 
 -- Type Meta- Data
 type ArrowMD = {codIndented :: Boolean}
-type TypeParamMD = {indented :: Boolean}
+type TypeArgMD = {indented :: Boolean}
 type TNeuMD = {}
 type TAppMD = {argIndented :: Boolean}
 type THoleMD = {}
@@ -43,8 +43,8 @@ defaultTAppMD :: TAppMD
 defaultTAppMD = {argIndented : false}
 defaultTNeuMD :: TNeuMD
 defaultTNeuMD = {}
-defaultTypeParamMD :: TypeParamMD
-defaultTypeParamMD = {indented : true}
+defaultTypeArgMD :: TypeArgMD
+defaultTypeArgMD = {indented : true}
 defaultTHoleMD :: THoleMD
 defaultTHoleMD = {}
 defaultTLambdaMD :: TLambdaMD
@@ -59,9 +59,18 @@ defaultAppMD :: AppMD
 defaultAppMD = {argIndented : false}
 defaultBufferMD :: BufferMD
 defaultBufferMD = {}
+defaultVarMD :: VarMD
+defaultVarMD = {}
+defaultLambdaMD :: LambdaMD
+defaultLambdaMD = {bodyIndented : false}
 
 -- Kind metadata defaults
 defaultTypeMD :: TypeMD
 defaultTypeMD = {}
 defaultKArrowMD :: KArrowMD
 defaultKArrowMD = {codIndented : false}
+
+---- termbind
+--defaultTermBindMD :: TermBindMD
+--defaultTermBindMD = {}
+

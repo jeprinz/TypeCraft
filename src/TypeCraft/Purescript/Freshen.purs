@@ -67,9 +67,9 @@ freshenTypeImpl m (Arrow md c1 c2) =
     let c2' /\ m'' = freshenTypeImpl m' c2 in
     Arrow md c1 c2 /\ m''
 freshenTypeImpl m (TNeu md x args) =
-    let args' /\ m' = foldr (\ (TypeParam md t) (args' /\ m) ->
+    let args' /\ m' = foldr (\ (TypeArg md t) (args' /\ m) ->
         let t' /\ m' = freshenTypeImpl m t in
-        ((TypeParam md t') : args') /\ m') (Nil /\ m) args
+        ((TypeArg md t') : args') /\ m') (Nil /\ m) args
     in (TNeu md x args') /\ m'
 freshenTypeImpl m (THole md x) =
     case lookup x m of

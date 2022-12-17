@@ -18,11 +18,11 @@ import Effect.Unsafe (unsafePerformEffect)
 type TypeHoleID = Int -- figure out unique Ids later!
 type TermVarID = Int
 type TypeVarID = Int
-data Type = Arrow ArrowMD Type Type | THole THoleMD TypeHoleID | TNeu TNeuMD TypeVarID (List TypeParam)
-data TypeParam = TypeParam TypeParamMD Type
+data Type = Arrow ArrowMD Type Type | THole THoleMD TypeHoleID | TNeu TNeuMD TypeVarID (List TypeArg)
+data TypeArg = TypeArg TypeArgMD Type
 data Term = App AppMD Term Term Type -- The type of the argument
           | Lambda LambdaMD TermBind Type Term -- NOTE: if we do no-lambda-left-of-app, then the Type here is unecessary!
-          | Var VarMD TermVarID (List TypeParam) {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}
+          | Var VarMD TermVarID (List TypeArg) {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}
           | Let LetMD TermBind (List TypeBind) Term Type Term Type
           | Data GADTMD TypeBind (List TypeBind) (List Constructor) Term Type
           | TLet TLetMD TypeBind (List TypeBind) Type Kind Term Type
@@ -66,8 +66,8 @@ data TermPath =
 
 {-
 The following is a list of the grammatical sorts within this editor:
-Term, Type, (Kind?), (List Constructor), (List CtrParam), (List TypeParam) , (List TypeBind)
-Constructor, CtrParam, TypeParam, TypeBind
+Term, Type, (List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
+Constructor, CtrParam, TypeArg, TypeBind, TermBind
 Each of these has a type of terms and of paths.
 The type <thing>Path is the set of possible paths when the cursor is on a <thing>
 -}
@@ -83,7 +83,7 @@ data CtrParamListPath = CtrParamListCons2 CtrParamListPath CtrParam {-List CtrPa
 
 data TypePath = Arrow1 TypePath ArrowMD Type | Arrow2 TypePath ArrowMD Type
      | Let2 TermPath LetMD TermBind (List TypeBind) Term {-Type-} Term Type
-     | TNeu1 TypePath TNeuMD (List TypeParam)
+     | TNeu1 TypePath TNeuMD (List TypeArg)
      | TNeu2 TypePath TNeuMD (List Change) Int -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
      | Buffer2 TermPath BufferMD Term Term
      | Lambda1 TermPath LambdaMD TermBind Term
@@ -100,7 +100,7 @@ data KindPath = KArrow1 KindPath KArrowMD
 
 tyInject :: Type -> Change
 tyInject (Arrow _ ty1 ty2) = CArrow (tyInject ty1) (tyInject ty2)
-tyInject (TNeu _ x args) = CNeu x (map (case _ of TypeParam _ t -> ChangeParam (tyInject t)) args)
+tyInject (TNeu _ x args) = CNeu x (map (case _ of TypeArg _ t -> ChangeParam (tyInject t)) args)
 tyInject (THole _ id) = CHole id
 --tyInject (TLambda _ x k ty) = CLambda x (tyInject ty)
 
@@ -112,17 +112,19 @@ tyInject (THole _ id) = CHole id
 uniqueIdCounter :: Ref Int
 uniqueIdCounter = unsafePerformEffect (new 0)
 
-freshTypeHoleID :: Unit -> TypeHoleID
-freshTypeHoleID _ =
+freshInt :: Unit -> Int
+freshInt _ =
     let currentValue = unsafePerformEffect (read uniqueIdCounter) in
     let _ = unsafePerformEffect (write (currentValue + 1) uniqueIdCounter) in
     currentValue
 
+freshTypeHoleID :: Unit -> TypeHoleID
+freshTypeHoleID = freshInt
+
 --derive newtype instance eqType :: Eq TypeHoleID
 
---data TypeParam = TypeParam TypeParamMD Type
-instance eqTypeParam :: Eq TypeParam where
-    eq (TypeParam _ t1) (TypeParam _ t2) = t1 == t2
+instance eqTypeParam :: Eq TypeArg where
+    eq (TypeArg _ t1) (TypeArg _ t2) = t1 == t2
 
 instance eqType :: Eq Type where
     eq (Arrow _ t1 t2) (Arrow _ t1' t2') = (t1 == t1') && (t2 == t2')

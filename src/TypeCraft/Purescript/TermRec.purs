@@ -18,7 +18,6 @@ import TypeCraft.Purescript.ChangeType (chType)
 import TypeCraft.Purescript.TypeChangeAlgebra (isIdentity, invert)
 import Data.Tuple (fst)
 import TypeCraft.Purescript.TypeChangeAlgebra (getSubstitution)
-import TypeCraft.Purescript.ChangeType (chTypeParams)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 
@@ -28,7 +27,7 @@ type TypeRecValue = {kctx :: TypeContext, ctx :: TermContext, ty :: Type}
 type TermRec a = {
       lambda :: LambdaMD -> TermBind -> TypeRecValue -> TermRecValue -> a
     , app :: AppMD -> TermRecValue -> TermRecValue -> TypeRecValue -> a
-    , var :: VarMD -> TermVarID -> List TypeParam -> a -- TODO: write recTypeParam!!!!! it should pass a List TypeParamValue or something!
+    , var :: VarMD -> TermVarID -> List TypeArg -> a -- TODO: write recTypeParam!!!!! it should pass a List TypeParamValue or something!
     , lett :: LetMD -> TermBind -> (List TypeBind) -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
     , dataa :: GADTMD -> TypeBind -> List TypeBind -> List Constructor -> TermRecValue -> Type -> a -- TODO: write recConstructor!! Should be List ConstructorRecValue!
 }

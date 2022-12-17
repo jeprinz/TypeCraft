@@ -18,7 +18,6 @@ import TypeCraft.Purescript.ChangeType (chType)
 import TypeCraft.Purescript.TypeChangeAlgebra (isIdentity, invert)
 import Data.Tuple (fst)
 import TypeCraft.Purescript.TypeChangeAlgebra (getSubstitution)
-import TypeCraft.Purescript.ChangeType (chTypeParams)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.TermRec (TermRecValue)

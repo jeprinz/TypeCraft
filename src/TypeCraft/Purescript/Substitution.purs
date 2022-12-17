@@ -30,7 +30,7 @@ subChange sub = let rec = subChange sub in case _ of
     Minus tooth c -> Minus tooth (rec c)
 
 subType :: Sub -> Type -> Type
-subType sub (TNeu md x args) = TNeu md x (map (\(TypeParam md t) -> TypeParam md (subType sub t)) args)
+subType sub (TNeu md x args) = TNeu md x (map (\(TypeArg md t) -> TypeArg md (subType sub t)) args)
 subType sub (Arrow md t1 t2) = Arrow md (subType sub t1) (subType sub t2)
 subType sub (THole md x) = case lookup x sub of
     Nothing -> THole md x

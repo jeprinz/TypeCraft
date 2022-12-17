@@ -18,7 +18,7 @@ import TypeCraft.Purescript.ChangeType (chType)
 import TypeCraft.Purescript.TypeChangeAlgebra (isIdentity, invert)
 import Data.Tuple (fst)
 import TypeCraft.Purescript.TypeChangeAlgebra (getSubstitution)
-import TypeCraft.Purescript.ChangeType (chTypeParams)
+import TypeCraft.Purescript.ChangeType (chTypeArgs)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 
@@ -125,5 +125,5 @@ chParamList kctx (param : params) =
     let chs /\ params' = chParamList kctx params in
     (ch : chs) /\ param' : params'
 
-chTypeParamList :: KindChangeCtx -> List TypeParam -> List Change /\ List TypeParam
+chTypeParamList :: KindChangeCtx -> List TypeArg -> List Change /\ List TypeArg
 chTypeParamList = hole

@@ -32,8 +32,8 @@ getEndpoints (CHole x) = THole defaultTHoleMD x /\ THole defaultTHoleMD x
 getEndpoints (CNeu x args) =
     let start = TNeu defaultTNeuMD x in
     let ts1 /\ ts2 = getEndpointss args in
-    let args1 = map (TypeParam defaultTypeParamMD) ts1 in
-    let args2 = map (TypeParam defaultTypeParamMD) ts2 in
+    let args1 = map (TypeArg defaultTypeArgMD) ts1 in
+    let args2 = map (TypeArg defaultTypeArgMD) ts2 in
     start args1 /\ start args2
 getEndpoints (Replace a b) = a /\ b
 getEndpoints (Plus t c) =
@@ -166,8 +166,8 @@ getSubstitution (CNeu x params1) (TNeu _ y params2)
          foldl (\s1 s2 -> bind s1 (\s1' -> combineSubs s1' s2)) (Just empty) subs
 getSubstitution _ _  = Nothing
 
-getParamSub :: ChangeParam -> TypeParam -> Maybe Sub
-getParamSub (ChangeParam c) (TypeParam _ t) = getSubstitution c t
+getParamSub :: ChangeParam -> TypeArg -> Maybe Sub
+getParamSub (ChangeParam c) (TypeArg _ t) = getSubstitution c t
 getParamSub _ _ = Nothing
 
 --getSubstitution :: Change -> Change -> Maybe (Map TypeHoleID Change)
