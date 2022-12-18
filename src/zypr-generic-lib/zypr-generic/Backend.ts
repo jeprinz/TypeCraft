@@ -404,6 +404,9 @@ function formatNodeStyle<Met, Rul, Val, Dat, Env>
 
 // buildBackend
 
+// TODO: this was a utility function I defined to help test my impl just with
+// typescript. but, this isn't useful for using the purescript backend
+/*
 export function buildBackend<Met, Rul, Val, Dat, Env>(
     args: {
         language: Language,
@@ -662,4 +665,4 @@ export function buildBackend<Met, Rul, Val, Dat, Env>(
         })
     }
 }
-
+*/
