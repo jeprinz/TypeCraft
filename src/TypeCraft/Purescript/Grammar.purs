@@ -20,16 +20,16 @@ type TermVarID = Int
 type TypeVarID = Int
 data Type = Arrow ArrowMD Type Type | THole THoleMD TypeHoleID | TNeu TNeuMD TypeVarID (List TypeArg)
 data TypeArg = TypeArg TypeArgMD Type
-data Term = App AppMD Term Term Type -- The type of the argument
+data Term = App AppMD Term Term Type Type -- The type of the argument, then the type of the output
           | Lambda LambdaMD TermBind Type Term -- NOTE: if we do no-lambda-left-of-app, then the Type here is unecessary!
           | Var VarMD TermVarID (List TypeArg) {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}
           | Let LetMD TermBind (List TypeBind) Term Type Term Type
           | Data GADTMD TypeBind (List TypeBind) (List Constructor) Term Type
-          | TLet TLetMD TypeBind (List TypeBind) Type Kind Term Type
+          | TLet TLetMD TypeBind (List TypeBind) Type Term Type -- last Type is type of body!
           | TypeBoundary TypeBoundaryMD Change Term -- the change goes from type inside to type outside. That is, getEndpoints gives inside type on left and outside on right.
           | ContextBoundary ContextBoundaryMD TermVarID Change Term
           | Hole HoleMD
-          | Buffer BufferMD Term Type Term
+          | Buffer BufferMD Term Type Term Type
 
 data TypeBind = TypeBind TypeBindMD TypeVarID
 data TermBind = TermBind TermBindMD TermVarID
@@ -37,7 +37,7 @@ data CtrParam = CtrParam CtrParamMD Type
 data Constructor = Constructor CtrMD TermBind (List CtrParam)
 
 --data Kind = KArrow KArrowMD Kind Kind | Type TypeMD
-data Kind = KArrow KArrowMD Kind | Type TypeMD
+data Kind = KArrow Kind | Type
 
 data Change = CArrow Change Change | CHole TypeHoleID
      | Replace Type Type
@@ -53,15 +53,16 @@ data KindChange = KCArrow KindChange | KCType
 -- Also, an upwards path is always the first argument.
 data TermPath =
      Top
-     |App1 TermPath AppMD {-Term-} Term Type
-     | App2 TermPath AppMD Term {-Term-} Type
+     | App1 TermPath AppMD {-Term-} Term Type Type
+     | App2 TermPath AppMD Term {-Term-} Type Type
      | Lambda2 TermPath LambdaMD TermBind Type {-Term-}
      | Let1 TermPath LetMD TermBind (List TypeBind) {-Term-} Type Term Type
      | Let3 TermPath LetMD TermBind (List TypeBind) Term Type {-Term-} Type
-     | Buffer1 TermPath BufferMD {-Term-} Type Term | Buffer3 TermPath BufferMD Term Type {-Term-}
+     | Buffer1 TermPath BufferMD {-Term-} Type Term Type
+     | Buffer3 TermPath BufferMD Term Type {-Term-} Type
      | TypeBoundary1 TermPath TypeBoundaryMD Change {-Term-}
-     | ContextBoundary1 TermPath ContextBoundaryMD Change {-Term-}
-     | TLet3 TermPath TLetMD TypeBind Type Kind {-Term-} Type
+     | ContextBoundary1 TermPath ContextBoundaryMD TermVarID Change {-Term-}
+     | TLet2 TermPath TLetMD TypeBind (List TypeBind) Type {-Term-} Type
      | Data3 TermPath GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-} Type
 
 {-
@@ -85,15 +86,9 @@ data TypePath = Arrow1 TypePath ArrowMD Type | Arrow2 TypePath ArrowMD Type
      | Let2 TermPath LetMD TermBind (List TypeBind) Term {-Type-} Term Type
      | TNeu1 TypePath TNeuMD (List TypeArg)
      | TNeu2 TypePath TNeuMD (List Change) Int -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
-     | Buffer2 TermPath BufferMD Term Term
+     | Buffer2 TermPath BufferMD Term {-Type-} Term Type
      | Lambda1 TermPath LambdaMD TermBind Term
-     | TLet1 TermPath TLetMD TypeBind Kind Term Type
-     | App3 TermPath AppMD Term Term
-
-data KindPath = KArrow1 KindPath KArrowMD
-     | TLet2 TermPath TLetMD TypeBind Type Term Type
-     | TLambda1 TypePath TLambdaMD TypeBind Type
-
+     | TLet1 TermPath TLetMD TypeBind (List TypeBind) Term Type
 
 
 -- TODO: move the below stuff into a separate file

@@ -27,9 +27,7 @@ type BufferMD = {}
 type VarMD = {}
 type TLetMD = {}
 
--- Kind metadata
-type KArrowMD = {codIndented :: Boolean}
-type TypeMD = {}
+-- no kind metadata because it is never in the source code
 
 ------------------------------------------------------------------------------------------------------------------------
 --- Readable things above, garbage below -------------------------------------------------------------------------------
@@ -63,12 +61,6 @@ defaultVarMD :: VarMD
 defaultVarMD = {}
 defaultLambdaMD :: LambdaMD
 defaultLambdaMD = {bodyIndented : false}
-
--- Kind metadata defaults
-defaultTypeMD :: TypeMD
-defaultTypeMD = {}
-defaultKArrowMD :: KArrowMD
-defaultKArrowMD = {codIndented : false}
 
 ---- termbind
 --defaultTermBindMD :: TermBindMD

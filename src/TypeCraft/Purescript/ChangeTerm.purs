@@ -38,18 +38,21 @@ chTerm :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Change  /\ Term
 chTerm kctx ctx c t =
     let cRes /\ tRes = (
         case c /\ t of
-            cin /\ (App md t1 t2 ty) ->
-                let c1 /\ t1' = chTerm kctx ctx (CArrow (tyInject ty) cin) t1 in
+            cin /\ (App md t1 t2 argTy outTy) ->
+                let c1 /\ t1' = chTerm kctx ctx (CArrow (tyInject argTy) cin) t1 in
                 case c1 of
-                (Minus _ c1') -> c1' /\ Buffer defaultBufferMD t2 ty t1'
+                (Minus _ c1') -> c1' /\ Buffer defaultBufferMD t2 argTy t1' (snd (getEndpoints c1))
                 (CArrow c1a c1b) ->
                     let c2 /\ t2' = chTerm kctx ctx c1a t2 in
                     let t2'' = if isIdentity c2
                         then t2'
                         else TypeBoundary defaultTypeBoundaryMD (invert c2) t2'
-                    in c1b /\ App md t1' t2'' (snd (getEndpoints c1a))
-                _ -> composeChange (Minus ty (tyInject (snd (getEndpoints cin)))) c1 /\ -- is this right?
-                     Buffer defaultBufferMD t1' (snd (getEndpoints c1)) t1'
+                    in c1b /\ App md t1' t2'' (snd (getEndpoints c1a)) (snd (getEndpoints c1b))
+                otherChange -> tyInject (outTy)
+                    /\ TypeBoundary defaultTypeBoundaryMD (Replace (Arrow defaultArrowMD argTy outTy) (snd (getEndpoints otherChange)))
+                       (Buffer defaultBufferMD t2 argTy t1' (snd (getEndpoints otherChange)))
+--                _ -> composeChange (Minus argTy (tyInject (snd (getEndpoints cin)))) c1 /\ -- is this right?
+--                     Buffer defaultBufferMD t1' (snd (getEndpoints c1)) t1'
             cin /\ (Var md x params) ->
                 -- try the polymorphism case
 --                case getSubstitution cin (lookup x ctx)
@@ -75,7 +78,7 @@ chTerm kctx ctx c t =
                 let c2' /\ t' = chTerm kctx (ctxLambdaCons ctx x VarDelete) c t in
                 (Minus ty1 c2') /\ t'
             (Plus ty c) /\ t ->
-                c /\ App defaultAppMD t (Hole defaultHoleMD) ty
+                c /\ App defaultAppMD t (Hole defaultHoleMD) ty (snd (getEndpoints c))
             c /\ Let md x binds t1 ty t2 tybody ->
                 -- TODO: need to include the binds into the kctx for some things I think?
                 if not (fst (getEndpoints c) == ty) then unsafeThrow "shouldn't happen" else
@@ -83,15 +86,15 @@ chTerm kctx ctx c t =
                 let c2 /\ t2' = chTerm kctx (ctxLetCons ctx x (VarTypeChange (tyInject ty))) c t2 in
                 let t1'' = if isIdentity c1 then t1' else TypeBoundary defaultTypeBoundaryMD c1 t1' in
                 c2 /\ Let md x binds t1'' ty t2' (snd (getEndpoints c2))
-            c /\ Buffer md t1 ty t2 ->
-                let c1 /\ t1' = chTerm kctx ctx (tyInject ty) t1 in
+            c /\ Buffer md t1 ty1 t2 bodyTy ->
+                let c1 /\ t1' = chTerm kctx ctx (tyInject ty1) t1 in
                 let c2 /\ t2' = chTerm kctx ctx c t2 in
-                c2 /\ Buffer md t1' ty t2'
-            c /\ TLet md x params ty k t bodyType ->
+                c2 /\ Buffer md t1' (snd (getEndpoints c1)) t2' (snd (getEndpoints c2))
+            c /\ TLet md x params ty t bodyType ->
                 if not (fst (getEndpoints c) == bodyType) then unsafeThrow "shouldn't happen" else
                 let ty' /\ tyChange = chType kctx ty in
                 let c' /\ t' = chTerm (ctxKindCons kctx x (TVarTypeChange tyChange)) ctx c t in
-                c' /\ TLet md x params ty' k t' (snd (getEndpoints c')) -- TODO: what if c references x? Then it is out of scope above.
+                c' /\ TLet md x params ty' t' (snd (getEndpoints c')) -- TODO: what if c references x? Then it is out of scope above.
             cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
         )
     in
@@ -101,7 +104,7 @@ Inputs (implicit D) C1 t, and outputs t2 and C2 such that
 D |- t1 ---[C1 o (C2 ^-1)]---> t2
 -}
 doInsertArgs :: Change -> Term -> Change /\ Term
-doInsertArgs (Plus ty c) t = doInsertArgs c (App defaultAppMD t (Hole defaultHoleMD) ty)
+doInsertArgs (Plus ty c) t = doInsertArgs c (App defaultAppMD t (Hole defaultHoleMD) ty (snd (getEndpoints c)))
 doInsertArgs c t = c /\ t
 
 --chTerm :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Change  /\ Term

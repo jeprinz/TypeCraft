@@ -15,11 +15,12 @@ import Data.Tuple (snd)
 -- For now, I won't do anything with upwards ChangeCtx. But I can implement that in the future.
 
 chPath :: KindChangeCtx -> ChangeCtx -> Change -> TermPath -> TermPath
-chPath kctx ctx (CArrow c1 c2) (App1 up md {-here-} t ty) =
-    if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen" else
+chPath kctx ctx (CArrow c1 c2) (App1 up md {-here-} t argTy outTy) =
+    if not (argTy == fst (getEndpoints c1) && outTy == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen" else
     let t' = chTermBoundary kctx ctx c1 t in
     let up' = chPath kctx ctx c2 up in
-    App1 up' md t' (snd (getEndpoints c1))
+    App1 up' md t' (snd (getEndpoints c1)) (snd (getEndpoints c2))
+-- TODO: App2 case, other App1 cases
 chPath kctx ctx c  (Let1 up md x tbinds {-Term = here-} ty body tybody) =
     hole
 chPath kctx ctx c (Let3 up md x tbinds def ty {-body = here-} tybody) =
