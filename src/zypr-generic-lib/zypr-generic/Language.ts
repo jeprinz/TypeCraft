@@ -1,29 +1,389 @@
 import { List } from "immutable"
+import { v4 as newUUID } from "uuid"
 
-export type Grammar<Met, Rul, Val> = {
+// language definition
+
+export type Met
+    = 'bnd-ty' // type bind
+    | 'bnd-tm' // term bind
+    | 'ctr' // constructor
+    | 'prm' // parameter
+    | 'kd' // kind
+    | 'ty' // type
+    | 'tm' // term
+    // lists
+    | 'bnd-ty list'
+    | 'ctr list'
+    | 'prm list'
+    | 'ty list'
+
+export type Rul
+    = 'bnd-ty'
+    | 'bnd-tm'
+    | 'ctr'
+    | 'prm'
+    | 'kd # arr'
+    | 'kd # *'
+    | 'ty # arr'
+    | 'ty # hol'
+    | 'ty # neu'
+    | 'tm # app'
+    | 'tm # lam'
+    | 'tm # var'
+    | 'tm # let-tm'
+    | 'tm # dat'
+    | 'tm # let-ty'
+    | 'tm # bou-ty'
+    | 'tm # bou-cx'
+    | 'tm # buf'
+    | 'tm # hol'
+    | 'bnd-ty list # cons' | 'bnd-ty list # nil'
+    | 'ctr list # cons' | 'ctr list # nil'
+    | 'prm list # cons' | 'prm list # nil'
+    | 'ty list # cons' | 'ty list # nil'
+
+export type Val
+    = BndTyVal
+    | BndTmVal
+    | CtrVal
+    | PrmVal
+    | KdArrVal
+    | KdStarVal
+    | TyArrVal
+    | TyHolVal
+    | TyNeuVal
+    | TmAppVal
+    | TmLamVal
+    | TmVarVal
+    | TmLetTmVal
+    | TmLetTyVal
+    | TmDatVal
+    | TmBouTyVal
+    | TmBouCxVal
+    | TmBufVal
+    | TmHolVal
+    | ListConsVal | ListNilVal
+
+export type BndTyVal = { label: string, uuid: string }
+
+export type BndTmVal = { label: string, uuid: string }
+
+export type CtrVal = {}
+
+export type PrmVal = {}
+
+export type KdArrVal = {}
+export type KdStarVal = {}
+
+export type TyArrVal = {}
+export type TyHolVal = {}
+export type TyNeuVal = { uuid: string }
+
+export type TmAppVal = { indentedArg: boolean }
+export type TmLamVal = { indentedBod: boolean }
+export type TmVarVal = { uuid: string }
+export type TmLetTmVal = { indentedImp: boolean, indentedBod: boolean }
+export type TmLetTyVal = { indentedImp: boolean, indentedBod: boolean }
+export type TmDatVal = { indentedBod: boolean }
+export type TmBouTyVal = {}
+export type TmBouCxVal = {}
+export type TmBufVal = { indentedImp: boolean, indentedBod: boolean }
+export type TmHolVal = {}
+
+export type ListConsVal = {}
+export type ListNilVal = {}
+
+export const kid_ixs = {
+    'bnd-ty': {},
+    'bnd-tm': {},
+    'ctr': {},
+    'prm': { bnd: 0, sig: 1 },
+    // kd
+    'kd # arr': { dom: 0, cod: 1 },
+    'kd # *': {},
+    // ty
+    'ty # arr': { dom: 0, cod: 1 },
+    'ty # hol': {},
+    'ty # neu': { args: 0 },
+    // tm
+    'tm # app': { apl: 0, arg: 1 },
+    'tm # lam': { bnd: 0, dom: 1, bod: 2 },
+    'tm # var': {},
+    'tm # let-tm': { bnd: 0, prms: 1, sig: 2, imp: 3, bod: 4 },
+    'tm # dat': { bnd: 0, prms: 1, ctrs: 2, bod: 3 },
+    'tm # let-ty': { bnd: 0, prms: 1, imp: 2, bod: 3 },
+    'tm # bou-ty': { bod: 0 },
+    'tm # bou-cx': { bod: 0 },
+    'tm # buf': { sig: 0, imp: 1, bod: 2 },
+    'tm # hol': {},
+    // lists
+    'list # cons': { hd: 0, tl: 1 },
+    'list # nil': {},
+}
+
+// export function prettyPre(pre: Pre): string {
+//   switch (pre.rul) {
+//     case 'bnd': return "@\"" + (pre.val as BndVal).label + "\""
+//     case 'var': return "\"" + (pre.val as VarVal).label + "\""
+//     case 'app': return "(_ _)"
+//     case 'lam': return "(_ ↦ _)"
+//     case 'let': return "(let _ = _ in _)"
+//     case 'hol': return "?"
+//   }
+// }
+
+export default function language(): Language {
+    let grammar: Grammar = {
+        rules: (met) => ({
+            'bnd-tm': ['bnd-tm'] as Rul[],
+            'bnd-ty': ['bnd-ty'] as Rul[],
+            'ctr': ['ctr'] as Rul[],
+            'prm': ['prm'] as Rul[],
+            'kd': ['kd # arr', 'kd # *'] as Rul[],
+            'ty': ['ty # arr', 'ty # hol', 'ty # neu'] as Rul[],
+            'tm': ['tm # app', 'tm # lam', 'tm # var', 'tm # let-tm', 'tm # dat', 'tm # let-ty', 'tm # bou-ty', 'tm # bou-cx', 'tm # buf', 'tm # hol'] as Rul[],
+            // lists
+            'bnd-ty list': ['bnd-ty list # cons', 'bnd-ty list # nil'] as Rul[],
+            'ctr list': ['ctr list # cons', 'ctr list # nil'] as Rul[],
+            'prm list': ['prm list # cons', 'prm list # nil'] as Rul[],
+            'ty list': [] as Rul[],
+        }[met]),
+        valueDefault: (rul) => ({
+            'bnd-ty': { label: "", uuid: newUUID() } as BndTyVal,
+            'bnd-tm': { label: "", uuid: newUUID() } as BndTmVal,
+            'ctr': {} as CtrVal,
+            'prm': {} as PrmVal,
+            'kd # arr': {} as KdArrVal,
+            'kd # *': {} as KdStarVal,
+            'ty # arr': {} as TyArrVal,
+            'ty # hol': {} as TyHolVal,
+            'ty # neu': { uuid: "cannot use `valueDefault` for 'ty # neu'" } as TyNeuVal,
+            'tm # app': { indentedArg: false } as TmAppVal,
+            'tm # lam': { indentedBod: false } as TmLamVal,
+            'tm # var': { uuid: "cannot use `valueDefault` for 'tm # var'" } as TmVarVal,
+            'tm # let-tm': { indentedImp: false, indentedBod: true } as TmLetTmVal,
+            'tm # dat': {} as TmDatVal,
+            'tm # let-ty': { indentedImp: false, indentedBod: true } as TmLetTyVal,
+            'tm # bou-ty': {} as TmBouTyVal,
+            'tm # bou-cx': {} as TmBouCxVal,
+            'tm # buf': { indentedImp: false, indentedBod: true } as TmBufVal,
+            'tm # hol': {} as TmHolVal,
+            // lists
+            'bnd-ty list # cons': {} as ListConsVal,
+            'bnd-ty list # nil': {} as ListNilVal,
+            'ctr list # cons': {} as ListConsVal,
+            'ctr list # nil': {} as ListNilVal,
+            'prm list # cons': {} as ListConsVal,
+            'prm list # nil': {} as ListNilVal,
+            'ty list # cons': {} as ListConsVal,
+            'ty list # nil': {} as ListNilVal,
+        }[rul]),
+        kids: (rul) => ({
+            'bnd-ty': [] as Met[],
+            'bnd-tm': [] as Met[],
+            'ctr': ['bnd-tm', 'prm list'] as Met[],
+            'prm': ['bnd-tm', 'ty'] as Met[],
+            'kd # arr': ['kd', 'kd'] as Met[],
+            'kd # *': [] as Met[],
+            'ty # arr': ['ty', 'ty'] as Met[],
+            'ty # hol': [] as Met[],
+            'ty # neu': ['ty list'] as Met[],
+            'tm # app': ['tm', 'tm'] as Met[],
+            'tm # lam': ['bnd-tm', 'ty', 'tm'] as Met[],
+            'tm # var': [] as Met[],
+            'tm # let-tm': ['bnd-tm', 'prms', 'ty', 'tm', 'tm'] as Met[],
+            'tm # dat': ['bnd-ty', 'bnd-ty list', 'ctr list', 'tm'] as Met[],
+            'tm # let-ty': ['bnd-ty', 'bnd-ty list', 'ty', 'tm'] as Met[],
+            'tm # bou-ty': ['tm'] as Met[],
+            'tm # bou-cx': ['tm'] as Met[],
+            'tm # buf': ['ty', 'tm', 'tm'] as Met[],
+            'tm # hol': {} as Met[],
+            // lists
+            'bnd-ty list # cons': ['bnd-ty', 'bnd-ty list'] as Met[],
+            'bnd-ty list # nil': [] as Met[],
+            'ctr list # cons': ['ctr', 'ctr list'] as Met[],
+            'ctr list # nil': [] as Met[],
+            'prm list # cons': ['prm', 'prm list'] as Met[],
+            'prm list # nil': [] as Met[],
+            'ty list # cons': ['ty', 'ty list'] as Met[],
+            'ty list # nil': [] as Met[],
+        }[rul]),
+        holeRule: (met) => ({
+            'bnd-ty': 'bnd-ty' as Rul,
+            'bnd-tm': 'bnd-tm' as Rul,
+            'ctr': 'ctr' as Rul,
+            'prm': 'prm' as Rul,
+            'kd': 'kd # *' as Rul,
+            'ty': 'ty # hol' as Rul,
+            'tm': 'tm # hol' as Rul,
+            // lists
+            'ty list': 'ty list # nil' as Rul,
+            'bnd-ty list': 'bnd-ty list # nil' as Rul,
+            'ctr list': 'ctr list # nil' as Rul,
+            'prm list': 'prm list # nil' as Rul,
+        }[met])
+    }
+
+    function isParenthesized(zips: List<Zip>, exp: Exp): boolean {
+        const zip = zips.get(0)
+        if (zip === undefined) return false
+        switch (zip.rul) {
+            case 'kd # arr': {
+                switch (exp.rul) {
+                    case 'kd # arr': return iZip(zip) === kid_ixs['kd # arr'].dom
+                    default: return false
+                }
+            }
+            case 'ty # arr': {
+                switch (exp.rul) {
+                    case 'ty # neu': return exp.kids.get(1)?.rul === 'ty list # nil'
+                    case 'ty # arr': return iZip(zip) === kid_ixs['ty # arr'].dom
+                    default: return false
+                }
+            }
+            case 'prm': return true
+            case 'tm # app': {
+                switch (exp.rul) {
+                    case 'tm # app': return iZip(zip) === kid_ixs['tm # app'].arg
+                    case 'tm # buf': return true
+                    case 'tm # dat': return true
+                    case 'tm # lam': return true
+                    case 'tm # let-tm': return true
+                    case 'tm # let-ty': return true
+                    default: return false
+                }
+            }
+            case 'tm # dat': {
+                if (iZip(zip) === kid_ixs['tm # dat'].prms) return true
+                return false
+            }
+            case 'tm # let-ty': {
+                if (iZip(zip) === kid_ixs['tm # let-ty'].prms) return true
+                return false
+            }
+            case 'tm # let-tm': {
+                if (iZip(zip) === kid_ixs['tm # let-tm'].prms) return true
+                return false
+            }
+            default: return false
+        }
+    }
+
+    function modifyIndent(f: (isIndented: boolean) => boolean, zip: Zip): Zip | undefined {
+        // TODO: update to use `kid_ixs`
+        switch (zip.rul) {
+            case 'bnd-ty': return undefined
+            case 'bnd-tm': return undefined
+            case 'ctr': return undefined
+            case 'prm': return undefined
+            // kd
+            case 'kd # arr': return undefined
+            case 'kd # *': return undefined
+            // ty
+            case 'ty # arr': return undefined
+            case 'ty # hol': return undefined
+            case 'ty # neu': return undefined
+            // tm
+            case 'tm # app': {
+                switch (iZip(zip)) {
+                    case 1: return { ...zip, val: { ...zip.val as TmAppVal, indentedArg: !(zip.val as TmAppVal).indentedArg } as TmAppVal }
+                    default: return undefined
+                }
+            }
+            case 'tm # lam': {
+                switch (iZip(zip)) {
+                    case 2: return { ...zip, val: { ...zip.val as TmLamVal, indentedBod: !(zip.val as TmLamVal).indentedBod } as TmLamVal }
+                    default: return undefined
+                }
+            }
+            case 'tm # var': return undefined
+            case 'tm # let-tm': {
+                switch (iZip(zip)) {
+                    case 3: return { ...zip, val: { ...zip.val as TmLetTmVal, indentedImp: !(zip.val as TmLetTmVal).indentedImp } as TmLetTmVal }
+                    case 4: return { ...zip, val: { ...zip.val as TmLetTmVal, indentedBod: !(zip.val as TmLetTmVal).indentedBod } as TmLetTmVal }
+                    default: return undefined
+                }
+            }
+            case 'tm # dat': {
+                switch (iZip(zip)) {
+                    case kid_ixs['tm # dat'].bod: return { ...zip, val: { ...zip.val as TmDatVal, indentedBod: !(zip.val as TmDatVal).indentedBod } as TmDatVal }
+                    default: return undefined
+                }
+            }
+            case 'tm # let-ty': {
+                switch (iZip(zip)) {
+                    case 2: return { ...zip, val: { ...zip.val as TmLetTyVal, indentedImp: !(zip.val as TmLetTyVal).indentedImp } as TmLetTyVal }
+                    case 3: return { ...zip, val: { ...zip.val as TmLetTyVal, indentedBod: !(zip.val as TmLetTyVal).indentedBod } as TmLetTyVal }
+                    default: return undefined
+                }
+            }
+            case 'tm # bou-ty': return undefined
+            case 'tm # bou-cx': return undefined
+            case 'tm # buf': {
+                switch (iZip(zip)) {
+                    case 1: return { ...zip, val: { ...zip.val as TmBufVal, indentedImp: !(zip.val as TmBufVal).indentedImp } as TmBufVal }
+                    case 2: return { ...zip, val: { ...zip.val as TmBufVal, indentedBod: !(zip.val as TmBufVal).indentedBod } as TmBufVal }
+                    default: return undefined
+                }
+            }
+            case 'tm # hol': return undefined
+            // lists
+            case 'bnd-ty list # cons': return undefined
+            case 'bnd-ty list # nil': return undefined
+            case 'ctr list # cons': return undefined
+            case 'ctr list # nil': return undefined
+            case 'prm list # cons': return undefined
+            case 'prm list # nil': return undefined
+        }
+    }
+
+    function isValidSelect(select: Select): boolean {
+        // check that the top and bot of select have same met
+        const preTop = getZipsBot(select).get(-1)
+        if (preTop === undefined) return true
+        const preBot = select.exp as Pre
+        return preTop.met === preBot.met
+    }
+
+    function isValidCursor(cursor: Cursor): boolean {
+        return true // TODO: stricter, like in term neutral forms
+    }
+
+    return {
+        grammar,
+        isParenthesized,
+        modifyIndent,
+        isValidSelect,
+        isValidCursor
+    }
+}
+
+// abstract types
+
+export type Grammar = {
     rules: (met: Met) => Rul[], // this meta can be produced by these rules
     valueDefault: (rul: Rul) => Val, // this rule has this default value
     kids: (rul: Rul) => Met[], // this rule has these children metas
     holeRule: (met: Met) => Rul, // this meta can be produced by this hole rule
 }
 
-export type Language<Met, Rul, Val> = {
-    grammar: Grammar<Met, Rul, Val>,
-    isParenthesized: (zips: List<Zip<Met, Rul, Val>>, exp: Exp<Met, Rul, Val>) => boolean,
-    modifyIndent: (f: (isIndented: boolean) => boolean, zip: Zip<Met, Rul, Val>) => Zip<Met, Rul, Val> | undefined,
-    isValidSelect: (select: Select<Met, Rul, Val>) => boolean
-    isValidCursor: (cursor: Cursor<Met, Rul, Val>) => boolean
+export type Language = {
+    grammar: Grammar,
+    isParenthesized: (zips: List<Zip>, exp: Exp) => boolean,
+    modifyIndent: (f: (isIndented: boolean) => boolean, zip: Zip) => Zip | undefined,
+    isValidSelect: (select: Select) => boolean
+    isValidCursor: (cursor: Cursor) => boolean
 }
 
-export type Cursor<Met, Rul, Val> = { zips: List<Zip<Met, Rul, Val>>, exp: Exp<Met, Rul, Val> }
+export type Cursor = { zips: List<Zip>, exp: Exp }
 
-export function prettyCursor<Met, Rul, Val>(cursor: Cursor<Met, Rul, Val>): string {
+export function prettyCursor(cursor: Cursor): string {
     return prettyZips(cursor.zips)(prettyExp(cursor.exp))
 }
 
-export type Select<Met, Rul, Val> = { zipsTop: List<Zip<Met, Rul, Val>>, zipsBot: List<Zip<Met, Rul, Val>>, exp: Exp<Met, Rul, Val>, orient: Orient }
+export type Select = { zipsTop: List<Zip>, zipsBot: List<Zip>, exp: Exp, orient: Orient }
 
-export function prettySelect<Met, Rul, Val>(select: Select<Met, Rul, Val>): string {
+export function prettySelect(select: Select): string {
     return prettyZips(select.zipsTop)(prettyZips(getZipsBot(select))(prettyExp(select.exp)))
 }
 
@@ -31,27 +391,27 @@ export function prettySelect<Met, Rul, Val>(select: Select<Met, Rul, Val>): stri
 // bot: the bot of the select can move
 export type Orient = 'top' | 'bot'
 
-export function getZipsBot<Met, Rul, Val>(select: Select<Met, Rul, Val>) {
+export function getZipsBot(select: Select) {
     return toZipsBot(select.orient, select.zipsBot)
 }
 
-export function setZipsBot<Met, Rul, Val>(select: Select<Met, Rul, Val>, zips: List<Zip<Met, Rul, Val>>) {
+export function setZipsBot(select: Select, zips: List<Zip>) {
     return { ...select, zipsBot: toZipsBot(select.orient, zips) }
 }
 
-export function toZipsBot<Met, Rul, Val>(orient: Orient, zips: List<Zip<Met, Rul, Val>>) {
+export function toZipsBot(orient: Orient, zips: List<Zip>) {
     switch (orient) {
         case 'top': return zips.reverse()
         case 'bot': return zips
     }
 }
 
-export function isValidRuleKidI<Met, Rul, Val>
-    (gram: Grammar<Met, Rul, Val>, rul: Rul, i: number): boolean {
+export function isValidRuleKidI
+    (gram: Grammar, rul: Rul, i: number): boolean {
     return 0 <= i && i < gram.kids(rul).length
 }
 
-export function verifyRuleKidI<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, rul: Rul, i: number): void {
+export function verifyRuleKidI(gram: Grammar, rul: Rul, i: number): void {
     // TODO: tmp disable
     // assert(
     //     0 <= i && i < gram.kids(rul).length,
@@ -60,13 +420,13 @@ export function verifyRuleKidI<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, rul:
 }
 
 // pre-expression
-export type Pre<Met, Rul, Val> = {
+export type Pre = {
     met: Met,
     rul: Rul,
     val: Val
 }
 
-export function prettyPre<Met, Rul, Val>(lang: Language<Met, Rul, Val>, pre: Pre<Met, Rul, Val>) {
+export function prettyPre(lang: Language, pre: Pre) {
     let s = ""
     s += "("
     s += pre.met + ":" + pre.rul
@@ -79,14 +439,14 @@ export function prettyPre<Met, Rul, Val>(lang: Language<Met, Rul, Val>, pre: Pre
 
 
 // expression
-export type Exp<Met, Rul, Val> = {
+export type Exp = {
     met: Met,
     rul: Rul,
     val: Val,
-    kids: List<Exp<Met, Rul, Val>>
+    kids: List<Exp>
 }
 
-export function prettyExp<Met, Rul, Val>(exp: Exp<Met, Rul, Val>) {
+export function prettyExp(exp: Exp) {
     let s = ""
     s += "("
     s += exp.met + ":" + exp.rul
@@ -96,10 +456,10 @@ export function prettyExp<Met, Rul, Val>(exp: Exp<Met, Rul, Val>) {
 }
 
 // verify exp
-export function verifyExp<Met, Rul, Val>(
-    gram: Grammar<Met, Rul, Val>,
-    exp: Exp<Met, Rul, Val>
-): Exp<Met, Rul, Val> {
+export function verifyExp(
+    gram: Grammar,
+    exp: Exp
+): Exp {
     const kidMets = gram.kids(exp.rul)
     // TODO: tmp disable
     // assert(
@@ -116,10 +476,10 @@ export function verifyExp<Met, Rul, Val>(
     return exp
 }
 
-export function makeHole<Met, Rul, Val>(
-    gram: Grammar<Met, Rul, Val>,
+export function makeHole(
+    gram: Grammar,
     met: Met
-): Exp<Met, Rul, Val> {
+): Exp {
     return verifyExp(gram, {
         met: met,
         rul: gram.holeRule(met),
@@ -128,21 +488,21 @@ export function makeHole<Met, Rul, Val>(
     })
 }
 
-export function makeExpTemplate<Met, Rul, Val>(
-    gram: Grammar<Met, Rul, Val>,
+export function makeExpTemplate(
+    gram: Grammar,
     met: Met,
     rul: Rul,
     val: Val
-): Exp<Met, Rul, Val> {
+): Exp {
     return verifyExp(gram, {
         met, rul, val,
         kids: List(gram.kids(rul).map((met) => makeHole(gram, met)))
     })
 }
 
-export function eqExp<Met, Rul, Val>(
-    exp1: Exp<Met, Rul, Val>,
-    exp2: Exp<Met, Rul, Val>
+export function eqExp(
+    exp1: Exp,
+    exp2: Exp
 ): boolean {
     return (
         exp1.met === exp2.met &&
@@ -154,15 +514,15 @@ export function eqExp<Met, Rul, Val>(
 }
 
 // zipper step
-export type Zip<Met, Rul, Val> = {
+export type Zip = {
     met: Met,
     rul: Rul,
     val: Val,
-    kidsLeft: List<Exp<Met, Rul, Val>>,
-    kidsRight: List<Exp<Met, Rul, Val>>
+    kidsLeft: List<Exp>,
+    kidsRight: List<Exp>
 }
 
-export function prettyZip<Met, Rul, Val>(zip: Zip<Met, Rul, Val>): (str: string) => string {
+export function prettyZip(zip: Zip): (str: string) => string {
     return (str: string) => {
         let s = ""
         s += "("
@@ -175,14 +535,14 @@ export function prettyZip<Met, Rul, Val>(zip: Zip<Met, Rul, Val>): (str: string)
     }
 }
 
-export function prettyZips<Met, Rul, Val>(zips: List<Zip<Met, Rul, Val>>): (str: string) => string {
+export function prettyZips(zips: List<Zip>): (str: string) => string {
     const zip = zips.get(0)
     if (zip === undefined) return (str: string) => str
     return (str: string) => prettyZips(zips.shift())(prettyZip(zip)(str))
 }
 
 // verify zip
-export function verifyZip<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, zip: Zip<Met, Rul, Val>): Zip<Met, Rul, Val> {
+export function verifyZip(gram: Grammar, zip: Zip): Zip {
     const kidMets = gram.kids(zip.rul)
     // TODO: tmp disable
     // assert(
@@ -210,19 +570,19 @@ export function verifyZip<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, zip: Zip<
     return zip
 }
 
-export function toggleIndent<Met, Rul, Val>
-    (lang: Language<Met, Rul, Val>, zip: Zip<Met, Rul, Val>): Zip<Met, Rul, Val> | undefined {
+export function toggleIndent
+    (lang: Language, zip: Zip): Zip | undefined {
     return lang.modifyIndent((b: boolean) => !b, zip)
 }
 
-export function makeZipTemplate<Met, Rul, Val>(
-    gram: Grammar<Met, Rul, Val>,
+export function makeZipTemplate(
+    gram: Grammar,
     met: Met,
     rul: Rul,
     val: Val,
     i: number,
     metBot: Met
-): Zip<Met, Rul, Val> | undefined {
+): Zip | undefined {
     if (gram.kids(rul)[i] !== metBot) return undefined
     return verifyZip(gram, {
         met, rul, val,
@@ -231,9 +591,9 @@ export function makeZipTemplate<Met, Rul, Val>(
     })
 }
 
-export function eqZip<Met, Rul, Val>(
-    zip1: Zip<Met, Rul, Val>,
-    zip2: Zip<Met, Rul, Val>
+export function eqZip(
+    zip1: Zip,
+    zip2: Zip
 ): boolean {
     return (
         zip1.met === zip2.met &&
@@ -244,9 +604,9 @@ export function eqZip<Met, Rul, Val>(
     )
 }
 
-export function eqZips<Met, Rul, Val>(
-    zips1: List<Zip<Met, Rul, Val>>,
-    zips2: List<Zip<Met, Rul, Val>>
+export function eqZips(
+    zips1: List<Zip>,
+    zips2: List<Zip>
 ): boolean {
     return (
         zips1.size === zips2.size &&
@@ -255,20 +615,20 @@ export function eqZips<Met, Rul, Val>(
     )
 }
 
-export function makeZipTemplates<Met, Rul, Val>(
-    gram: Grammar<Met, Rul, Val>,
+export function makeZipTemplates(
+    gram: Grammar,
     met: Met, rul: Rul, val: Val,
     metBot: Met
-): Zip<Met, Rul, Val>[] {
+): Zip[] {
     return gram.kids(rul).flatMap((_kidMet, i) => makeZipTemplate(gram, met, rul, val, i, metBot) ?? [])
 }
 
 // the index of the zip's hole
-export function iZip<Met, Rul, Val>(zip: Zip<Met, Rul, Val>): number {
+export function iZip(zip: Zip): number {
     return zip.kidsLeft.size
 }
 
-export function zipExp<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, exp: Exp<Met, Rul, Val>, i: number): { zip: Zip<Met, Rul, Val>, exp: Exp<Met, Rul, Val> } | undefined {
+export function zipExp(gram: Grammar, exp: Exp, i: number): { zip: Zip, exp: Exp } | undefined {
     if (!isValidRuleKidI(gram, exp.rul, i)) return undefined
     return {
         zip: {
@@ -278,23 +638,23 @@ export function zipExp<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, exp: Exp<Met
             kidsLeft: exp.kids.slice(undefined, i).reverse(),
             kidsRight: exp.kids.slice(i + 1, undefined)
         },
-        exp: exp.kids.get(i) as Exp<Met, Rul, Val>
+        exp: exp.kids.get(i) as Exp
     }
 }
 
-export function zipRight<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, zip: Zip<Met, Rul, Val>, exp0: Exp<Met, Rul, Val>): { zip: Zip<Met, Rul, Val>, exp: Exp<Met, Rul, Val> } | undefined {
+export function zipRight(gram: Grammar, zip: Zip, exp0: Exp): { zip: Zip, exp: Exp } | undefined {
     const exp1 = zip.kidsRight.get(0)
     if (exp1 === undefined) return undefined
     return { zip: { ...zip, kidsLeft: zip.kidsLeft.unshift(exp0), kidsRight: zip.kidsRight.shift() }, exp: exp1 }
 }
 
-export function zipLeft<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, zip: Zip<Met, Rul, Val>, exp0: Exp<Met, Rul, Val>): { zip: Zip<Met, Rul, Val>, exp: Exp<Met, Rul, Val> } | undefined {
+export function zipLeft(gram: Grammar, zip: Zip, exp0: Exp): { zip: Zip, exp: Exp } | undefined {
     const exp1 = zip.kidsLeft.get(0)
     if (exp1 === undefined) return undefined
     return { zip: { ...zip, kidsLeft: zip.kidsLeft.shift(), kidsRight: zip.kidsRight.unshift(exp0) }, exp: exp1 }
 }
 
-export function unzipExp<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, zip: Zip<Met, Rul, Val>, exp: Exp<Met, Rul, Val>): Exp<Met, Rul, Val> {
+export function unzipExp(gram: Grammar, zip: Zip, exp: Exp): Exp {
     const kidMets = gram.kids(zip.rul)
     // verify that exp can fit into zip
     // assert(kidMets[zip.kidsLeft.size] === exp.met)
@@ -309,13 +669,13 @@ export function unzipExp<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, zip: Zip<M
     }
 }
 
-export function unzipsExp<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, csr: Cursor<Met, Rul, Val>): Exp<Met, Rul, Val> {
+export function unzipsExp(gram: Grammar, csr: Cursor): Exp {
     const zip = csr.zips.get(0)
     if (zip === undefined) return csr.exp
     return unzipsExp(gram, { zips: csr.zips.shift(), exp: unzipExp(gram, zip, csr.exp) })
 }
 
-export function stepRightCursor<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, csr0: Cursor<Met, Rul, Val>): Cursor<Met, Rul, Val> | undefined {
+export function stepRightCursor(gram: Grammar, csr0: Cursor): Cursor | undefined {
     const zip = csr0.zips.get(0)
     if (zip === undefined) return undefined
     const res = zipRight(gram, zip, csr0.exp)
@@ -323,7 +683,7 @@ export function stepRightCursor<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, csr
     return { zips: csr0.zips.shift().unshift(res.zip), exp: res.exp }
 }
 
-export function stepRightSelect<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, sel0: Select<Met, Rul, Val>): Select<Met, Rul, Val> | undefined {
+export function stepRightSelect(gram: Grammar, sel0: Select): Select | undefined {
     switch (sel0.orient) {
         case 'top': {
             return undefined
@@ -343,7 +703,7 @@ export function stepRightSelect<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, sel
     }
 }
 
-export function stepLeftCursor<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, csr0: Cursor<Met, Rul, Val>): Cursor<Met, Rul, Val> | undefined {
+export function stepLeftCursor(gram: Grammar, csr0: Cursor): Cursor | undefined {
     const zip = csr0.zips.get(0)
     if (zip === undefined) return undefined
     const res = zipLeft(gram, zip, csr0.exp)
@@ -351,7 +711,7 @@ export function stepLeftCursor<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, csr0
     return { zips: csr0.zips.shift().unshift(res.zip), exp: res.exp }
 }
 
-export function stepLeftSelect<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, sel0: Select<Met, Rul, Val>): Select<Met, Rul, Val> | undefined {
+export function stepLeftSelect(gram: Grammar, sel0: Select): Select | undefined {
     switch (sel0.orient) {
         case 'top': {
             return undefined
@@ -371,13 +731,13 @@ export function stepLeftSelect<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, sel0
     }
 }
 
-export function stepDownCursor<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, csr0: Cursor<Met, Rul, Val>, i: number): Cursor<Met, Rul, Val> | undefined {
+export function stepDownCursor(gram: Grammar, csr0: Cursor, i: number): Cursor | undefined {
     const res = zipExp(gram, csr0.exp, i)
     if (res === undefined) return undefined
     return { zips: csr0.zips.unshift(res.zip), exp: res.exp }
 }
 
-export function stepDownSelect<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, sel: Select<Met, Rul, Val>, i: number): Select<Met, Rul, Val> | undefined {
+export function stepDownSelect(gram: Grammar, sel: Select, i: number): Select | undefined {
     switch (sel.orient) {
         case 'top': {
             const zip = sel.zipsBot.get(0)
@@ -402,13 +762,13 @@ export function stepDownSelect<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, sel:
     }
 }
 
-export function stepUpCursor<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, csr: Cursor<Met, Rul, Val>): Cursor<Met, Rul, Val> | undefined {
+export function stepUpCursor(gram: Grammar, csr: Cursor): Cursor | undefined {
     const zip = csr.zips.get(0)
     if (zip === undefined) return undefined
     return { zips: csr.zips.shift(), exp: unzipExp(gram, zip, csr.exp) }
 }
 
-export function stepUpSelect<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, sel: Select<Met, Rul, Val>): Select<Met, Rul, Val> | undefined {
+export function stepUpSelect(gram: Grammar, sel: Select): Select | undefined {
     switch (sel.orient) {
         case 'top': {
             const zip = sel.zipsTop.get(0)
@@ -433,26 +793,26 @@ export function stepUpSelect<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, sel: S
     }
 }
 
-export function stepBotRightCursor<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, csr0: Cursor<Met, Rul, Val>): Cursor<Met, Rul, Val> | undefined {
+export function stepBotRightCursor(gram: Grammar, csr0: Cursor): Cursor | undefined {
     const nKids = gram.kids(csr0.exp.rul).length
     if (nKids === 0) return undefined
-    const csr1 = stepDownCursor(gram, csr0, nKids - 1) as Cursor<Met, Rul, Val>
+    const csr1 = stepDownCursor(gram, csr0, nKids - 1) as Cursor
     const csr2 = stepBotRightCursor(gram, csr1)
     return csr2 ?? csr1
 }
 
-export function stepBotRightSelect<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, sel0: Select<Met, Rul, Val>): Select<Met, Rul, Val> | undefined {
+export function stepBotRightSelect(gram: Grammar, sel0: Select): Select | undefined {
     const nKids = gram.kids(sel0.exp.rul).length
     if (nKids === 0) return undefined
-    const sel1 = stepDownSelect(gram, sel0, nKids - 1) as Select<Met, Rul, Val>
+    const sel1 = stepDownSelect(gram, sel0, nKids - 1) as Select
     const sel2 = stepBotRightSelect(gram, sel1)
     return sel2 ?? sel1
 }
 
-export function stepBotLeftCursor<Met, Rul, Val>(gram: Grammar<Met, Rul, Val>, csr0: Cursor<Met, Rul, Val>): Cursor<Met, Rul, Val> | undefined {
+export function stepBotLeftCursor(gram: Grammar, csr0: Cursor): Cursor | undefined {
     const nKids = gram.kids(csr0.exp.rul).length
     if (nKids === 0) return undefined
-    const csr1 = stepDownCursor(gram, csr0, 0) as Cursor<Met, Rul, Val>
+    const csr1 = stepDownCursor(gram, csr0, 0) as Cursor
     const csr2 = stepBotLeftCursor(gram, csr1)
     return csr2 ?? csr1
 }
@@ -462,8 +822,8 @@ For `moveNext*` and `movePrev*`, think of it as traversing a path through the
 tree, and stopping at the first that that `isValidCursor`.
 */
 
-export function moveNextCursor<Met, Rul, Val>(lang: Language<Met, Rul, Val>, csr0: Cursor<Met, Rul, Val>): Cursor<Met, Rul, Val> | undefined {
-    function goUpRight(csr1: Cursor<Met, Rul, Val>): Cursor<Met, Rul, Val> | undefined {
+export function moveNextCursor(lang: Language, csr0: Cursor): Cursor | undefined {
+    function goUpRight(csr1: Cursor): Cursor | undefined {
         // try to step right then step bot-left
         const csr2 = stepRightCursor(lang.grammar, csr1)
         if (csr2 !== undefined) {
@@ -479,7 +839,7 @@ export function moveNextCursor<Met, Rul, Val>(lang: Language<Met, Rul, Val>, csr
         return goUpRight(csr3)
     }
 
-    function goDownRight(csr1: Cursor<Met, Rul, Val>): Cursor<Met, Rul, Val> | undefined {
+    function goDownRight(csr1: Cursor): Cursor | undefined {
         for (let i = 0; i < csr1.exp.kids.size; i++) {
             const csr2 = stepDownCursor(lang.grammar, csr1, i)
             if (csr2 === undefined) continue
@@ -498,8 +858,8 @@ export function moveNextCursor<Met, Rul, Val>(lang: Language<Met, Rul, Val>, csr
 }
 
 
-export function movePrevCursor<Met, Rul, Val>(lang: Language<Met, Rul, Val>, csr0: Cursor<Met, Rul, Val>): Cursor<Met, Rul, Val> | undefined {
-    function go(csr1: Cursor<Met, Rul, Val>): Cursor<Met, Rul, Val> | undefined {
+export function movePrevCursor(lang: Language, csr0: Cursor): Cursor | undefined {
+    function go(csr1: Cursor): Cursor | undefined {
         // if valid, then return here
         if (lang.isValidCursor(csr1)) return csr1
 
@@ -529,9 +889,9 @@ export function movePrevCursor<Met, Rul, Val>(lang: Language<Met, Rul, Val>, csr
     return go(csr2)
 }
 
-export function moveNextSelect<Met, Rul, Val>(lang: Language<Met, Rul, Val>, sel0: Select<Met, Rul, Val>): Select<Met, Rul, Val> | undefined {
+export function moveNextSelect(lang: Language, sel0: Select): Select | undefined {
 
-    function goUpRight(sel1: Select<Met, Rul, Val>): Select<Met, Rul, Val> | undefined {
+    function goUpRight(sel1: Select): Select | undefined {
         // try to step right then step bot-left
         const sel2 = stepRightSelect(lang.grammar, sel1)
         if (sel2 !== undefined) {
@@ -545,7 +905,7 @@ export function moveNextSelect<Met, Rul, Val>(lang: Language<Met, Rul, Val>, sel
         return goUpRight(sel3)
     }
 
-    function goDownRight(sel1: Select<Met, Rul, Val>): Select<Met, Rul, Val> | undefined {
+    function goDownRight(sel1: Select): Select | undefined {
         for (let i = 0; i < sel1.exp.kids.size; i++) {
             const sel2 = stepDownSelect(lang.grammar, sel1, i)
             if (sel2 === undefined) continue
@@ -563,8 +923,8 @@ export function moveNextSelect<Met, Rul, Val>(lang: Language<Met, Rul, Val>, sel
     return goUpRight(sel0)
 }
 
-export function movePrevSelect<Met, Rul, Val>(lang: Language<Met, Rul, Val>, sel0: Select<Met, Rul, Val>): Select<Met, Rul, Val> | undefined {
-    function go(sel1: Select<Met, Rul, Val>): Select<Met, Rul, Val> | undefined {
+export function movePrevSelect(lang: Language, sel0: Select): Select | undefined {
+    function go(sel1: Select): Select | undefined {
         // if valid, then return here
         if (lang.isValidSelect(sel1)) return sel1
 

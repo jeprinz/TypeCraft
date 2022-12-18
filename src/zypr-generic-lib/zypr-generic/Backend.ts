@@ -3,86 +3,92 @@ import { debug } from '../Debug'
 import { EndoPart, EndoReadPart } from '../Endo'
 import { Direction } from './Direction'
 import { Query } from './Editor'
-import { Cursor, Exp, getZipsBot, Grammar, isValidRuleKidI, iZip, Language, makeExpTemplate, makeHole, makeZipTemplates, moveNextCursor, moveNextSelect, movePrevCursor, movePrevSelect, Orient, Pre, Select, setZipsBot, toZipsBot, unzipExp, unzipsExp, Zip, zipExp } from './Language'
+import { Cursor, Exp, getZipsBot, Grammar, isValidRuleKidI, iZip, Language, makeExpTemplate, makeHole, makeZipTemplates, Met, moveNextCursor, moveNextSelect, movePrevCursor, movePrevSelect, Orient, Pre, Rul, Select, setZipsBot, toZipsBot, unzipExp, unzipsExp, Val, Zip, zipExp } from './Language'
 import { ExpNode, Node, NodeStyle } from './Node'
 
-// Env: render environment
-// Dat: render data
+// rendering environment
+type Env = RecordOf<{
+    st: State,
+    indentationLevel: number,
+    zips: List<Zip>
+}>
 
-export type Backend<Met, Rul, Val, Dat> = {
-    props: Props<Met, Rul, Val, Dat>,
-    state: State<Met, Rul, Val, Dat>
+// node data
+export type Dat = {
+    pre: Pre,
+    indentation?: number,
+    isParethesized: boolean,
+    label?: string
 }
 
-export type Props<Met, Rul, Val, Dat> = {
-    language: Language<Met, Rul, Val>,
-    format: (st: State<Met, Rul, Val, Dat>, query: Query) => Node<Met, Rul, Val, Dat>[],
+export type Backend = {
+    props: Props,
+    state: State
+}
+
+export type Props = {
+    language: Language,
+    format: (st: State, query: Query) => Node[],
     // TODO: extend with completions
-    interpretQueryString: (st: State<Met, Rul, Val, Dat>, str: string) => Action<Met, Rul, Val>[],
-    interpretKeyboardCommandEvent: (st: State<Met, Rul, Val, Dat>, event: KeyboardEvent) => Action<Met, Rul, Val> | undefined,
-    handleAction: (act: Action<Met, Rul, Val>) => EndoReadPart<Props<Met, Rul, Val, Dat>, State<Met, Rul, Val, Dat>>
+    interpretQueryString: (st: State, str: string) => Action[],
+    interpretKeyboardCommandEvent: (st: State, event: KeyboardEvent) => Action | undefined,
+    handleAction: (act: Action) => EndoReadPart<Props, State>
 }
 
-export type Dat<Met, Rul, Val> = {
-    pre: Pre<Met, Rul, Val>,
-    indentation: number | undefined,
-    isParethesized: boolean
-}
-
-export function interpretQueryAction<Met, Rul, Val, Dat>(
-    backend: Props<Met, Rul, Val, Dat>,
-    st: State<Met, Rul, Val, Dat>,
+export function interpretQueryAction(
+    backend: Props,
+    st: State,
     query: Query
-): Action<Met, Rul, Val> | undefined {
+): Action | undefined {
     const acts = backend.interpretQueryString(st, query.str)
     if (acts.length === 0) return undefined
     return acts[query.i % acts.length]
 }
 
-export function handleQueryAction<Met, Rul, Val, Dat>(
-    backend: Props<Met, Rul, Val, Dat>,
-    st: State<Met, Rul, Val, Dat>,
+export function handleQueryAction(
+    backend: Props,
+    st: State,
     query: Query
-): EndoReadPart<Props<Met, Rul, Val, Dat>, State<Met, Rul, Val, Dat>> | undefined {
+): EndoReadPart<Props, State> | undefined {
     const act = interpretQueryAction(backend, st, query)
     if (act === undefined) return undefined
     return backend.handleAction(act)
 }
 
-export type Action<Met, Rul, Val>
+export type Action
     = { case: 'move_cursor', dir: Direction }
     | { case: 'move_select', dir: Direction }
-    | { case: 'set_cursor', cursor: Cursor<Met, Rul, Val> }
-    | { case: 'set_select', select: Select<Met, Rul, Val> }
-    | { case: 'replace-exp', exp: Exp<Met, Rul, Val> }
-    | { case: 'replace-zips', zips: List<Zip<Met, Rul, Val>> }
-    | { case: 'insert', zips: List<Zip<Met, Rul, Val>> }
+    | { case: 'set_cursor', cursor: Cursor }
+    | { case: 'set_select', select: Select }
+    | { case: 'replace-exp', exp: Exp }
+    | { case: 'replace-zips', zips: List<Zip> }
+    | { case: 'insert', zips: List<Zip> }
     | { case: BasicAction }
 export type BasicAction = 'undo' | 'redo' | 'copy' | 'cut' | 'paste' | 'delete' | 'escape'
 
-export type State<Met, Rul, Val, Dat> = RecordOf<State_<Met, Rul, Val, Dat>>
-export const makeState = <Met, Rul, Val, Dat>(state_: State_<Met, Rul, Val, Dat>): State<Met, Rul, Val, Dat> => Record<State_<Met, Rul, Val, Dat>>(state_)()
-export type State_<Met, Rul, Val, Dat> = {
-    mode: Mode<Met, Rul, Val>,
-    clipboard: Clipboard<Met, Rul, Val>,
-    history: List<State<Met, Rul, Val, Dat>>,
-    future: List<State<Met, Rul, Val, Dat>>
+export type State = RecordOf<State_>
+export const makeState = (state_: State_): State => Record<State_>(state_)()
+export type State_ = {
+    mode: Mode,
+    clipboard: Clipboard,
+    history: List<State>,
+    future: List<State>
 }
 
-export type Mode<Met, Rul, Val>
-    = { case: 'cursor', cursor: Cursor<Met, Rul, Val> }
-    | { case: 'select', select: Select<Met, Rul, Val> }
+export type Mode
+    = { case: 'cursor', cursor: Cursor }
+    | { case: 'select', select: Select }
 
-export type Clipboard<Met, Rul, Val>
-    = { case: 'exp', exp: Exp<Met, Rul, Val> }
-    | { case: 'zips', zips: List<Zip<Met, Rul, Val>> }
+export type Clipboard
+    = { case: 'exp', exp: Exp }
+    | { case: 'zips', zips: List<Zip> }
     | undefined
 
 
 
 // updateState
 
-export function updateState<Met, Rul, Val, Dat>(f: EndoReadPart<Props<Met, Rul, Val, Dat>, State<Met, Rul, Val, Dat>>): EndoReadPart<Props<Met, Rul, Val, Dat>, State<Met, Rul, Val, Dat>> {
+export function updateState(f: EndoReadPart<Props, State>): EndoReadPart<Props, State> {
     return (pr, st) => {
         const st_ = f(pr, st)
         if (st_ === undefined) return undefined
@@ -92,7 +98,7 @@ export function updateState<Met, Rul, Val, Dat>(f: EndoReadPart<Props<Met, Rul, 
     }
 }
 
-export function updateMode<Met, Rul, Val, Dat>(f: EndoPart<Mode<Met, Rul, Val>>): EndoReadPart<Props<Met, Rul, Val, Dat>, State<Met, Rul, Val, Dat>> {
+export function updateMode(f: EndoPart<Mode>): EndoReadPart<Props, State> {
     return (pr, st) => {
         return st
             .update('mode', (mode) => f(mode) ?? mode)
@@ -101,7 +107,7 @@ export function updateMode<Met, Rul, Val, Dat>(f: EndoPart<Mode<Met, Rul, Val>>)
     }
 }
 
-export function undo<Met, Rul, Val, Dat>(): EndoReadPart<Props<Met, Rul, Val, Dat>, State<Met, Rul, Val, Dat>> {
+export function undo(): EndoReadPart<Props, State> {
     return (pr, st) => {
         const st_ = st.history.get(0)
         if (st_ === undefined) return undefined
@@ -110,7 +116,7 @@ export function undo<Met, Rul, Val, Dat>(): EndoReadPart<Props<Met, Rul, Val, Da
     }
 }
 
-export function redo<Met, Rul, Val, Dat>(): EndoReadPart<Props<Met, Rul, Val, Dat>, State<Met, Rul, Val, Dat>> {
+export function redo(): EndoReadPart<Props, State> {
     return (pr, st) => {
         const st_ = st.future.get(0)
         if (st_ === undefined) return undefined
@@ -119,12 +125,12 @@ export function redo<Met, Rul, Val, Dat>(): EndoReadPart<Props<Met, Rul, Val, Da
     }
 }
 
-export function getStateMet<Met, Rul, Val, Dat>(gram: Grammar<Met, Rul, Val>, st: State<Met, Rul, Val, Dat>): Met {
+export function getStateMet(gram: Grammar, st: State): Met {
     return getModeMet(gram, st.mode)
 }
-export function getModeMet<Met, Rul, Val, Dat>(
-    gram: Grammar<Met, Rul, Val>,
-    mode: Mode<Met, Rul, Val>
+export function getModeMet(
+    gram: Grammar,
+    mode: Mode
 ): Met {
     switch (mode.case) {
         case 'cursor': return mode.cursor.exp.met
@@ -132,11 +138,11 @@ export function getModeMet<Met, Rul, Val, Dat>(
     }
 }
 
-export function enterCursor<Met, Rul, Val>(
-    gram: Grammar<Met, Rul, Val>,
-    mode: Mode<Met, Rul, Val>
+export function enterCursor(
+    gram: Grammar,
+    mode: Mode
 ):
-    Cursor<Met, Rul, Val> {
+    Cursor {
     switch (mode.case) {
         case 'cursor': return mode.cursor
         case 'select': return {
@@ -146,11 +152,11 @@ export function enterCursor<Met, Rul, Val>(
     }
 }
 
-export function moveCursor<Met, Rul, Val>(
-    lang: Language<Met, Rul, Val>,
+export function moveCursor(
+    lang: Language,
     dir: Direction,
-    mode: Mode<Met, Rul, Val>
-): Mode<Met, Rul, Val> | undefined {
+    mode: Mode
+): Mode | undefined {
     const cursor = enterCursor(lang.grammar, mode)
     switch (dir.case) {
         case 'up': {
@@ -206,11 +212,11 @@ export function moveCursor<Met, Rul, Val>(
     }
 }
 
-export function fixSelect<Met, Rul, Val>(
-    gram: Grammar<Met, Rul, Val>,
-    select: Select<Met, Rul, Val>
+export function fixSelect(
+    gram: Grammar,
+    select: Select
 ):
-    Mode<Met, Rul, Val> {
+    Mode {
     if (select.zipsBot.isEmpty())
         return {
             case: 'cursor',
@@ -219,11 +225,11 @@ export function fixSelect<Met, Rul, Val>(
     else return { case: 'select', select }
 }
 
-export function enterSelect<Met, Rul, Val>(
-    mode: Mode<Met, Rul, Val>,
+export function enterSelect(
+    mode: Mode,
     orient: Orient,
 ):
-    Select<Met, Rul, Val> {
+    Select {
     switch (mode.case) {
         case 'cursor': return {
             zipsTop: mode.cursor.zips,
@@ -236,13 +242,13 @@ export function enterSelect<Met, Rul, Val>(
 }
 
 // TODO: update with new move functions from Language
-export function moveSelect<Met, Rul, Val>(
-    lang: Language<Met, Rul, Val>,
+export function moveSelect(
+    lang: Language,
     dir: Direction,
-    mode: Mode<Met, Rul, Val>
+    mode: Mode
 ):
-    Mode<Met, Rul, Val> | undefined {
-    const select: Select<Met, Rul, Val> =
+    Mode | undefined {
+    const select: Select =
         enterSelect(
             mode,
             ((): Orient => {
@@ -343,14 +349,14 @@ export function moveSelect<Met, Rul, Val>(
     }
 }
 
-export function buildInterpretQueryString<Met, Rul, Val, Dat>(
-    gram: Grammar<Met, Rul, Val>,
+export function buildInterpretQueryString(
+    gram: Grammar,
     parse: (met: Met, str: string) => { rul: Rul, val: Val } | undefined
 ) {
     return (
-        st: State<Met, Rul, Val, Dat>,
+        st: State,
         str: string
-    ): Action<Met, Rul, Val>[] => {
+    ): Action[] => {
         if (str === "") return []
         const met = getModeMet(gram, st.mode)
         const res = parse(met, str)
@@ -383,9 +389,9 @@ export function buildInterpretQueryString<Met, Rul, Val, Dat>(
 
 function formatNodeStyle<Met, Rul, Val, Dat, Env>
     (
-        style: NodeStyle<Met, Rul, Val, Dat>,
-        expNode_: (env: Env) => ExpNode<Met, Rul, Val, Dat>
-    ): (env: Env) => ExpNode<Met, Rul, Val, Dat> {
+        style: NodeStyle,
+        expNode_: (env: Env) => ExpNode
+    ): (env: Env) => ExpNode {
     return (env) => {
         const expNode = expNode_(env)
         return ({
@@ -396,33 +402,23 @@ function formatNodeStyle<Met, Rul, Val, Dat, Env>
     // ({ ...expNode(env), style })
 }
 
-// TODO: pull back custom Envs to a general interface
-type Env<Met, Rul, Val, Dat> = RecordOf<{
-    st: State<Met, Rul, Val, Dat>,
-    indentationLevel: number,
-    zips: List<Zip<Met, Rul, Val>>
-}>
-
-// TODO: what was this supposed to do?
-// function formatPre<Met, Rul, Val, Dat>() {}
-
 // buildBackend
 
 export function buildBackend<Met, Rul, Val, Dat, Env>(
     args: {
-        language: Language<Met, Rul, Val>,
-        initExp: Exp<Met, Rul, Val>,
+        language: Language,
+        initExp: Exp,
         // actions
-        interpretQueryString: Props<Met, Rul, Val, Dat>['interpretQueryString'],
-        interpretKeyboardCommandEvent: Props<Met, Rul, Val, Dat>['interpretKeyboardCommandEvent'],
+        interpretQueryString: Props['interpretQueryString'],
+        interpretKeyboardCommandEvent: Props['interpretKeyboardCommandEvent'],
         // formatting
-        makeInitEnv: (st: State<Met, Rul, Val, Dat>) => Env,
-        formatExp: (st: State<Met, Rul, Val, Dat>, exp: Exp<Met, Rul, Val>, zipPar: Zip<Met, Rul, Val> | undefined) => (env: Env) => ExpNode<Met, Rul, Val, Dat>,
-        formatZip: (st: State<Met, Rul, Val, Dat>, zips: List<Zip<Met, Rul, Val>>, zipPar: Zip<Met, Rul, Val> | undefined) => (kid: (env: Env) => ExpNode<Met, Rul, Val, Dat>) => (env: Env) => ExpNode<Met, Rul, Val, Dat>
+        makeInitEnv: (st: State) => Env,
+        formatExp: (st: State, exp: Exp, zipPar: Zip | undefined) => (env: Env) => ExpNode,
+        formatZip: (st: State, zips: List<Zip>, zipPar: Zip | undefined) => (kid: (env: Env) => ExpNode) => (env: Env) => ExpNode
     },
-): Backend<Met, Rul, Val, Dat> {
-    function cut(): EndoReadPart<Props<Met, Rul, Val, Dat>, State<Met, Rul, Val, Dat>> {
-        return updateState((pr, st): State<Met, Rul, Val, Dat> | undefined => {
+): Backend {
+    function cut(): EndoReadPart<Props, State> {
+        return updateState((pr, st): State | undefined => {
             const met = getStateMet(pr.language.grammar, st)
             switch (st.mode.case) {
                 case 'cursor': return st
@@ -438,8 +434,8 @@ export function buildBackend<Met, Rul, Val, Dat, Env>(
         })
     }
 
-    function copy(): EndoReadPart<Props<Met, Rul, Val, Dat>, State<Met, Rul, Val, Dat>> {
-        return updateState((pr, st): State<Met, Rul, Val, Dat> | undefined => {
+    function copy(): EndoReadPart<Props, State> {
+        return updateState((pr, st): State | undefined => {
             switch (st.mode.case) {
                 case 'cursor': return st
                     .set('clipboard', { case: 'exp', exp: st.mode.cursor.exp })
@@ -452,8 +448,8 @@ export function buildBackend<Met, Rul, Val, Dat, Env>(
         })
     }
 
-    function paste(): EndoReadPart<Props<Met, Rul, Val, Dat>, State<Met, Rul, Val, Dat>> {
-        return updateState((pr, st): State<Met, Rul, Val, Dat> | undefined => {
+    function paste(): EndoReadPart<Props, State> {
+        return updateState((pr, st): State | undefined => {
             if (st.clipboard === undefined) return undefined
             switch (st.clipboard.case) {
                 case 'exp': {
@@ -482,7 +478,7 @@ export function buildBackend<Met, Rul, Val, Dat, Env>(
             format: (st, query) => {
                 const initEnv = args.makeInitEnv(st)
 
-                const acts: Action<Met, Rul, Val>[] | undefined =
+                const acts: Action[] | undefined =
                     query.str.length > 0 ?
                         args.interpretQueryString(st, query.str) :
                         undefined
@@ -495,7 +491,7 @@ export function buildBackend<Met, Rul, Val, Dat, Env>(
                         act.zips.get(0) :
                         undefined
 
-                function formatQueryAround(kid: (env: Env) => ExpNode<Met, Rul, Val, Dat>, zipPar: Zip<Met, Rul, Val> | undefined): (env: Env) => ExpNode<Met, Rul, Val, Dat> {
+                function formatQueryAround(kid: (env: Env) => ExpNode, zipPar: Zip | undefined): (env: Env) => ExpNode {
                     if (query.str === "")
                         return kid
                     else if (act === undefined) {
@@ -548,7 +544,7 @@ export function buildBackend<Met, Rul, Val, Dat, Env>(
                 }
             },
 
-            handleAction: (act: Action<Met, Rul, Val>): EndoReadPart<Props<Met, Rul, Val, Dat>, State<Met, Rul, Val, Dat>> => {
+            handleAction: (act: Action): EndoReadPart<Props, State> => {
                 switch (act.case) {
                     case 'replace-exp': {
                         return updateMode(mode => {
@@ -589,7 +585,7 @@ export function buildBackend<Met, Rul, Val, Dat, Env>(
                         })
                     }
                     case 'insert': {
-                        return updateMode((mode): Mode<Met, Rul, Val> => {
+                        return updateMode((mode): Mode => {
                             switch (mode.case) {
                                 case 'cursor': return {
                                     case: 'cursor',
@@ -609,7 +605,7 @@ export function buildBackend<Met, Rul, Val, Dat, Env>(
                     case 'move_cursor': return updateMode((mode) => moveCursor(args.language, act.dir, mode))
                     case 'move_select': return updateMode((mode) => moveSelect(args.language, act.dir, mode))
                     case 'delete': {
-                        return updateMode((mode): Mode<Met, Rul, Val> | undefined => {
+                        return updateMode((mode): Mode | undefined => {
                             const met = getModeMet(args.language.grammar, mode)
                             switch (mode.case) {
                                 case 'cursor': {
@@ -634,7 +630,7 @@ export function buildBackend<Met, Rul, Val, Dat, Env>(
                             }
                         })
                     }
-                    case 'escape': return updateMode((mode): Mode<Met, Rul, Val> | undefined => {
+                    case 'escape': return updateMode((mode): Mode | undefined => {
                         return { case: 'cursor', cursor: enterCursor(args.language.grammar, mode) }
                     })
                     case 'cut': return cut()
@@ -643,13 +639,13 @@ export function buildBackend<Met, Rul, Val, Dat, Env>(
                     case 'undo': return undo()
                     case 'redo': return redo()
                     case 'set_cursor': {
-                        return updateMode((mode): Mode<Met, Rul, Val> => ({
+                        return updateMode((mode): Mode => ({
                             case: 'cursor',
                             cursor: act.cursor
                         }))
                     }
                     case 'set_select': {
-                        return updateMode((mode): Mode<Met, Rul, Val> => ({
+                        return updateMode((mode): Mode => ({
                             case: 'select',
                             select: act.select
                         }))
