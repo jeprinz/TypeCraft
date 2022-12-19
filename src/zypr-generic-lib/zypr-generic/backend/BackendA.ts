@@ -13,6 +13,7 @@ export const backend = (state: Interop.State): Backend.Backend => {
         throw new Error("TODO: use purescript backend");
       },
       handleKeyboardAction: (act: Backend.KeyboardAction) => (prop: Backend.Props, st: Interop.State) => {
+        // move cursor, move select, cut, copy, paste, redo, undo, delete, escape
         throw new Error("TODO:");
       }
     },
