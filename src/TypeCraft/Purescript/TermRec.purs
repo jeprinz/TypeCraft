@@ -24,14 +24,22 @@ import TypeCraft.Purescript.Kinds (bindsToKind)
 
 type TermRecValue = {kctx :: TypeContext, ctx :: TermContext, ty :: Type, term :: Term}
 type TypeRecValue = {kctx :: TypeContext, ctx :: TermContext, ty :: Type}
+type ListTypeArgRecValue = {kctx :: TypeContext, ctx :: TermContext, tyArgs :: List TypeArg}
+type ListConstructorRecValue = {kctx :: TypeContext, ctx :: TermContext, ctrs :: List Constructor}
+type ListTypeBindRecValue = {kctx :: TypeContext, ctx :: TermContext, tbinds :: List TypeBind}
+
+-- TODO: possible refactoring to make TermToNode simpler:
+-- replace *RecValue with *CursorLocation
+-- I also need to get selections out though?
+-- So pathRec will need to have a path to the bottom!?
 
 type TermRec a = {
       lambda :: LambdaMD -> TermBind -> TypeRecValue -> TermRecValue -> a
     , app :: AppMD -> TermRecValue -> TermRecValue -> Type -> Type -> a
-    , var :: VarMD -> TermVarID -> List TypeArg -> a -- TODO: write recTypeParam!!!!! it should pass a List TypeParamValue or something!
-    , lett :: LetMD -> TermBind -> (List TypeBind) -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
-    , dataa :: GADTMD -> TypeBind -> List TypeBind -> List Constructor -> TermRecValue -> Type -> a -- TODO: write recConstructor!! Should be List ConstructorRecValue!
-    , tlet :: TLetMD -> TypeBind -> List TypeBind -> TypeRecValue -> TermRecValue -> Type -> a
+    , var :: VarMD -> TermVarID -> ListTypeArgRecValue -> a
+    , lett :: LetMD -> TermBind -> ListTypeBindRecValue -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
+    , dataa :: GADTMD -> TypeBind -> ListTypeBindRecValue -> ListConstructorRecValue -> TermRecValue -> Type -> a -- TODO: write recConstructor!! Should be List ConstructorRecValue!
+    , tlet :: TLetMD -> TypeBind -> ListTypeBindRecValue -> TypeRecValue -> TermRecValue -> Type -> a
     , typeBoundary :: TypeBoundaryMD -> Change -> TermRecValue -> a
     , contextBoundary :: ContextBoundaryMD -> TermVarID -> Change -> TermRecValue -> a
     , hole :: HoleMD -> a
@@ -53,25 +61,25 @@ recTerm args {kctx, ctx, ty: tyOut, term : (App md t1 t2 tyArg tyOut')}
         args.app md {kctx, ctx, ty: Arrow defaultArrowMD tyArg tyOut, term: t1}
         {kctx, ctx, ty: tyArg, term: t2}
         tyArg tyOut
-recTerm args {ctx, term : Var md x tyParams} = args.var md x tyParams
+recTerm args {kctx, ctx, term : Var md x tyArgs} = args.var md x {kctx, ctx, tyArgs}
 recTerm args {kctx, ctx, ty, term : Let md bind@(TermBind _ x) tbinds def defTy body bodyTy}
     = if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
         let ctx' = insert x defTy ctx in -- TODO; should use number of tbinds here!
-        args.lett md bind tbinds {kctx, ctx: ctx', ty: defTy, term: def}
+        args.lett md bind {kctx, ctx, tbinds} {kctx, ctx: ctx', ty: defTy, term: def}
             {kctx, ctx, ty: defTy}
             {kctx, ctx: ctx', ty: ty, term: body}
             bodyTy
 recTerm args {kctx, ctx, ty, term : Data md tbind@(TypeBind _ x) tbinds ctrs body bodyTy} =
     if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
     let dataType = TNeu defaultTNeuMD x Nil in -- TODO: should actually use tbinds to get the list! ?? (sort of, the parametrs should be outside? see how constructorTypes changes)
-    args.dataa md tbind tbinds ctrs
+    args.dataa md tbind {kctx, ctx, tbinds} {kctx, ctx, ctrs}
         -- TODO: on line below, don't just put Type for kind, actually use the list of tbinds to get the number of parameters!!!!
         {kctx : insert x (bindsToKind tbinds) kctx, ctx: union ctx (constructorTypes dataType ctrs), ty: ty, term: body}
         bodyTy
 recTerm args {kctx, ctx, ty, term : TLet md tybind@(TypeBind _ x) tbinds def body bodyTy} =
     if not (bodyTy == ty) then unsafeThrow "shouldn't happen" else
     let kctx' = insert x (bindsToKind tbinds) kctx in
-    args.tlet md tybind tbinds
+    args.tlet md tybind {kctx, ctx, tbinds}
         {kctx, ctx, ty: def}
         {kctx: kctx', ctx, ty: bodyTy, term: body}
         bodyTy

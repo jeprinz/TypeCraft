@@ -28,6 +28,18 @@ foreign import makeNodeData ::
   } ->
   NodeData
 
+makeNodeDataSane ::
+  { indentation :: Int
+  , isParenthesized :: Boolean
+  , label :: String
+  } ->
+  NodeData
+makeNodeDataSane {indentation, isParenthesized, label}
+    = makeNodeData {
+        indentation: pureNullable indentation
+        , isParenthesized
+        , label: pureNullable label}
+
 -- NodeStyle
 foreign import data NodeStyle :: Type
 

@@ -34,6 +34,8 @@ data CursorLocation
 The TypeContext, TermContext, and Type are understood as being inside the second path.
 e.g. if the term selection is  path1[path2[term]], then the contexts and type given are for inside path2 and outside term.
 -}
+-- TODO: PROBLEM: A TermPath always has a Top at the top of it. But, this doesn't really work for the middle
+-- path in a selection?
 data Select
     = TermSelect TypeContext TermContext Type TermPath TermPath Term
     | TypeSelect TypeContext TermContext TypePath TypePath Type
@@ -47,14 +49,14 @@ getCursorChildren (TermCursor kctx ctx ty up term) =
             , app: \md t1 t2 tyArg tyOut -> TermCursor t1.kctx t1.ctx t1.ty (App1 up md t2.term tyArg tyOut) t1.term
                 : TermCursor t2.kctx t2.ctx t2.ty (App2 up md t1.term tyArg tyOut) t2.term : Nil
             , var: \_ _ _ -> Nil
-            , lett: \md x tBinds def defTy body bodyTy -> TermCursor def.kctx def.ctx def.ty (Let1 up md x tBinds defTy.ty body.term bodyTy) def.term
-                : TypeCursor defTy.kctx defTy.ctx (Let2 up md x tBinds def.term body.term bodyTy) defTy.ty
-                : TermCursor body.kctx body.ctx body.ty (Let3 up md x tBinds def.term defTy.ty bodyTy) body.term : Nil
-            , dataa : \md x tbinds ctrs body bodyTy -> TermCursor body.kctx body.ctx body.ty (Data3 up md x tbinds ctrs bodyTy) body.term: Nil
+            , lett: \md x tBinds def defTy body bodyTy -> TermCursor def.kctx def.ctx def.ty (Let1 up md x tBinds.tbinds defTy.ty body.term bodyTy) def.term
+                : TypeCursor defTy.kctx defTy.ctx (Let2 up md x tBinds.tbinds def.term body.term bodyTy) defTy.ty
+                : TermCursor body.kctx body.ctx body.ty (Let3 up md x tBinds.tbinds def.term defTy.ty bodyTy) body.term : Nil
+            , dataa : \md x tbinds ctrs body bodyTy -> TermCursor body.kctx body.ctx body.ty (Data3 up md x tbinds.tbinds ctrs.ctrs bodyTy) body.term: Nil
             , tlet : \md tbind tbinds def body bodyTy ->
                 -- Add TypeBindList child!
-                TypeCursor def.kctx def.ctx (TLet1 up md tbind tbinds body.term bodyTy) def.ty
-                : TermCursor body.kctx body.ctx body.ty (TLet2 up md tbind tbinds def.ty bodyTy) body.term
+                TypeCursor def.kctx def.ctx (TLet1 up md tbind tbinds.tbinds body.term bodyTy) def.ty
+                : TermCursor body.kctx body.ctx body.ty (TLet2 up md tbind tbinds.tbinds def.ty bodyTy) body.term
                 : Nil
             , typeBoundary: \md c t -> TermCursor t.kctx t.ctx t.ty (TypeBoundary1 up md c) t.term : Nil
             , contextBoundary: \md x c t -> TermCursor t.kctx t.ctx t.ty (ContextBoundary1 up md x c) t.term : Nil
