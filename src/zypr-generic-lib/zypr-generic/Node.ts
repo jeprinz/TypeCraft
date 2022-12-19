@@ -13,9 +13,8 @@ export type Node = {
 
 export type NodeStyle
     = { case: 'cursor' }
-    // TODO: actually we dont need isValid since we will just skip over that
-    | { case: 'select-top', isValid: boolean }
-    | { case: 'select-bot', isValid: boolean }
+    | { case: 'select-top' }
+    | { case: 'select-bot' }
     | { case: 'query-insert-top' }
     | { case: 'query-insert-bot' }
     | { case: 'query-replace-new' }
