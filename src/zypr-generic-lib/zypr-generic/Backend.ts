@@ -2,9 +2,31 @@ import { List, Record, RecordOf } from 'immutable'
 import { debug } from '../Debug'
 import { EndoPart, EndoReadPart } from '../Endo'
 import { Direction } from './Direction'
-import { Query } from './Editor'
 import { Cursor, Exp, getZipsBot, Grammar, isValidRuleKidI, iZip, Language, makeExpTemplate, makeHole, makeZipTemplates, Met, moveNextCursor, moveNextSelect, movePrevCursor, movePrevSelect, Orient, Pre, Rul, Select, setZipsBot, toZipsBot, unzipExp, unzipsExp, Val, Zip, zipExp } from './Language'
 import { ExpNode, Node, NodeStyle } from './Node'
+import { State } from '../../TypeCraft/Typescript/Interop'
+
+export type Backend = {
+    props: Props,
+    state: State
+}
+
+export type Props = {
+    language: Language,
+    format: (st: State) => Node[],
+    handleKeyboardAction: (act: KeyboardAction) => EndoReadPart<Props, State>,
+}
+
+export type KeyboardAction
+    = { case: 'move_cursor', dir: Direction }
+    | { case: 'move_select', dir: Direction }
+    | { case: 'undo' }
+    | { case: 'redo' }
+    | { case: 'copy' }
+    | { case: 'cut' }
+    | { case: 'paste' }
+    | { case: 'delete' }
+    | { case: 'escape' }
 
 // rendering environment
 type Env = RecordOf<{
@@ -21,40 +43,8 @@ export type Dat = {
     label?: string
 }
 
-export type Backend = {
-    props: Props,
-    state: State
-}
-
-export type Props = {
-    language: Language,
-    format: (st: State, query: Query) => Node[],
-    // TODO: extend with completions
-    interpretQueryString: (st: State, str: string) => Action[],
-    interpretKeyboardCommandEvent: (st: State, event: KeyboardEvent) => Action | undefined,
-    handleAction: (act: Action) => EndoReadPart<Props, State>
-}
-
-export function interpretQueryAction(
-    backend: Props,
-    st: State,
-    query: Query
-): Action | undefined {
-    const acts = backend.interpretQueryString(st, query.str)
-    if (acts.length === 0) return undefined
-    return acts[query.i % acts.length]
-}
-
-export function handleQueryAction(
-    backend: Props,
-    st: State,
-    query: Query
-): EndoReadPart<Props, State> | undefined {
-    const act = interpretQueryAction(backend, st, query)
-    if (act === undefined) return undefined
-    return backend.handleAction(act)
-}
-
+// TODO: old stuff from when State was defined in typescript
+/*
 export type Action
     = { case: 'move_cursor', dir: Direction }
     | { case: 'move_select', dir: Direction }
@@ -76,14 +66,16 @@ export type State_ = {
 }
 
 export type Mode
-    = { case: 'cursor', cursor: Cursor }
+    = {
+        case: 'cursor',
+        cursor: Cursor,
+    }
     | { case: 'select', select: Select }
 
 export type Clipboard
     = { case: 'exp', exp: Exp }
     | { case: 'zips', zips: List<Zip> }
     | undefined
-
 
 
 // updateState
@@ -401,6 +393,8 @@ function formatNodeStyle<Met, Rul, Val, Dat, Env>
     }
     // ({ ...expNode(env), style })
 }
+
+*/
 
 // buildBackend
 

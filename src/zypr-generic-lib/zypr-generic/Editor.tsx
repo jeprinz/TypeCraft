@@ -5,6 +5,7 @@ import { Node } from "./Node"
 import interactQuery from "./QueryInteraction"
 import './Editor.css'
 import { debug } from "../Debug"
+import { State } from "../../TypeCraft/Typescript/Interop"
 
 export var isMouseDown: boolean = false
 export function setMouseDown(event: MouseEvent) { isMouseDown = event.button === 0 ? true : isMouseDown }
@@ -13,16 +14,9 @@ export function setMouseUp(event: MouseEvent) { isMouseDown = event.button === 0
 export type Props = {
     backend: Backend.Props,
     render: (editor: Editor) => JSX.Element[],
-    handleKeyboard: (editor: Editor, event: KeyboardEvent) => void,
+    handleKeyboardEvent: (editor: Editor, event: KeyboardEvent) => void,
     initState: State
 }
-
-export type State = {
-    backend: Backend.State,
-    query: Query
-}
-
-export type Query = { str: string, i: number }
 
 export default class Editor
     extends React.Component<Props, State>
@@ -35,7 +29,7 @@ export default class Editor
     }
 
     keyboardEventListener = (event: KeyboardEvent): any => {
-        this.props.handleKeyboard(this, event)
+        this.props.handleKeyboardEvent(this, event)
     }
 
     componentDidMount(): void {
@@ -57,24 +51,20 @@ export default class Editor
 
 export function modifyBackendState(
     editor: Editor,
-    f: EndoReadPart<Backend.Props, Backend.State>
+    f: EndoReadPart<Backend.Props, State>
 ): void {
-    const backend = f(editor.props.backend, editor.state.backend)
-    debug(1, "modifyBackendState success = " + (backend !== undefined))
-    if (backend !== undefined)
-        editor.setState({
-            backend,
-            query: { str: "", i: 0 }
-        })
+    const state = f(editor.props.backend, editor.state)
+    debug(1, "modifyBackendState success = " + (state !== undefined))
+    if (state !== undefined) editor.setState(state)
 }
 
-export function doAction(
+export function doKeyboardAction(
     editor: Editor,
-    act: Backend.Action
+    act: Backend.KeyboardAction
 ): void {
     modifyBackendState(
         editor,
-        editor.props.backend.handleAction(act)
+        editor.props.backend.handleKeyboardAction(act)
     )
 }
 
@@ -83,7 +73,7 @@ export function renderEditor(
         renderNode: (
             node: Node,
             editor: Editor,
-            // doAction: (act: Backend.Action<Met,Rul,Val>) => void,
+            // doKeyboardAction: (act: Backend.KeyboardAction<Met,Rul,Val>) => void,
         ) =>
             JSX.Element[]
     }) {
@@ -91,8 +81,7 @@ export function renderEditor(
     return (backend: Backend.Backend) => {
 
         function render(editor: Editor) {
-            const nodes = editor.props.backend.format
-                (editor.state.backend, editor.state.query)
+            const nodes = editor.props.backend.format(editor.state)
             return [
                 // TODO: onClick={...}
                 <div className="editor"
@@ -107,14 +96,20 @@ export function renderEditor(
 
         }
 
+        function handleKeyboardEvent(editor: Editor, event: KeyboardEvent): void {
+            // TODO: just use handleKeyboardAction
+            throw new Error("TODO");
+        }
+
+        /* TODO: old 
         function handleKeyboard(editor: Editor, event: KeyboardEvent): void {
             // try to interpret as keyboard command
             {
-                const act = editor.props.backend.interpretKeyboardCommandEvent(editor.state.backend, event)
+                const act = editor.props.backend.interpretKeyboardCommandEvent(editor.state, event)
                 if (act !== undefined) {
                     debug(1, "keyboard command handled: " + event.key + " ==> " + act.case)
                     event.preventDefault()
-                    modifyBackendState(editor, editor.props.backend.handleAction(act))
+                    modifyBackendState(editor, editor.props.backend.handleKeyboardAction(act))
                     return
                 } else {
                     debug(1, "keyboard command aborted: " + event.key + " ==> !!")
@@ -131,7 +126,7 @@ export function renderEditor(
                 // if that doesn't work, then non-query-interaction action
                 const isQueryless = editor.state.query.str.length === 0
 
-                const act = ((): Backend.Action | undefined => {
+                const act = ((): Backend.KeyboardAction | undefined => {
                     if (false) { }
                     // TODO: tmp disable while trying out new move impl
                     // if (event.key === 'ArrowLeft') return { case: event.shiftKey ? 'move_select' : 'move_cursor', dir: { case: 'left' } }
@@ -146,7 +141,7 @@ export function renderEditor(
                     else if (event.key === 'ArrowRight' && isQueryless && event.altKey) return { case: event.shiftKey ? 'move_select' : 'move_cursor', dir: { case: 'right' } }
                     else if (event.key === 'ArrowUp' && isQueryless && event.altKey) return { case: event.shiftKey ? 'move_select' : 'move_cursor', dir: { case: 'up' } }
                     else if (event.key === 'ArrowDown' && isQueryless && event.altKey) return { case: event.shiftKey ? 'move_select' : 'move_cursor', dir: { case: 'down', i: 0 } }
-                    else if (event.key === 'Enter') return Backend.interpretQueryAction(editor.props.backend, editor.state.backend, editor.state.query)
+                    else if (event.key === 'Enter') return Backend.interpretQueryKeyboardAction(editor.props.backend, editor.state, editor.state.query)
                     else if (event.key === 'Escape') return { case: 'escape' }
                     else if (event.key === 'Backspace') return { case: 'delete' }
                     return undefined
@@ -154,21 +149,19 @@ export function renderEditor(
 
                 if (act !== undefined) {
                     event.preventDefault()
-                    modifyBackendState(editor, editor.props.backend.handleAction(act))
+                    modifyBackendState(editor, editor.props.backend.handleKeyboardAction(act))
                 }
             }
         }
+        */
 
-        const initState: State = {
-            backend: backend.state,
-            query: { str: "", i: 0 }
-        }
+        const initState: State = backend.state
 
         return [
             <Editor
                 backend={backend.props}
                 render={render}
-                handleKeyboard={handleKeyboard}
+                handleKeyboardEvent={handleKeyboardEvent}
                 initState={initState}
             />
         ]
