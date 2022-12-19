@@ -6,4 +6,8 @@ Henry TODO:
 - [ ] make `Backend.State` Purescript-generic
 
 Jacob TODO:
-- [ ] ...
+- [ ] finish ch*
+- [ ] finish ch*Path
+- [ ] finish rec*
+- [ ] finish rec*Path
+- [ ] write skeleton of *toNode
