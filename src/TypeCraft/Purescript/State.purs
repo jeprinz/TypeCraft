@@ -19,13 +19,30 @@ import Data.Maybe (Maybe(..))
 import Data.List (length)
 import Data.List (index)
 
+-- state of the editor
+type State = {
+        mode :: Mode
+    }
+
+data Mode 
+    = CursorMode {
+            cursorLocation :: CursorLocation,
+            query :: Query
+        }
+    | SelectMode Select
+
+type Query = {
+        string :: String,
+        completion_i :: Int,
+        completionOption_i :: Int
+    }
+
 {-
 This file will contain possible states for the editor
 -}
 
 data Clipboard = EmptyClip -- add more later, not priority yet
 
-data CodeState = CursorState CursorLocation
 data CursorLocation
     = TermCursor TypeContext TermContext Type TermPath Term
     | TypeCursor TypeContext TermContext TypePath Type -- add more later, for now this is fine

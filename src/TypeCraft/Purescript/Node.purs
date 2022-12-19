@@ -2,6 +2,7 @@ module TypeCraft.Purescript.Node where
 
 import Prelude
 import TypeCraft.Purescript.State
+import TypeCraft.Purescript.Nullable
 import Data.Maybe (Maybe, maybe)
 
 -- Node
@@ -47,12 +48,3 @@ foreign import makeQueryReplaceOldNodeStyle :: NodeStyle
 
 foreign import makeQueryInvalidNodeStyle :: String -> NodeStyle
 
--- Nullable
-foreign import data Nullable :: Type -> Type
-
-foreign import emptyNullable :: forall a. Nullable a
-
-foreign import pureNullable :: forall a. a -> Nullable a
-
-nullableMaybe :: forall a. Maybe a -> Nullable a
-nullableMaybe = maybe emptyNullable pureNullable

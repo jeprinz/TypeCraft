@@ -19,7 +19,3 @@ export const makeQueryInvalidNodeStyle = (str) => ({case: 'query-invalid', strin
 export function makeNodeData(data) {
   console.log(data)
 }
-
-// Nullable
-export const emptyNullable = undefined
-export const pureNullable = (x) => x
