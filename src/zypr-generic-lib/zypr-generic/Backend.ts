@@ -1,36 +1,24 @@
 import { List, Record, RecordOf } from 'immutable'
 import { debug } from '../Debug'
-import { EndoPart, EndoReadPart } from '../Endo'
-import { Direction } from './Direction'
-import { Cursor, Exp, getZipsBot, Grammar, isValidRuleKidI, iZip, Language, makeExpTemplate, makeHole, makeZipTemplates, Met, moveNextCursor, moveNextSelect, movePrevCursor, movePrevSelect, Orient, Pre, Rul, Select, setZipsBot, toZipsBot, unzipExp, unzipsExp, Val, Zip, zipExp } from './Language'
+import { EndoPart } from '../Endo'
 import { ExpNode, Node, NodeStyle } from './Node'
-import { State } from '../../TypeCraft/Typescript/Interop'
+import * as State from '../../TypeCraft/Typescript/State'
+import { Language, Pre, Zip } from './Language'
 
 export type Backend = {
     props: Props,
-    state: State
+    state: State.State
 }
 
 export type Props = {
     language: Language,
-    format: (st: State) => Node[],
-    handleKeyboardAction: (act: KeyboardAction) => EndoReadPart<Props, State>,
+    format: (st: State.State) => Node[],
+    handleKeyboardAction: (event: KeyboardEvent) => EndoPart<State.State>,
 }
-
-export type KeyboardAction
-    = { case: 'move_cursor', dir: Direction }
-    | { case: 'move_select', dir: Direction }
-    | { case: 'undo' }
-    | { case: 'redo' }
-    | { case: 'copy' }
-    | { case: 'cut' }
-    | { case: 'paste' }
-    | { case: 'delete' }
-    | { case: 'escape' }
 
 // rendering environment
 type Env = RecordOf<{
-    st: State,
+    st: State.State,
     indentationLevel: number,
     zips: List<Zip>
 }>
