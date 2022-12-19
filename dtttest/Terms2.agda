@@ -106,3 +106,8 @@ exampleTooth = tooth lett "x"
   (next here)
   (term (lambda Base) "y" ((term (var Base) "y" tt , tt))
   , term (var _) "x" tt , tt)
+
+test : ∀{T} → LangTerm T → String
+test (term (lambda A) x₁ x₂) = "lambda"
+test (term (var _) x₁ x₂) = "var"
+test (term lett x₁ x₂) = "let"
