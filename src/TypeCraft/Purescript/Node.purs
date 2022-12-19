@@ -4,8 +4,6 @@ import Prelude
 import TypeCraft.Purescript.State
 import Data.Maybe (Maybe, maybe)
 
-data Select  -- TODO: jacob needs to define stuff  for this 
-
 -- Node
 foreign import data Node :: Type
 

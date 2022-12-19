@@ -26,7 +26,18 @@ This file will contain possible states for the editor
 data Clipboard = EmptyClip -- add more later, not priority yet
 
 data CodeState = CursorState CursorLocation
-data CursorLocation = TermCursor TypeContext TermContext Type TermPath Term | TypeCursor TypeContext TermContext TypePath Type -- add more later, for now this is fine
+data CursorLocation
+    = TermCursor TypeContext TermContext Type TermPath Term
+    | TypeCursor TypeContext TermContext TypePath Type -- add more later, for now this is fine
+
+{-
+The TypeContext, TermContext, and Type are understood as being inside the second path.
+e.g. if the term selection is  path1[path2[term]], then the contexts and type given are for inside path2 and outside term.
+-}
+data Select
+    = TermSelect TypeContext TermContext Type TermPath TermPath Term
+    | TypeSelect TypeContext TermContext TypePath TypePath Type
+
 
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor kctx ctx ty up term) =
