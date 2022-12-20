@@ -74,6 +74,7 @@ recTerm args {kctx, ctx, ty, term : Data md tbind@(TypeBind _ x) tbinds ctrs bod
     let dataType = TNeu defaultTNeuMD x Nil in -- TODO: should actually use tbinds to get the list! ?? (sort of, the parametrs should be outside? see how constructorTypes changes)
     args.dataa md tbind tbinds {kctx, ctx, ctrs}
         -- TODO: on line below, don't just put Type for kind, actually use the list of tbinds to get the number of parameters!!!!
+        -- TODO TODO TODO TODO: actually add constructors to the context!
         {kctx : insert x (bindsToKind tbinds) kctx, ctx: union ctx (constructorTypes dataType ctrs), ty: ty, term: body}
         bodyTy
 recTerm args {kctx, ctx, ty, term : TLet md tybind@(TypeBind _ x) tbinds def body bodyTy} =

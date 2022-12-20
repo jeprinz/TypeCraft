@@ -61,6 +61,7 @@ recTermPath args {kctx, ctx, ty, termPath: Data3 up md bind@(TypeBind _ x) tbind
 recTermPath args {termPath: Top} = args.top
 recTermPath _ _ = hole
 
+-- TODO: just get rid of recTypePath completely!
 recTypePath :: forall a. TypePathRec a -> TypePathRecValue -> a
 recTypePath args {kctx, ctx, ty, typePath: Arrow1 up md outTy} =
     args.arrow1 {kctx, ctx, ty: Arrow defaultArrowMD ty outTy, typePath: up} md {kctx, ctx, ty: outTy}

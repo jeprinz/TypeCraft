@@ -81,6 +81,7 @@ data ConstructorPath = CtrListCons1 CtrListPath CtrMD {-List CtrParam-} (List Ct
 -- A path, when the cursor is on a list of parameters (within a constructor)
 data CtrParamListPath = CtrParamListCons2 CtrParamListPath CtrParam {-List CtrParam-}
     | Constructor1 ConstructorPath {-List CtrParam-}
+data CtrParamPath = CtrParamListCons1 CtrParamListPath CtrParam (List CtrParam)
 
 data TypePath = Arrow1 TypePath ArrowMD Type | Arrow2 TypePath ArrowMD Type
      | Let2 TermPath LetMD TermBind (List TypeBind) Term {-Type-} Term Type

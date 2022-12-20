@@ -11,7 +11,6 @@ import Data.Tuple.Nested (type (/\), (/\))
 import TypeCraft.Purescript.TermRec (TermRecValue)
 import TypeCraft.Purescript.TermRec (recTerm)
 import TypeCraft.Purescript.TermRec (TypeRecValue)
-import TypeCraft.Purescript.TermRec (recType)
 import TypeCraft.Purescript.PathRec (recTermPath)
 import TypeCraft.Purescript.PathRec (recTypePath)
 import Data.Maybe (Maybe)
@@ -81,13 +80,9 @@ getCursorChildren (TermCursor kctx ctx ty up term) =
             , buffer: \md def defTy body bodyTy -> Nil
         }
         {kctx, ctx, ty, term}
-getCursorChildren (TypeCursor kctx ctx up ty) =
-    recType
-        {
-            arrow: \md t1 t2 -> TypeCursor t1.kctx t1.ctx (Arrow1 up md t2.ty) t1.ty
-                : TypeCursor t2.kctx t2.ctx (Arrow2 up md t1.ty) t2.ty : Nil
-        }
-        {kctx, ctx, ty}
+getCursorChildren (TypeCursor kctx ctx up (Arrow md t1 t2)) =
+    TypeCursor kctx ctx (Arrow1 up md t2) t1 : TypeCursor kctx ctx (Arrow2 up md t1) t2 : Nil
+getCursorChildren (TypeCursor kctx ctx up _) = hole
 
 -- the Int is what'th child the input is of the output
 up :: CursorLocation -> Maybe (CursorLocation /\ Int)
