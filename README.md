@@ -8,6 +8,6 @@ Henry TODO:
 Jacob TODO:
 - [ ] finish ch*
 - [ ] finish ch*Path
-- [ ] finish rec*
+- [x] finish rec*
 - [ ] finish rec*Path
 - [ ] write skeleton of *toNode

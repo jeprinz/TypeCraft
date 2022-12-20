@@ -24,19 +24,12 @@ import TypeCraft.Purescript.Kinds (bindsToKind)
 
 type TermRecValue = {kctx :: TypeContext, ctx :: TermContext, ty :: Type, term :: Term}
 type TypeRecValue = {kctx :: TypeContext, ctx :: TermContext, ty :: Type}
-type ListTypeArgRecValue = {kctx :: TypeContext, ctx :: TermContext, tyArgs :: List TypeArg}
 type ListConstructorRecValue = {kctx :: TypeContext, ctx :: TermContext, ctrs :: List Constructor}
-type ListTypeBindRecValue = {kctx :: TypeContext, ctx :: TermContext, tbinds :: List TypeBind}
-type ListConstructorParamValue = {kctx :: TypeContext, ctx :: TermContext, params :: List CtrParam}
-type ConstructorRecValue = {kctx :: TypeContext, ctx :: TermContext, ctr :: Constructor}
-type ConstructorParamRecValue = {kctx :: TypeContext, ctx :: TermContext, param :: CtrParam}
-type TypeArgRecValue = {kctx :: TypeContext, ctx :: TermContext, targ :: TypeArg}
-type TypeBindRecValue = {kctx :: TypeContext, ctx :: TermContext, tbind :: TypeBind}
-type TermBindRecValue = {kctx :: TypeContext, ctx :: TermContext, bind :: TermBind}
 {-
-There is no need to have recursors for some grammatical sorts, because they don't do anything with types and contexts.
-These are:
-List Constructor, List CtrParam, List TypeArg, List TypeBind, Constructor, CtrParam, TypeArg, TypeBind, TermBind
+There isn't really any needs for recursors on grammatical sorts other than terms, because no other part of the syntax
+binds anything into the context or does anything nontrivial with types.
+
+Likewise, it is only necessary to have RecValues for parts of the syntax where something interesting happens with the context.
 -}
 
 -- TODO: possible refactoring to make TermToNode simpler:
@@ -47,10 +40,10 @@ List Constructor, List CtrParam, List TypeArg, List TypeBind, Constructor, CtrPa
 type TermRec a = {
       lambda :: LambdaMD -> TermBind -> TypeRecValue -> TermRecValue -> a
     , app :: AppMD -> TermRecValue -> TermRecValue -> Type -> Type -> a
-    , var :: VarMD -> TermVarID -> ListTypeArgRecValue -> a
-    , lett :: LetMD -> TermBind -> ListTypeBindRecValue -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
-    , dataa :: GADTMD -> TypeBind -> ListTypeBindRecValue -> ListConstructorRecValue -> TermRecValue -> Type -> a -- TODO: write recConstructor!! Should be List ConstructorRecValue!
-    , tlet :: TLetMD -> TypeBind -> ListTypeBindRecValue -> TypeRecValue -> TermRecValue -> Type -> a
+    , var :: VarMD -> TermVarID -> List TypeArg -> a
+    , lett :: LetMD -> TermBind -> List TypeBind -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
+    , dataa :: GADTMD -> TypeBind -> List TypeBind -> ListConstructorRecValue -> TermRecValue -> Type -> a -- TODO: write recConstructor!! Should be List ConstructorRecValue!
+    , tlet :: TLetMD -> TypeBind -> List TypeBind -> TypeRecValue -> TermRecValue -> Type -> a
     , typeBoundary :: TypeBoundaryMD -> Change -> TermRecValue -> a
     , contextBoundary :: ContextBoundaryMD -> TermVarID -> Change -> TermRecValue -> a
     , hole :: HoleMD -> a
@@ -68,25 +61,25 @@ recTerm args {kctx, ctx, ty: tyOut, term : (App md t1 t2 tyArg tyOut')}
         args.app md {kctx, ctx, ty: Arrow defaultArrowMD tyArg tyOut, term: t1}
         {kctx, ctx, ty: tyArg, term: t2}
         tyArg tyOut
-recTerm args {kctx, ctx, term : Var md x tyArgs} = args.var md x {kctx, ctx, tyArgs}
+recTerm args {kctx, ctx, term : Var md x tyArgs} = args.var md x tyArgs
 recTerm args {kctx, ctx, ty, term : Let md bind@(TermBind _ x) tbinds def defTy body bodyTy}
     = if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
         let ctx' = insert x defTy ctx in -- TODO; should use number of tbinds here!
-        args.lett md bind {kctx, ctx, tbinds} {kctx, ctx: ctx', ty: defTy, term: def}
+        args.lett md bind tbinds {kctx, ctx: ctx', ty: defTy, term: def}
             {kctx, ctx, ty: defTy}
             {kctx, ctx: ctx', ty: ty, term: body}
             bodyTy
 recTerm args {kctx, ctx, ty, term : Data md tbind@(TypeBind _ x) tbinds ctrs body bodyTy} =
     if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
     let dataType = TNeu defaultTNeuMD x Nil in -- TODO: should actually use tbinds to get the list! ?? (sort of, the parametrs should be outside? see how constructorTypes changes)
-    args.dataa md tbind {kctx, ctx, tbinds} {kctx, ctx, ctrs}
+    args.dataa md tbind tbinds {kctx, ctx, ctrs}
         -- TODO: on line below, don't just put Type for kind, actually use the list of tbinds to get the number of parameters!!!!
         {kctx : insert x (bindsToKind tbinds) kctx, ctx: union ctx (constructorTypes dataType ctrs), ty: ty, term: body}
         bodyTy
 recTerm args {kctx, ctx, ty, term : TLet md tybind@(TypeBind _ x) tbinds def body bodyTy} =
     if not (bodyTy == ty) then unsafeThrow "shouldn't happen" else
     let kctx' = insert x (bindsToKind tbinds) kctx in
-    args.tlet md tybind {kctx, ctx, tbinds}
+    args.tlet md tybind tbinds
         {kctx, ctx, ty: def}
         {kctx: kctx', ctx, ty: bodyTy, term: body}
         bodyTy
@@ -103,16 +96,3 @@ recTerm args {kctx, ctx, ty, term : Buffer md def defTy body bodyTy} =
         {kctx, ctx, ty: bodyTy, term: body}
         bodyTy
 recTerm _ _ = unsafeThrow "invalid type for a lambda probably"
-
-type TypeRec a = {
-    arrow :: ArrowMD -> TypeRecValue -> TypeRecValue -> a
-    , tHole :: THoleMD -> TypeHoleID -> a
-    , tNeu :: TNeuMD -> TypeVarID -> ListTypeArgRecValue -> a
-}
-
-recType :: forall a. TypeRec a -> TypeRecValue -> a
-recType args {kctx, ctx, ty: Arrow md t1 t2} =
-    args.arrow md {kctx, ctx, ty: t1} {kctx, ctx, ty: t2}
--- THole
--- TNeu
-recType _ _ = hole
