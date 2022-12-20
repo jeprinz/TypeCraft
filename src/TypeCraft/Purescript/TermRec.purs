@@ -27,6 +27,17 @@ type TypeRecValue = {kctx :: TypeContext, ctx :: TermContext, ty :: Type}
 type ListTypeArgRecValue = {kctx :: TypeContext, ctx :: TermContext, tyArgs :: List TypeArg}
 type ListConstructorRecValue = {kctx :: TypeContext, ctx :: TermContext, ctrs :: List Constructor}
 type ListTypeBindRecValue = {kctx :: TypeContext, ctx :: TermContext, tbinds :: List TypeBind}
+type ListConstructorParamValue = {kctx :: TypeContext, ctx :: TermContext, params :: List CtrParam}
+type ConstructorRecValue = {kctx :: TypeContext, ctx :: TermContext, ctr :: Constructor}
+type ConstructorParamRecValue = {kctx :: TypeContext, ctx :: TermContext, param :: CtrParam}
+type TypeArgRecValue = {kctx :: TypeContext, ctx :: TermContext, targ :: TypeArg}
+type TypeBindRecValue = {kctx :: TypeContext, ctx :: TermContext, tbind :: TypeBind}
+type TermBindRecValue = {kctx :: TypeContext, ctx :: TermContext, bind :: TermBind}
+{-
+There is no need to have recursors for some grammatical sorts, because they don't do anything with types and contexts.
+These are:
+List Constructor, List CtrParam, List TypeArg, List TypeBind, Constructor, CtrParam, TypeArg, TypeBind, TermBind
+-}
 
 -- TODO: possible refactoring to make TermToNode simpler:
 -- replace *RecValue with *CursorLocation
@@ -44,10 +55,6 @@ type TermRec a = {
     , contextBoundary :: ContextBoundaryMD -> TermVarID -> Change -> TermRecValue -> a
     , hole :: HoleMD -> a
     , buffer :: BufferMD -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
-}
-
-type TypeRec a = {
-    arrow :: ArrowMD -> TypeRecValue -> TypeRecValue -> a
 }
 
 recTerm :: forall a. TermRec a -> TermRecValue -> a
@@ -96,6 +103,12 @@ recTerm args {kctx, ctx, ty, term : Buffer md def defTy body bodyTy} =
         {kctx, ctx, ty: bodyTy, term: body}
         bodyTy
 recTerm _ _ = unsafeThrow "invalid type for a lambda probably"
+
+type TypeRec a = {
+    arrow :: ArrowMD -> TypeRecValue -> TypeRecValue -> a
+    , tHole :: THoleMD -> TypeHoleID -> a
+    , tNeu :: TNeuMD -> TypeVarID -> ListTypeArgRecValue -> a
+}
 
 recType :: forall a. TypeRec a -> TypeRecValue -> a
 recType args {kctx, ctx, ty: Arrow md t1 t2} =

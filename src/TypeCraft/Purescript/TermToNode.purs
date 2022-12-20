@@ -24,8 +24,8 @@ termToNode mdctx up term = recTerm
         let mdctx' = mdctx in -- TODO: add name of variable!
         makeNode {
             dat : makeNodeDataSane {indentation : mdctx.indentation, isParenthesized: false, label: "lambda"}
-            , kids : [[termToNode mdctx' hole body]] -- TODO: HOW TO BEST FILL THIS HOLE???!???!? SHOULD TermRecValue actually be LocationRecValue?!?!?!
-            , getCursor : \_ -> TermCursor body.kctx body.ctx body.ty hole body.term -- TODO: same here!
+            , kids : [[termToNode mdctx' (Lambda2 up md tbind ty.ty) body]]
+            , getCursor : \_ -> TermCursor term.kctx term.ctx term.ty up term.term -- Isn't this the same for every case?
             , isCursorable : true
             , getSelect : hole
             , isSelectable : hole
