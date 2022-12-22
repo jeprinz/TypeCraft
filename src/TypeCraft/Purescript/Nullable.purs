@@ -1,7 +1,5 @@
 module TypeCraft.Purescript.Nullable where
 
-import Prelude
-
 import Data.Maybe (Maybe, maybe)
 
 foreign import data Nullable :: Type -> Type

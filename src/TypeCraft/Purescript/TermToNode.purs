@@ -1,16 +1,17 @@
 module TypeCraft.Purescript.TermToNode where
 
-import TypeCraft.Purescript.Grammar
-import Data.Map.Internal (Map(..), empty, lookup, insert, union)
-import TypeCraft.Purescript.TermRec
-import TypeCraft.Purescript.Node
-import Prim hiding (Type)
-import TypeCraft.Purescript.Util (hole)
-import Data.List (List, (:))
-
 import Prelude
+import Prim hiding (Type)
 import TypeCraft.Purescript.Context
+import TypeCraft.Purescript.Grammar
+import TypeCraft.Purescript.Node
 import TypeCraft.Purescript.State
+import TypeCraft.Purescript.TermRec
+
+import Data.List (List, (:))
+import Data.Map.Internal (Map(..), empty, lookup, insert, union)
+import Data.Maybe (Maybe(..))
+import TypeCraft.Purescript.Util (hole)
 
 type MDContext = {
     indentation :: Int,
@@ -27,7 +28,7 @@ termToNode mdctx up term =
       lambda : \md tbind@(TermBind {varName} x) ty body ->
         let mdctx' = mdctx {termVarNames = insert x varName mdctx.termVarNames} in -- TODO: something something indentation
         {
-            dat : makeNodeDataSane {indentation : mdctx.indentation, isParenthesized: false, label: "lambda"}
+            dat : makeNodeData {indentation : if md.bodyIndented then Just mdctx.indentation else Nothing, isParenthesized: false, label: "lambda"}
             , kids : [[termToNode mdctx' (Lambda2 up md tbind ty.ty) body]] -- TODO: I guess we need another node for the variable name?
             , isCursorable : true
             , getSelect : hole
@@ -49,10 +50,14 @@ termToNode mdctx up term =
     makeNode {
             dat: partialNode.dat
             , kids : partialNode.kids
-            , getCursor : \_ -> TermCursor term.kctx term.ctx term.ty up term.term -- Isn't this the same for every case?
-            , isCursorable: partialNode.isCursorable
-            , getSelect : hole
-            , isSelectable : partialNode.isSelectable
+            , getCursor : 
+                if partialNode.isCursorable
+                    then Just \_ -> initState $ initCursorMode $ TermCursor term.kctx term.ctx term.ty up term.term -- Isn't this the same for every case?
+                    else Nothing
+            , getSelect : 
+                if partialNode.isSelectable
+                    then Just hole
+                    else Nothing
             , style : partialNode.style
     }
 
@@ -65,10 +70,14 @@ typeToNode mdctx up kctx ctx ty
     in makeNode {
         dat: partialNode.dat
         , kids : partialNode.kids
-        , getCursor : \_ -> TypeCursor kctx ctx up ty -- Isn't this the same for every case?
-        , isCursorable: partialNode.isCursorable
-        , getSelect : hole
-        , isSelectable : partialNode.isSelectable
+        , getCursor : 
+            if partialNode.isCursorable
+                then Just \_ -> initState $ initCursorMode $ TypeCursor kctx ctx up ty -- Isn't this the same for every case?
+                else Nothing
+        , getSelect: 
+            if partialNode.isSelectable
+                then Just hole
+                else Nothing
         , style : partialNode.style
     }
 

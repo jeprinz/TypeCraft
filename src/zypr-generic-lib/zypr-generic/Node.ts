@@ -8,11 +8,12 @@ export type Node = {
     isCursorable: 'same' | 'true' | 'false',
     getSelect: () => Select | 'empty' | undefined,
     isSelectable: Orient | 'empty' | 'false',
-    style: NodeStyle | undefined
+    style: NodeStyle
 }
 
 export type NodeStyle
-    = { case: 'cursor' }
+    = { case: 'normal' }
+    | { case: 'cursor' }
     | { case: 'select-top' }
     | { case: 'select-bot' }
     | { case: 'query-insert-top' }
