@@ -87,7 +87,7 @@ getCursorChildren (TermCursor kctx ctx ty up term) =
             , lett: \md x tBinds def defTy body bodyTy -> TermCursor def.kctx def.ctx def.ty (Let1 up md x tBinds defTy.ty body.term bodyTy) def.term
                 : TypeCursor defTy.kctx defTy.ctx (Let2 up md x tBinds def.term body.term bodyTy) defTy.ty
                 : TermCursor body.kctx body.ctx body.ty (Let3 up md x tBinds def.term defTy.ty bodyTy) body.term : Nil
-            , dataa : \md x tbinds ctrs body bodyTy -> TermCursor body.kctx body.ctx body.ty (Data3 up md x tbinds ctrs bodyTy) body.term: Nil
+            , dataa : \md x tbinds ctrs body bodyTy -> TermCursor body.kctx body.ctx body.ty (Data3 up md x tbinds ctrs.ctrs bodyTy) body.term: Nil
             , tlet : \md tbind tbinds def body bodyTy ->
                 -- Add TypeBindList child!
                 TypeCursor def.kctx def.ctx (TLet1 up md tbind tbinds body.term bodyTy) def.ty
