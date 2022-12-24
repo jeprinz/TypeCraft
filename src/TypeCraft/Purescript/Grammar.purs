@@ -55,7 +55,7 @@ data TermPath =
      Top
      | App1 TermPath AppMD {-Term-} Term Type Type
      | App2 TermPath AppMD Term {-Term-} Type Type
-     | Lambda2 TermPath LambdaMD TermBind Type {-Term-}
+     | Lambda3 TermPath LambdaMD TermBind Type {-Term-}
      | Let1 TermPath LetMD TermBind (List TypeBind) {-Term-} Type Term Type
      | Let3 TermPath LetMD TermBind (List TypeBind) Term Type {-Term-} Type
      | Buffer1 TermPath BufferMD {-Term-} Type Term Type
@@ -88,8 +88,10 @@ data TypePath = Arrow1 TypePath ArrowMD Type | Arrow2 TypePath ArrowMD Type
      | TNeu1 TypePath TNeuMD (List TypeArg)
      | TNeu2 TypePath TNeuMD (List Change) Int -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
      | Buffer2 TermPath BufferMD Term {-Type-} Term Type
-     | Lambda1 TermPath LambdaMD TermBind Term
+     | Lambda2 TermPath LambdaMD TermBind {-Type-} Term
      | TLet1 TermPath TLetMD TypeBind (List TypeBind) Term Type
+
+data TermBindPath = Lambda1 LambdaMD {-TermBind-} Type Term
 
 
 -- TODO: move the below stuff into a separate file
