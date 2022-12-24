@@ -13,7 +13,6 @@ import Data.Map.Internal (Map(..), empty, lookup, insert, union)
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Util (hole)
 import Data.Functor (map)
-import TypeCraft.Purescript.CombinePaths (combineTermPaths)
 
 type MDContext = {
     indentation :: Int,
@@ -23,15 +22,11 @@ type MDContext = {
 
 --type PathInfo -- need to track a path for the cursor, and two paths for the selction.
 -- also, might consider deriving the cursor path from those two in that case?
-type PathInfo = {
-    aboveTerm :: TermPath,
-    intoTerm :: TermPath
-}
 
 -- TODO: put TermPath into TermRecValue, and then don't need the TermPath argument here!
 -- Problem: what if I really did just have a term, without a TermPath though? I should still be able to recurse over that.
 -- So what is the right design here?
-termToNode :: MDContext -> TermPath -> TermPath -> TermRecValue -> Node
+termToNode :: MDContext -> UpPath -> UpPath -> TermRecValue -> Node
 termToNode mdctx aboveTerm intoTerm term =
     let partialNode' = recTerm ({
       lambda : \md tbind@(TermBind {varName} x) ty body ->
@@ -39,8 +34,8 @@ termToNode mdctx aboveTerm intoTerm term =
         {
             dat : makeNodeData {indentation : if md.bodyIndented then Just mdctx.indentation else Nothing, isParenthesized: false, label: "lambda"}
             , kids: [
-                    termToNode mdctx' aboveTerm (Lambda3 intoTerm md tbind ty.ty) body
-                    , typeToNode mdctx' (Lambda2 (combineTermPaths aboveTerm intoTerm) md tbind body.term) hole ty
+                    termToNode mdctx' aboveTerm (Lambda3 md tbind ty.ty : intoTerm) body
+                    , typeToNode mdctx' (Lambda2 md tbind body.term : (aboveTerm <> intoTerm)) hole ty
                 ]
         }
     , app : \md t1 t2 argTy outTy -> hole
@@ -51,9 +46,9 @@ termToNode mdctx aboveTerm intoTerm term =
             dat : makeNodeData {indentation : hole, isParenthesized: false, label: "let"}
             , kids: [
 --                and the termBind
-                termToNode mdctx' aboveTerm (Let1 intoTerm md tbind tbinds defTy.ty body.term bodyTy) def
+                termToNode mdctx' aboveTerm (Let1 md tbind tbinds defTy.ty body.term bodyTy : intoTerm) def
 --                and the type
-                , termToNode mdctx' aboveTerm (Let3 intoTerm md tbind tbinds def.term defTy.ty bodyTy) body
+                , termToNode mdctx' aboveTerm (Let3 md tbind tbinds def.term defTy.ty bodyTy : intoTerm) body
             ]
         }
     , dataa : \md x tbinds ctrs body bodyTy -> hole
@@ -70,13 +65,13 @@ termToNode mdctx aboveTerm intoTerm term =
             , kids : [partialNode.kids]
             , getCursor :
                 if true
-                    then Just \_ -> initState $ initCursorMode $ TermCursor term.kctx term.ctx term.ty (combineTermPaths aboveTerm intoTerm) term.term -- Isn't this the same for every case?
+                    then Just \_ -> initState $ initCursorMode $ TermCursor term.kctx term.ctx term.ty (aboveTerm <> intoTerm) term.term -- Isn't this the same for every case?
                     else Nothing
             , getSelect : hole
             , style : hole
     }
 
-typeToNode :: MDContext -> TypePath -> TypePath -> TypeRecValue -> Node
+typeToNode :: MDContext -> UpPath -> UpPath -> TypeRecValue -> Node
 typeToNode mdctx above into {kctx, ctx, ty}
     = let partialNode = case ty of
             Arrow md ty1 ty2 -> hole
@@ -96,11 +91,11 @@ typeToNode mdctx above into {kctx, ctx, ty}
         , style : partialNode.style
     }
 
-ctrListToNode :: MDContext -> CtrListPath -> TypeContext -> TermContext -> List Constructor -> Node
+ctrListToNode :: MDContext -> UpPath -> TypeContext -> TermContext -> List Constructor -> Node
 ctrListToNode mdctx up kctx ctx ctrs = hole
 
-ctrToNode :: MDContext -> ConstructorPath -> TypeContext -> TermContext -> Constructor -> Node
+ctrToNode :: MDContext -> UpPath -> TypeContext -> TermContext -> Constructor -> Node
 ctrToNode mdctx up kctx ctx ctr = hole
 
-ctrParamToNode :: MDContext -> CtrParamPath -> TypeContext -> TermContext -> CtrParam -> Node
+ctrParamToNode :: MDContext -> UpPath -> TypeContext -> TermContext -> CtrParam -> Node
 ctrParamToNode mdctx up kctx ctx param = hole

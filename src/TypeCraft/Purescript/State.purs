@@ -11,8 +11,7 @@ import Data.Tuple.Nested (type (/\), (/\))
 import TypeCraft.Purescript.TermRec (TermRecValue)
 import TypeCraft.Purescript.TermRec (recTerm)
 import TypeCraft.Purescript.TermRec (TypeRecValue)
-import TypeCraft.Purescript.PathRec (recTermPath)
-import TypeCraft.Purescript.PathRec (recTypePath)
+import TypeCraft.Purescript.PathRec
 import Data.Maybe (Maybe)
 import Data.Maybe (Maybe(..))
 import Data.List (length)
@@ -62,74 +61,67 @@ This file will contain possible states for the editor
 data Clipboard = EmptyClip -- add more later, not priority yet
 
 data CursorLocation
-    = TermCursor TypeContext TermContext Type TermPath Term
-    | TypeCursor TypeContext TermContext TypePath Type -- add more later, for now this is fine
+    = TermCursor TypeContext TermContext Type UpPath Term
+    | TypeCursor TypeContext TermContext UpPath Type -- add more later, for now this is fine
 
 {-
 The TypeContext, TermContext, and Type are understood as being inside the second path.
 e.g. if the term selection is  path1[path2[term]], then the contexts and type given are for inside path2 and outside term.
 -}
--- TODO: PROBLEM: A TermPath always has a Top at the top of it. But, this doesn't really work for the middle
--- path in a selection?
 data Select
-    = TermSelect TypeContext TermContext Type TermPath TermPath Term
-    | TypeSelect TypeContext TermContext TypePath TypePath Type
+    = TermSelect TypeContext TermContext Type UpPath UpPath Term
+    | TypeSelect TypeContext TermContext UpPath UpPath Type
 
 
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor kctx ctx ty up term) =
     recTerm
         {
-            lambda: \md x ty body -> TermCursor body.kctx body.ctx body.ty (Lambda3 up md x ty.ty) body.term : Nil
-            , app: \md t1 t2 tyArg tyOut -> TermCursor t1.kctx t1.ctx t1.ty (App1 up md t2.term tyArg tyOut) t1.term
-                : TermCursor t2.kctx t2.ctx t2.ty (App2 up md t1.term tyArg tyOut) t2.term : Nil
+            lambda: \md x ty body -> TermCursor body.kctx body.ctx body.ty (Lambda3 md x ty.ty : up) body.term : Nil
+            , app: \md t1 t2 tyArg tyOut -> TermCursor t1.kctx t1.ctx t1.ty (App1 md t2.term tyArg tyOut : up) t1.term
+                : TermCursor t2.kctx t2.ctx t2.ty (App2 md t1.term tyArg tyOut : up) t2.term : Nil
             , var: \_ _ _ -> Nil
-            , lett: \md x tBinds def defTy body bodyTy -> TermCursor def.kctx def.ctx def.ty (Let1 up md x tBinds defTy.ty body.term bodyTy) def.term
-                : TypeCursor defTy.kctx defTy.ctx (Let2 up md x tBinds def.term body.term bodyTy) defTy.ty
-                : TermCursor body.kctx body.ctx body.ty (Let3 up md x tBinds def.term defTy.ty bodyTy) body.term : Nil
-            , dataa : \md x tbinds ctrs body bodyTy -> TermCursor body.kctx body.ctx body.ty (Data3 up md x tbinds ctrs.ctrs bodyTy) body.term: Nil
+            , lett: \md x tBinds def defTy body bodyTy -> TermCursor def.kctx def.ctx def.ty (Let1 md x tBinds defTy.ty body.term bodyTy : up) def.term
+                : TypeCursor defTy.kctx defTy.ctx (Let2 md x tBinds def.term body.term bodyTy : up) defTy.ty
+                : TermCursor body.kctx body.ctx body.ty (Let3 md x tBinds def.term defTy.ty bodyTy : up) body.term : Nil
+            , dataa : \md x tbinds ctrs body bodyTy -> TermCursor body.kctx body.ctx body.ty (Data3 md x tbinds ctrs.ctrs bodyTy : up) body.term: Nil
             , tlet : \md tbind tbinds def body bodyTy ->
                 -- Add TypeBindList child!
-                TypeCursor def.kctx def.ctx (TLet1 up md tbind tbinds body.term bodyTy) def.ty
-                : TermCursor body.kctx body.ctx body.ty (TLet2 up md tbind tbinds def.ty bodyTy) body.term
+                TypeCursor def.kctx def.ctx (TLet1 md tbind tbinds body.term bodyTy : up) def.ty
+                : TermCursor body.kctx body.ctx body.ty (TLet2 md tbind tbinds def.ty bodyTy : up) body.term
                 : Nil
-            , typeBoundary: \md c t -> TermCursor t.kctx t.ctx t.ty (TypeBoundary1 up md c) t.term : Nil
-            , contextBoundary: \md x c t -> TermCursor t.kctx t.ctx t.ty (ContextBoundary1 up md x c) t.term : Nil
+            , typeBoundary: \md c t -> TermCursor t.kctx t.ctx t.ty (TypeBoundary1 md c : up) t.term : Nil
+            , contextBoundary: \md x c t -> TermCursor t.kctx t.ctx t.ty (ContextBoundary1 md x c : up) t.term : Nil
             , hole: \md -> Nil
             , buffer: \md def defTy body bodyTy -> Nil
         }
         {kctx, ctx, ty, term}
 getCursorChildren (TypeCursor kctx ctx up (Arrow md t1 t2)) =
-    TypeCursor kctx ctx (Arrow1 up md t2) t1 : TypeCursor kctx ctx (Arrow2 up md t1) t2 : Nil
+    TypeCursor kctx ctx (Arrow1 md t2 : up) t1 : TypeCursor kctx ctx (Arrow2 md t1 : up) t2 : Nil
+-- TODO: add TNeu case, which just has no children!
 getCursorChildren (TypeCursor kctx ctx up _) = hole
 
 -- the Int is what'th child the input is of the output
-up :: CursorLocation -> Maybe (CursorLocation /\ Int)
-up (TermCursor kctx ctx ty termPath term) =
+parent :: CursorLocation -> Maybe (CursorLocation /\ Int)
+parent (TermCursor kctx ctx ty (tooth : up) term) =
     recTermPath
         {
-            let1: \up md bind tbinds defTy body bodyTy ->
-                Just $ TermCursor up.kctx up.ctx up.ty up.termPath (Let md bind tbinds term defTy.ty body.term bodyTy) /\ (1 - 1)
-            , let3: \up md bind tbinds def defTy bodyTy ->
-                Just $ TermCursor up.kctx up.ctx up.ty up.termPath (Let md bind tbinds def.term defTy.ty term bodyTy) /\ (3 - 1)
-            , data3: \up md bind tbinds ctrs bodyTy ->
-                Just $ TermCursor up.kctx up.ctx up.ty up.termPath (Data md bind tbinds ctrs term bodyTy) /\ 0 -- for now, since the other children of Data aren't implemented
+            let1: \upRec md bind tbinds defTy body bodyTy ->
+                Just $ TermCursor upRec.kctx upRec.ctx upRec.ty up (Let md bind tbinds term defTy.ty body.term bodyTy) /\ (1 - 1)
+            , let3: \upRec md bind tbinds def defTy bodyTy ->
+                Just $ TermCursor upRec.kctx upRec.ctx upRec.ty up (Let md bind tbinds def.term defTy.ty term bodyTy) /\ (3 - 1)
+            , data3: \upRec md bind tbinds ctrs bodyTy ->
+                Just $ TermCursor upRec.kctx upRec.ctx upRec.ty up (Data md bind tbinds ctrs term bodyTy) /\ 0 -- for now, since the other children of Data aren't implemented
             , top: Nothing
         }
-        {kctx, ctx, ty, termPath}
-up (TypeCursor kctx ctx typePath ty) =
-    recTypePath
-        {
-            arrow1: \up md tOut ->
-                Just $ TypeCursor up.kctx up.ctx up.typePath (Arrow md ty tOut.ty) /\ (1 - 1)
-            , arrow2: \up md tIn ->
-                Just $ TypeCursor up.kctx up.ctx up.typePath (Arrow md tIn.ty ty) /\ (2 - 1)
-            , let2: \up md bind tbinds def body bodyTy ->
-                Just $ TermCursor up.kctx up.ctx up.ty up.termPath (Let md bind tbinds def.term ty body.term bodyTy) /\ (2 - 1)
-
-        }
-        {kctx, ctx, ty, typePath}
-up _ = hole
+        {kctx, ctx, ty} tooth
+parent (TypeCursor kctx ctx (Arrow1 md tOut : up) ty) =
+    Just $ TypeCursor kctx ctx up (Arrow md ty tOut) /\ (1 - 1)
+parent (TypeCursor kctx ctx (Arrow2 md tIn : up) ty) =
+    Just $ TypeCursor kctx ctx up (Arrow md tIn ty) /\ (2 - 1)
+parent (TypeCursor kctx ctx (Let2 md bind tbinds def body bodyTy : up) ty) =
+    Just $ TermCursor kctx ctx ty up(Let md bind tbinds def ty body bodyTy) /\ (2 - 1)
+parent _ = hole
 
 stepCursorForwards :: CursorLocation -> CursorLocation
 stepCursorForwards cursor = stepCursorForwardsImpl 0 cursor
@@ -139,7 +131,7 @@ stepCursorForwardsImpl childrenSkip cursor =
     let children = getCursorChildren cursor in
     case index children childrenSkip of
     Just child -> child
-    Nothing -> case up cursor of
+    Nothing -> case parent cursor of
                Just (parent /\ index) -> stepCursorForwardsImpl (index + 1) parent
                Nothing -> cursor -- couldn't move cursor anywhere: no parent or children
 
