@@ -72,7 +72,6 @@ data Select
     = TermSelect TypeContext TermContext Type UpPath UpPath Term
     | TypeSelect TypeContext TermContext UpPath UpPath Type
 
-
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor kctx ctx ty up term) =
     recTerm
@@ -103,6 +102,7 @@ getCursorChildren (TypeCursor kctx ctx up _) = hole
 
 -- the Int is what'th child the input is of the output
 parent :: CursorLocation -> Maybe (CursorLocation /\ Int)
+parent (TermCursor kctx ctx ty Nil term) = Nothing
 parent (TermCursor kctx ctx ty (tooth : up) term) =
     recTermPath
         {
@@ -112,7 +112,6 @@ parent (TermCursor kctx ctx ty (tooth : up) term) =
                 Just $ TermCursor upRec.kctx upRec.ctx upRec.ty up (Let md bind tbinds def.term defTy.ty term bodyTy) /\ (3 - 1)
             , data3: \upRec md bind tbinds ctrs bodyTy ->
                 Just $ TermCursor upRec.kctx upRec.ctx upRec.ty up (Data md bind tbinds ctrs term bodyTy) /\ 0 -- for now, since the other children of Data aren't implemented
-            , top: Nothing
         }
         {kctx, ctx, ty} tooth
 parent (TypeCursor kctx ctx (Arrow1 md tOut : up) ty) =

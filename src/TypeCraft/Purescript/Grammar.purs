@@ -48,6 +48,19 @@ data ChangeParam = ChangeParam Change | PlusParam Type | MinusParam Type
 data KindChange = KCArrow KindChange | KCType
      | KPlus KindChange | KMinus KindChange
 
+
+{-
+The following is a list of the grammatical sorts within this editor:
+Term, Type, (List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
+Constructor, CtrParam, TypeArg, TypeBind, TermBind
+Each of these has a type of terms and of paths.
+The type <thing>Path is the set of possible paths when the cursor is on a <thing>
+-}
+data Syntax =
+    STerm Term | SType Type | SCtrList (List Constructor) | SCtrParamList (List CtrParam)
+    | TypeArgList (List TypeArg) | TypeBindList (List TypeBind) | SConstructor Constructor
+    | SCtrParam CtrParam | STypeArg TypeArg | STypeBind TypeBind | STermBind TermBind
+
 -- If Term has a constructor named <name>, then here a constructor named <name>n
 -- refers to a zipper path piece with a hole as the nth term in that constructor.
 -- Can tell what path is up by what type the constructor name came from
@@ -89,15 +102,8 @@ data Tooth =
     -- TODO: Add Let 1, rename other let paths
 
 type UpPath = List Tooth
+type DownPath = List Tooth
 
-
-{-
-The following is a list of the grammatical sorts within this editor:
-Term, Type, (List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
-Constructor, CtrParam, TypeArg, TypeBind, TermBind
-Each of these has a type of terms and of paths.
-The type <thing>Path is the set of possible paths when the cursor is on a <thing>
--}
 
 
 

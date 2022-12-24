@@ -33,7 +33,6 @@ type TermPathRec a = {
       let1 :: TermPathRecValue -> LetMD -> TermBind -> List TypeBind -> TypeRecValue -> TermRecValue -> Type -> a
     , let3 :: TermPathRecValue -> LetMD -> TermBind -> List TypeBind -> TermRecValue -> TypeRecValue -> Type -> a
     , data3 :: TermPathRecValue -> GADTMD -> TypeBind -> List TypeBind -> List Constructor -> Type -> a
-    , top :: a
 }
 
 recTermPath :: forall a. TermPathRec a -> TermPathRecValue -> Tooth -> a
