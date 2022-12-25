@@ -24,7 +24,6 @@ import TypeCraft.Purescript.TermRec (TermRecValue)
 import TypeCraft.Purescript.TermRec (TypeRecValue)
 
 type TermPathRecValue = {kctx :: TypeContext, ctx :: TermContext, ty :: Type}
-type TypePathRecValue = {kctx :: TypeContext, ctx :: TermContext, ty:: Type}
 -- TypePathRecValue needs ctx and ty so that when it gets up to a TermPath (e.g. in Let2), it knows the context and type
 
 -- TODO: in the future, when I implement editing lists of constructors and stuff, more things will need to be
