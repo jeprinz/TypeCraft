@@ -66,15 +66,15 @@ typePathToNode mdctx belowInfo kctx ctx ty path@(tooth : teeth) innerNode =
         , style : hole
     } in
     case tooth of
-        Let2 md tbind tbinds def {-type-} body bodyTy ->
+        Let3 md tbind tbinds def {-type-} body bodyTy ->
             let mdctx' = hole in
             let innerNode' = makeNode' {
                 dat : hole
                 , kids : [
-                    termToNode mdctx' (AICursor (Let1 md tbind tbinds (bIGetTerm belowInfo) body bodyTy : teeth))
+                    termToNode mdctx' defaultMDType (AICursor (Let2 md tbind tbinds (bIGetTerm belowInfo) body bodyTy : teeth))
                         {kctx, ctx, ty, term: def}
                     , innerNode
-                    , termToNode mdctx' (AICursor (Let3 md tbind tbinds def (bIGetTerm belowInfo) bodyTy : teeth))
+                    , termToNode mdctx' defaultMDType (AICursor (Let4 md tbind tbinds def (bIGetTerm belowInfo) bodyTy : teeth))
                         {kctx, ctx, ty, term: body}
                 ]
             } in termPathToNode mdctx' (BITerm (Let md tbind tbinds def (bIGetTerm belowInfo) body bodyTy)) {kctx, ctx, ty} teeth innerNode'

@@ -63,6 +63,7 @@ data Clipboard = EmptyClip -- add more later, not priority yet
 data CursorLocation
     = TermCursor TypeContext TermContext Type UpPath Term
     | TypeCursor TypeContext TermContext UpPath Type -- add more later, for now this is fine
+    | TermBindCursor TypeContext TermContext UpPath TermBind -- add more later, for now this is fine
 
 {-
 The TypeContext, TermContext, and Type are understood as being inside the second path.
@@ -80,9 +81,9 @@ getCursorChildren (TermCursor kctx ctx ty up term) =
             , app: \md t1 t2 tyArg tyOut -> TermCursor t1.kctx t1.ctx t1.ty (App1 md t2.term tyArg tyOut : up) t1.term
                 : TermCursor t2.kctx t2.ctx t2.ty (App2 md t1.term tyArg tyOut : up) t2.term : Nil
             , var: \_ _ _ -> Nil
-            , lett: \md x tBinds def defTy body bodyTy -> TermCursor def.kctx def.ctx def.ty (Let1 md x tBinds defTy.ty body.term bodyTy : up) def.term
-                : TypeCursor defTy.kctx defTy.ctx (Let2 md x tBinds def.term body.term bodyTy : up) defTy.ty
-                : TermCursor body.kctx body.ctx body.ty (Let3 md x tBinds def.term defTy.ty bodyTy : up) body.term : Nil
+            , lett: \md x tBinds def defTy body bodyTy -> TermCursor def.kctx def.ctx def.ty (Let2 md x tBinds defTy.ty body.term bodyTy : up) def.term
+                : TypeCursor defTy.kctx defTy.ctx (Let3 md x tBinds def.term body.term bodyTy : up) defTy.ty
+                : TermCursor body.kctx body.ctx body.ty (Let4 md x tBinds def.term defTy.ty bodyTy : up) body.term : Nil
             , dataa : \md x tbinds ctrs body bodyTy -> TermCursor body.kctx body.ctx body.ty (Data3 md x tbinds ctrs.ctrs bodyTy : up) body.term: Nil
             , tlet : \md tbind tbinds def body bodyTy ->
                 -- Add TypeBindList child!
@@ -99,6 +100,7 @@ getCursorChildren (TypeCursor kctx ctx up (Arrow md t1 t2)) =
     TypeCursor kctx ctx (Arrow1 md t2 : up) t1 : TypeCursor kctx ctx (Arrow2 md t1 : up) t2 : Nil
 -- TODO: add TNeu case, which just has no children!
 getCursorChildren (TypeCursor kctx ctx up _) = hole
+getCursorChildren (TermBindCursor _ _ _ _) = Nil
 
 -- the Int is what'th child the input is of the output
 parent :: CursorLocation -> Maybe (CursorLocation /\ Int)
@@ -118,7 +120,7 @@ parent (TypeCursor kctx ctx (Arrow1 md tOut : up) ty) =
     Just $ TypeCursor kctx ctx up (Arrow md ty tOut) /\ (1 - 1)
 parent (TypeCursor kctx ctx (Arrow2 md tIn : up) ty) =
     Just $ TypeCursor kctx ctx up (Arrow md tIn ty) /\ (2 - 1)
-parent (TypeCursor kctx ctx (Let2 md bind tbinds def body bodyTy : up) ty) =
+parent (TypeCursor kctx ctx (Let3 md bind tbinds def body bodyTy : up) ty) =
     Just $ TermCursor kctx ctx ty up(Let md bind tbinds def ty body bodyTy) /\ (2 - 1)
 parent _ = hole
 

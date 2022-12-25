@@ -70,8 +70,8 @@ data Tooth =
       App1 AppMD {-Term-} Term Type Type
     | App2 AppMD Term {-Term-} Type Type
     | Lambda3 LambdaMD TermBind Type {-Term-}
-    | Let1 LetMD TermBind (List TypeBind) {-Term-} Type Term Type
-    | Let3 LetMD TermBind (List TypeBind) Term Type {-Term-} Type
+    | Let2 LetMD TermBind (List TypeBind) {-Term-} Type Term Type
+    | Let4 LetMD TermBind (List TypeBind) Term Type {-Term-} Type
     | Buffer1 BufferMD {-Term-} Type Term Type
     | Buffer3 BufferMD Term Type {-Term-} Type
     | TypeBoundary1 TypeBoundaryMD Change {-Term-}
@@ -81,7 +81,7 @@ data Tooth =
     -- TypePath
     | Arrow1 ArrowMD Type -- up TypePath
     | Arrow2 ArrowMD Type -- up TypePath
-    | Let2 LetMD TermBind (List TypeBind) Term {-Type-} Term Type -- up TermPath
+    | Let3 LetMD TermBind (List TypeBind) Term {-Type-} Term Type -- up TermPath
     | TNeu1 TNeuMD (List TypeArg) -- up TypePath
      -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
     | TNeu2 TNeuMD (List Change) Int -- up TypePath
@@ -100,6 +100,7 @@ data Tooth =
     | CtrParamListCons1 CtrParam (List CtrParam) -- up CtrParamListPath
     -- TermBindPath
     | Lambda1 LambdaMD {-TermBind-} Type Term -- up TermPath
+    | Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term Type
     -- TODO: Add Let 1, rename other let paths
 
 type UpPath = List Tooth

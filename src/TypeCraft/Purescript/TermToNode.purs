@@ -13,11 +13,19 @@ import Data.Map.Internal (Map(..), empty, lookup, insert, union)
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Util (hole)
 
+-- TODO: put in Context.purs
 type MDContext = {
-    indentation :: Int,
+    indentation :: Int, -- TODO: hopefully the frontend can handle this instead
     termVarNames :: Map TermVarID String,
     typeVarNames :: Map TypeVarID String
 }
+
+-- term metadata that is per-term, as opposed to MDContext which is more accumulative
+type MDType = {
+    onLeftOfApp :: Boolean -- needs to be in MDContext, because it needs to be in the state: if I have select the left of an app, then the term inside needs to know that when its rendered
+}
+
+defaultMDType = {onLeftOfApp : false}
 
 data AboveInfo = AICursor UpPath | AISelect UpPath UpPath -- top path, then middle path
 
@@ -29,35 +37,46 @@ aIOnlyCursor :: AboveInfo -> AboveInfo
 aIOnlyCursor (AICursor path) = AICursor path
 aIOnlyCursor (AISelect topPath middlePath) = AICursor (middlePath <> topPath)
 
+aIGetPath :: AboveInfo -> UpPath
+aIGetPath (AICursor path) = path
+aIGetPath (AISelect top middle) = middle <> top
+
 --type AboveInfo -- need to track a path for the cursor, and two paths for the selction.
 -- also, might consider deriving the cursor path from those two in that case?
 
 -- TODO: put TermPath into TermRecValue, and then don't need the TermPath argument here!
 -- Problem: what if I really did just have a term, without a TermPath though? I should still be able to recurse over that.
 -- So what is the right design here?
-termToNode :: MDContext -> AboveInfo -> TermRecValue -> Node
-termToNode mdctx aboveInfo term =
+termToNode :: MDContext -> MDType -> AboveInfo -> TermRecValue -> Node
+termToNode mdctx mdType aboveInfo term =
     let partialNode' = recTerm ({
       lambda : \md tbind@(TermBind {varName} x) ty body ->
         let mdctx' = mdctx {termVarNames = insert x varName mdctx.termVarNames} in -- TODO: something something indentation
         {
-            dat : makeNodeData {indentation : if md.bodyIndented then Just mdctx.indentation else Nothing, isParenthesized: false, label: "lambda"}
+            dat : makeNodeData {indentation : if md.bodyIndented then Just mdctx.indentation else Nothing, isParenthesized: mdType.onLeftOfApp, label: "Lambda"}
             , kids: [
-                    termToNode mdctx' (stepAI (Lambda3 md tbind ty.ty) aboveInfo) body
+                    termToNode mdctx' defaultMDType (stepAI (Lambda3 md tbind ty.ty) aboveInfo) body
                     , typeToNode mdctx' (stepAI (Lambda2 md tbind body.term) (aIOnlyCursor aboveInfo)) ty
                 ]
         }
-    , app : \md t1 t2 argTy outTy -> hole
+    , app : \md t1 t2 argTy outTy ->
+        {
+            dat : makeNodeData {indentation : hole, isParenthesized: mdType.onLeftOfApp, label: "App"} -- TODO: seems like there will be some redundancy in parenthesization logic?
+            , kids: [
+                termToNode mdctx defaultMDType{onLeftOfApp= true} (stepAI (App1 md t2.term argTy outTy) aboveInfo) t1
+                , termToNode mdctx defaultMDType (stepAI (App2 md t2.term argTy outTy) aboveInfo) t2
+            ]
+        }
     , var : \md x targs -> hole
     , lett : \md tbind@(TermBind {varName} x) tbinds def defTy body bodyTy ->
         let mdctx' = mdctx {termVarNames = insert x varName mdctx.termVarNames} in
         {
-            dat : makeNodeData {indentation : hole, isParenthesized: false, label: "let"}
+            dat : makeNodeData {indentation : hole, isParenthesized: mdType.onLeftOfApp, label: "Let"}
             , kids: [
 --                and the termBind
-                termToNode mdctx' (stepAI (Let1 md tbind tbinds defTy.ty body.term bodyTy) aboveInfo) def
---                and the type
-                , termToNode mdctx' (stepAI (Let3 md tbind tbinds def.term defTy.ty bodyTy) aboveInfo) body
+                termToNode mdctx' defaultMDType (stepAI (Let2 md tbind tbinds defTy.ty body.term bodyTy) aboveInfo) def
+                , typeToNode mdctx (stepAI (Let3 md tbind tbinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
+                , termToNode mdctx' defaultMDType (stepAI (Let4 md tbind tbinds def.term defTy.ty bodyTy) aboveInfo) body
             ]
         }
     , dataa : \md x tbinds ctrs body bodyTy -> hole
@@ -72,11 +91,7 @@ termToNode mdctx aboveInfo term =
     makeNode {
             dat: partialNode.dat
             , kids : [partialNode.kids]
-            , getCursor :
-                let abovePath = case aboveInfo of
-                                    AICursor path -> path
-                                    AISelect top middle -> middle <> top
-                in Just \_ -> initState $ initCursorMode $ TermCursor term.kctx term.ctx term.ty abovePath term.term
+            , getCursor : Just \_ -> initState $ initCursorMode $ TermCursor term.kctx term.ctx term.ty (aIGetPath aboveInfo) term.term
             , getSelect : hole
             , style : hole
     }
@@ -109,3 +124,12 @@ ctrToNode mdctx up kctx ctx ctr = hole
 
 ctrParamToNode :: MDContext -> UpPath -> TypeContext -> TermContext -> CtrParam -> Node
 ctrParamToNode mdctx up kctx ctx param = hole
+
+termBindToNode :: MDContext  -> TypeContext -> TermContext -> AboveInfo -> TermBind -> Node
+termBindToNode mdctx kctx ctx aboveInfo tbind@(TermBind md x) = makeNode {
+    dat : makeNodeData {indentation: hole, isParenthesized: false, label: "TypeBind"}
+    , kids: []
+    , getCursor : Just \_ -> initState $ initCursorMode $ TermBindCursor kctx ctx (aIGetPath aboveInfo) tbind
+    , getSelect: Nothing
+    , style: makeNormalNodeStyle
+}
