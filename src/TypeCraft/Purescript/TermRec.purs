@@ -38,7 +38,7 @@ Likewise, it is only necessary to have RecValues for parts of the syntax where s
 -- So pathRec will need to have a path to the bottom!?
 
 type TermRec a = {
-      lambda :: LambdaMD -> TermBind -> TypeRecValue -> TermRecValue -> a
+      lambda :: LambdaMD -> TermBind -> TypeRecValue -> TermRecValue -> Type -> a
     , app :: AppMD -> TermRecValue -> TermRecValue -> Type -> Type -> a
     , var :: VarMD -> TermVarID -> List TypeArg -> a
     , lett :: LetMD -> TermBind -> List TypeBind -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
@@ -51,11 +51,13 @@ type TermRec a = {
 }
 
 recTerm :: forall a. TermRec a -> TermRecValue -> a
-recTerm args {kctx, ctx, ty: (Arrow _ ty1 ty2), term : (Lambda md bind@(TermBind _ x) xty body)}
+recTerm args {kctx, ctx, ty: (Arrow _ ty1 ty2), term : (Lambda md bind@(TermBind _ x) xty body bodyTy)}
     = if not (ty1 == xty) then unsafeThrow "dynamic type error detected" else
+      if not (ty2 == bodyTy) then unsafeThrow "dynamic type error detected" else
         args.lambda md bind
             {kctx: kctx, ctx, ty: xty}
             {kctx: kctx, ctx: (insert x ty1 ctx), ty: ty2, term : body}
+            ty2
 recTerm args {kctx, ctx, ty: tyOut, term : (App md t1 t2 tyArg tyOut')}
     = if not (tyOut == tyOut') then unsafeThrow "dynamic type error: shouldn't happen" else
         args.app md {kctx, ctx, ty: Arrow defaultArrowMD tyArg tyOut, term: t1}

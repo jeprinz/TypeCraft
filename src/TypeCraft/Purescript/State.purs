@@ -77,7 +77,7 @@ getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor kctx ctx ty up term) =
     recTerm
         {
-            lambda: \md x ty body -> TermCursor body.kctx body.ctx body.ty (Lambda3 md x ty.ty : up) body.term : Nil
+            lambda: \md x ty body bodyTy -> TermCursor body.kctx body.ctx body.ty (Lambda3 md x ty.ty bodyTy : up) body.term : Nil
             , app: \md t1 t2 tyArg tyOut -> TermCursor t1.kctx t1.ctx t1.ty (App1 md t2.term tyArg tyOut : up) t1.term
                 : TermCursor t2.kctx t2.ctx t2.ty (App2 md t1.term tyArg tyOut : up) t2.term : Nil
             , var: \_ _ _ -> Nil

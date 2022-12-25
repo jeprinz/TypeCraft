@@ -21,7 +21,7 @@ type TypeVarID = Int
 data Type = Arrow ArrowMD Type Type | THole THoleMD TypeHoleID | TNeu TNeuMD TypeVarID (List TypeArg)
 data TypeArg = TypeArg TypeArgMD Type
 data Term = App AppMD Term Term Type Type -- The type of the argument, then the type of the output
-          | Lambda LambdaMD TermBind Type Term -- NOTE: if we do no-lambda-left-of-app, then the Type here is unecessary!
+          | Lambda LambdaMD TermBind Type Term Type -- first Type is arg, second is type of body
           | Var VarMD TermVarID (List TypeArg) {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}
           | Let LetMD TermBind (List TypeBind) Term Type Term Type
           | Data GADTMD TypeBind (List TypeBind) (List Constructor) Term Type
@@ -69,7 +69,7 @@ data Tooth =
     -- TermPath (all ups are TermPaths)
       App1 AppMD {-Term-} Term Type Type
     | App2 AppMD Term {-Term-} Type Type
-    | Lambda3 LambdaMD TermBind Type {-Term-}
+    | Lambda3 LambdaMD TermBind Type {-Term-} Type
     | Let2 LetMD TermBind (List TypeBind) {-Term-} Type Term Type
     | Let4 LetMD TermBind (List TypeBind) Term Type {-Term-} Type
     | Buffer1 BufferMD {-Term-} Type Term Type
@@ -86,7 +86,7 @@ data Tooth =
      -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
     | TNeu2 TNeuMD (List Change) Int -- up TypePath
     | Buffer2 BufferMD Term {-Type-} Term Type -- up TermPath
-    | Lambda2 LambdaMD TermBind {-Type-} Term -- up TermPath
+    | Lambda2 LambdaMD TermBind {-Type-} Term Type -- up TermPath
     | TLet1 TLetMD TypeBind (List TypeBind) Term Type -- up TermPath
     -- CtrListPath
     | Data1 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type -- up TermPath

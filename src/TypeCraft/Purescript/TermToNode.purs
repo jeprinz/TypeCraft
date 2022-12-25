@@ -50,13 +50,13 @@ aIGetPath (AISelect top middle) = middle <> top
 termToNode :: MDContext -> MDType -> AboveInfo -> TermRecValue -> Node
 termToNode mdctx mdType aboveInfo term =
     let partialNode' = recTerm ({
-      lambda : \md tbind@(TermBind {varName} x) ty body ->
+      lambda : \md tbind@(TermBind {varName} x) ty body bodyTy ->
         let mdctx' = mdctx {termVarNames = insert x varName mdctx.termVarNames} in -- TODO: something something indentation
         {
             dat : makeNodeData {indentation : if md.bodyIndented then Just mdctx.indentation else Nothing, isParenthesized: mdType.onLeftOfApp, label: "Lambda"}
             , kids: [
-                    termToNode mdctx' defaultMDType (stepAI (Lambda3 md tbind ty.ty) aboveInfo) body
-                    , typeToNode mdctx' (stepAI (Lambda2 md tbind body.term) (aIOnlyCursor aboveInfo)) ty
+                    termToNode mdctx' defaultMDType (stepAI (Lambda3 md tbind ty.ty bodyTy) aboveInfo) body
+                    , typeToNode mdctx' (stepAI (Lambda2 md tbind body.term bodyTy) (aIOnlyCursor aboveInfo)) ty
                 ]
         }
     , app : \md t1 t2 argTy outTy ->

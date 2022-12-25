@@ -69,12 +69,14 @@ chTerm kctx ctx c t =
                         in case tryPolymorhpismCase  of
                            Just res -> res
                            Nothing -> xChange /\ Var md x (unsafeThrow "need to deal with params!") -- if the polymorhpism case didn't apply, simply return the change and leave the variable as is
-            (CArrow c1 c2) /\ (Lambda md x ty t) ->
+            (CArrow c1 c2) /\ (Lambda md x ty t bodyTy) ->
                 if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen" else
+                if not (bodyTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen" else
                 let c2' /\ t' = chTerm kctx (ctxLambdaCons ctx x (VarTypeChange c1)) c2 t in
-                (CArrow (tyInject (snd (getEndpoints c1))) c2') /\ Lambda md x (snd (getEndpoints c1)) t'
-            (Minus ty1 c) /\ (Lambda md x ty2 t) ->
+                (CArrow (tyInject (snd (getEndpoints c1))) c2') /\ Lambda md x (snd (getEndpoints c1)) t' (snd (getEndpoints c2))
+            (Minus ty1 c) /\ (Lambda md x ty2 t bodyTy) ->
                 if not (ty1 == ty2) then unsafeThrow "shouldn't happen" else
+                if not (bodyTy == fst (getEndpoints c)) then unsafeThrow "shouldn't happen" else
                 let c2' /\ t' = chTerm kctx (ctxLambdaCons ctx x VarDelete) c t in
                 (Minus ty1 c2') /\ t'
             (Plus ty c) /\ t ->
