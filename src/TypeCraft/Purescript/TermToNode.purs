@@ -21,11 +21,12 @@ type MDContext = {
 }
 
 -- term metadata that is per-term, as opposed to MDContext which is more accumulative
-type MDType = {
-    onLeftOfApp :: Boolean -- needs to be in MDContext, because it needs to be in the state: if I have select the left of an app, then the term inside needs to know that when its rendered
+type MDType = { -- needs to be in MDContext, because it needs to be in the state: if I have select the left of an app, then the term inside needs to know that when its rendered
+    onLeftOfApp :: Boolean
+    , onRightOfApp :: Boolean
 }
 
-defaultMDType = {onLeftOfApp : false}
+defaultMDType = {onLeftOfApp : false, onRightOfApp : false}
 
 data AboveInfo = AICursor UpPath | AISelect UpPath UpPath -- top path, then middle path
 
@@ -55,16 +56,17 @@ termToNode mdctx mdType aboveInfo term =
         {
             dat : makeNodeData {indentation : if md.bodyIndented then Just mdctx.indentation else Nothing, isParenthesized: mdType.onLeftOfApp, label: "Lambda"}
             , kids: [
-                    termToNode mdctx' defaultMDType (stepAI (Lambda3 md tbind ty.ty bodyTy) aboveInfo) body
+                    termBindToNode mdctx' term.kctx term.ctx (stepAI (Lambda1 md ty.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tbind
                     , typeToNode mdctx' (stepAI (Lambda2 md tbind body.term bodyTy) (aIOnlyCursor aboveInfo)) ty
+                    , termToNode mdctx' defaultMDType (stepAI (Lambda3 md tbind ty.ty bodyTy) aboveInfo) body
                 ]
         }
     , app : \md t1 t2 argTy outTy ->
         {
-            dat : makeNodeData {indentation : hole, isParenthesized: mdType.onLeftOfApp, label: "App"} -- TODO: seems like there will be some redundancy in parenthesization logic?
+            dat : makeNodeData {indentation : hole, isParenthesized: mdType.onRightOfApp, label: "App"} -- TODO: seems like there will be some redundancy in parenthesization logic?
             , kids: [
                 termToNode mdctx defaultMDType{onLeftOfApp= true} (stepAI (App1 md t2.term argTy outTy) aboveInfo) t1
-                , termToNode mdctx defaultMDType (stepAI (App2 md t2.term argTy outTy) aboveInfo) t2
+                , termToNode mdctx defaultMDType{onRightOfApp= true} (stepAI (App2 md t2.term argTy outTy) aboveInfo) t2
             ]
         }
     , var : \md x targs -> hole

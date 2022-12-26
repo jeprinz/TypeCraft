@@ -99,7 +99,7 @@ data Tooth =
     -- CtrParamPath
     | CtrParamListCons1 CtrParam (List CtrParam) -- up CtrParamListPath
     -- TermBindPath
-    | Lambda1 LambdaMD {-TermBind-} Type Term -- up TermPath
+    | Lambda1 LambdaMD {-TermBind-} Type Term Type -- up TermPath
     | Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term Type
     -- TODO: Add Let 1, rename other let paths
 

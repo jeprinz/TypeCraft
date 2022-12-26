@@ -29,21 +29,21 @@ type TermPathRecValue = {kctx :: TypeContext, ctx :: TermContext, ty :: Type}
 -- TODO: in the future, when I implement editing lists of constructors and stuff, more things will need to be
 -- <thing>RecValue instead of just <thing>
 type TermPathRec a = {
-      let1 :: TermPathRecValue -> LetMD -> TermBind -> List TypeBind -> TypeRecValue -> TermRecValue -> Type -> a
-    , let3 :: TermPathRecValue -> LetMD -> TermBind -> List TypeBind -> TermRecValue -> TypeRecValue -> Type -> a
+      let2 :: TermPathRecValue -> LetMD -> TermBind -> List TypeBind -> TypeRecValue -> TermRecValue -> Type -> a
+    , let4 :: TermPathRecValue -> LetMD -> TermBind -> List TypeBind -> TermRecValue -> TypeRecValue -> Type -> a
     , data3 :: TermPathRecValue -> GADTMD -> TypeBind -> List TypeBind -> List Constructor -> Type -> a
 }
 
 recTermPath :: forall a. TermPathRec a -> TermPathRecValue -> Tooth -> a
 recTermPath args {kctx, ctx, ty} (Let2 md bind@(TermBind _ x) tBinds defTy body bodyTy) =
     if not (ty == defTy) then unsafeThrow "dynamic type error detected" else
-    args.let1 {kctx, ctx: delete x ctx, ty: bodyTy} md bind tBinds
+    args.let2 {kctx, ctx: delete x ctx, ty: bodyTy} md bind tBinds
         {kctx, ctx, ty: defTy} -- defTy
         {kctx, ctx, ty: bodyTy, term: body} -- body
         bodyTy -- bodyTy
 recTermPath args {kctx, ctx, ty} (Let4 md bind@(TermBind _ x) tBinds def defTy bodyTy) =
     if not (ty == bodyTy) then unsafeThrow "dynamic type error detedted" else
-    args.let3 {kctx, ctx: delete x ctx, ty: ty} md bind tBinds
+    args.let4 {kctx, ctx: delete x ctx, ty: ty} md bind tBinds
         {kctx, ctx, ty: defTy, term: def} --def
         {kctx, ctx, ty: defTy} -- defTy
         bodyTy -- bodyTy

@@ -108,9 +108,9 @@ parent (TermCursor kctx ctx ty Nil term) = Nothing
 parent (TermCursor kctx ctx ty (tooth : up) term) =
     recTermPath
         {
-            let1: \upRec md bind tbinds defTy body bodyTy ->
+            let2: \upRec md bind tbinds defTy body bodyTy ->
                 Just $ TermCursor upRec.kctx upRec.ctx upRec.ty up (Let md bind tbinds term defTy.ty body.term bodyTy) /\ (1 - 1)
-            , let3: \upRec md bind tbinds def defTy bodyTy ->
+            , let4: \upRec md bind tbinds def defTy bodyTy ->
                 Just $ TermCursor upRec.kctx upRec.ctx upRec.ty up (Let md bind tbinds def.term defTy.ty term bodyTy) /\ (3 - 1)
             , data3: \upRec md bind tbinds ctrs bodyTy ->
                 Just $ TermCursor upRec.kctx upRec.ctx upRec.ty up (Data md bind tbinds ctrs term bodyTy) /\ 0 -- for now, since the other children of Data aren't implemented
