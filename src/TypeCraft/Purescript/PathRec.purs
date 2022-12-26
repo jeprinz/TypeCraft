@@ -23,7 +23,7 @@ import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.TermRec (TermRecValue)
 import TypeCraft.Purescript.TermRec (TypeRecValue)
 
-type TermPathRecValue = {kctx :: TypeContext, ctx :: TermContext, ty :: Type}
+type TermPathRecValue = {mdkctx :: MDTypeContext, mdctx :: MDTermContext, mdty :: MDType, kctx :: TypeContext, ctx :: TermContext, ty :: Type}
 -- TypePathRecValue needs ctx and ty so that when it gets up to a TermPath (e.g. in Let3), it knows the context and type
 
 -- TODO: in the future, when I implement editing lists of constructors and stuff, more things will need to be
@@ -35,11 +35,11 @@ type TermPathRec a = {
 }
 
 recTermPath :: forall a. TermPathRec a -> TermPathRecValue -> Tooth -> a
-recTermPath args {kctx, ctx, ty} (Let2 md bind@(TermBind _ x) tBinds defTy body bodyTy) =
+recTermPath args {mdkctx, mdctx, kctx, ctx, ty} (Let2 md bind@(TermBind _ x) tBinds defTy body bodyTy) =
     if not (ty == defTy) then unsafeThrow "dynamic type error detected" else
-    args.let2 {kctx, ctx: delete x ctx, ty: bodyTy} md bind tBinds
-        {kctx, ctx, ty: defTy} -- defTy
-        {kctx, ctx, ty: bodyTy, term: body} -- body
+    args.let2 {mdkctx, mdctx: delete x mdctx, mdty: hole, kctx, ctx: delete x ctx, ty: bodyTy} md bind tBinds
+        {mdkctx, mdctx, kctx, ctx, ty: defTy} -- defTy
+        {mdkctx, mdctx, mdty: defaultMDType, kctx, ctx, ty: bodyTy, term: body} -- body
         bodyTy -- bodyTy
 recTermPath args {kctx, ctx, ty} (Let4 md bind@(TermBind _ x) tBinds def defTy bodyTy) =
     if not (ty == bodyTy) then unsafeThrow "dynamic type error detedted" else

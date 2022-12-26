@@ -13,20 +13,6 @@ import Data.Map.Internal (Map(..), empty, lookup, insert, union)
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Util (hole)
 
--- TODO: put in Context.purs
-type MDContext = {
-    indentation :: Int, -- TODO: hopefully the frontend can handle this instead
-    termVarNames :: Map TermVarID String,
-    typeVarNames :: Map TypeVarID String
-}
-
--- term metadata that is per-term, as opposed to MDContext which is more accumulative
-type MDType = { -- needs to be in MDContext, because it needs to be in the state: if I have select the left of an app, then the term inside needs to know that when its rendered
-    onLeftOfApp :: Boolean
-    , onRightOfApp :: Boolean
-}
-
-defaultMDType = {onLeftOfApp : false, onRightOfApp : false}
 
 data AboveInfo = AICursor UpPath | AISelect UpPath UpPath -- top path, then middle path
 

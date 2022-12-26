@@ -42,3 +42,11 @@ chTermPath kctx ctx c (Data3 md x tbinds ctrs {-body = here-} bodyTy : up) =
 --ContextBoundary1 TermPath ContextBoundaryMD Change {-Term-}
 --TLet3 TermPath TLetMD TypeBind Type Kind {-Term-}
 chTermPath _ _ _ _ = unsafeThrow "finish implementing all cases"
+
+-- trying the idea of working with a DownPath. Change is still applied to bottom.
+chTermPath' :: KindChangeCtx -> ChangeCtx -> Change -> DownPath -> DownPath
+chTermPath' kctx ctx c (Let2 md x tbinds {-Term = here-} ty body tybody : down) =
+    let ctx' = ctxLetCons ctx x (VarTypeChange (tyInject ty)) in
+    hole
+chTermPath' _ _ _ _ = hole
+
