@@ -61,18 +61,19 @@ This file will contain possible states for the editor
 data Clipboard = EmptyClip -- add more later, not priority yet
 
 data CursorLocation
-    = TermCursor TypeContext TermContext Type UpPath Term
-    | TypeCursor TypeContext TermContext UpPath Type -- add more later, for now this is fine
-    | TermBindCursor TypeContext TermContext UpPath TermBind -- add more later, for now this is fine
+    = TermCursor DownPath Term
+    | TypeCursor DownPath Type -- add more later, for now this is fine
+    | TermBindCursor DownPath TermBind -- add more later, for now this is fine
 
 {-
 The TypeContext, TermContext, and Type are understood as being inside the second path.
 e.g. if the term selection is  path1[path2[term]], then the contexts and type given are for inside path2 and outside term.
 -}
 data Select
-    = TermSelect TypeContext TermContext Type UpPath UpPath Term
-    | TypeSelect TypeContext TermContext UpPath UpPath Type
+    = TermSelect DownPath DownPath Term
+    | TypeSelect DownPath DownPath Type
 
+{-
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor kctx ctx ty up term) =
     recTerm
@@ -104,8 +105,8 @@ getCursorChildren (TermBindCursor _ _ _ _) = Nil
 
 -- the Int is what'th child the input is of the output
 parent :: CursorLocation -> Maybe (CursorLocation /\ Int)
-parent (TermCursor kctx ctx ty Nil term) = Nothing
-parent (TermCursor kctx ctx ty (tooth : up) term) =
+parent (TermCursor ty Nil term) = Nothing
+parent (TermCursor ty (tooth : up) term) =
     recTermPath
         {
             let2: \upRec md bind tbinds defTy body bodyTy ->
@@ -137,3 +138,4 @@ stepCursorForwardsImpl childrenSkip cursor =
                Nothing -> cursor -- couldn't move cursor anywhere: no parent or children
 
 --stepCursorBackwards :: CursorLocation -> CursorLocation
+-}

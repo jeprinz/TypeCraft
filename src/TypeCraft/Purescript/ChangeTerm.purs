@@ -38,19 +38,19 @@ chTerm :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Change  /\ Term
 chTerm kctx ctx c t =
     let cRes /\ tRes = (
         case c /\ t of
-            cin /\ (App md t1 t2 argTy outTy) ->
+            cin /\ (App md t1 t2 argTy) ->
                 let c1 /\ t1' = chTerm kctx ctx (CArrow (tyInject argTy) cin) t1 in
                 case c1 of
-                (Minus _ c1') -> c1' /\ Buffer defaultBufferMD t2 argTy t1' (snd (getEndpoints c1))
+                (Minus _ c1') -> c1' /\ Buffer defaultBufferMD t2 argTy t1'
                 (CArrow c1a c1b) ->
                     let c2 /\ t2' = chTerm kctx ctx c1a t2 in
                     let t2'' = if isIdentity c2
                         then t2'
                         else TypeBoundary defaultTypeBoundaryMD (invert c2) t2'
-                    in c1b /\ App md t1' t2'' (snd (getEndpoints c1a)) (snd (getEndpoints c1b))
-                otherChange -> tyInject (outTy)
-                    /\ TypeBoundary defaultTypeBoundaryMD (Replace (Arrow defaultArrowMD argTy outTy) (snd (getEndpoints otherChange)))
-                       (Buffer defaultBufferMD t2 argTy t1' (snd (getEndpoints otherChange)))
+                    in c1b /\ App md t1' t2'' (snd (getEndpoints c1a))
+                otherChange -> tyInject (snd (getEndpoints c))
+                    /\ TypeBoundary defaultTypeBoundaryMD (Replace (Arrow defaultArrowMD argTy (snd (getEndpoints c))) (snd (getEndpoints otherChange)))
+                       (Buffer defaultBufferMD t2 argTy t1')
 --                _ -> composeChange (Minus argTy (tyInject (snd (getEndpoints cin)))) c1 /\ -- is this right?
 --                     Buffer defaultBufferMD t1' (snd (getEndpoints c1)) t1'
             cin /\ (Var md x params) ->
@@ -69,34 +69,31 @@ chTerm kctx ctx c t =
                         in case tryPolymorhpismCase  of
                            Just res -> res
                            Nothing -> xChange /\ Var md x (unsafeThrow "need to deal with params!") -- if the polymorhpism case didn't apply, simply return the change and leave the variable as is
-            (CArrow c1 c2) /\ (Lambda md x ty t bodyTy) ->
+            (CArrow c1 c2) /\ (Lambda md x ty t) ->
                 if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen" else
-                if not (bodyTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen" else
                 let c2' /\ t' = chTerm kctx (ctxLambdaCons ctx x (VarTypeChange c1)) c2 t in
-                (CArrow (tyInject (snd (getEndpoints c1))) c2') /\ Lambda md x (snd (getEndpoints c1)) t' (snd (getEndpoints c2))
-            (Minus ty1 c) /\ (Lambda md x ty2 t bodyTy) ->
+                (CArrow (tyInject (snd (getEndpoints c1))) c2') /\ Lambda md x (snd (getEndpoints c1)) t'
+            (Minus ty1 c) /\ (Lambda md x ty2 t) ->
                 if not (ty1 == ty2) then unsafeThrow "shouldn't happen" else
-                if not (bodyTy == fst (getEndpoints c)) then unsafeThrow "shouldn't happen" else
                 let c2' /\ t' = chTerm kctx (ctxLambdaCons ctx x VarDelete) c t in
                 (Minus ty1 c2') /\ t'
             (Plus ty c) /\ t ->
-                c /\ App defaultAppMD t (Hole defaultHoleMD) ty (snd (getEndpoints c))
-            c /\ Let md x binds t1 ty t2 tybody ->
+                c /\ App defaultAppMD t (Hole defaultHoleMD) ty
+            c /\ Let md x binds t1 ty t2 ->
                 -- TODO: need to include the binds into the kctx for some things I think?
                 if not (fst (getEndpoints c) == ty) then unsafeThrow "shouldn't happen" else
                 let c1 /\ t1' = chTerm kctx (ctxLetCons ctx x (VarTypeChange (tyInject ty))) (tyInject ty) t1 in
                 let c2 /\ t2' = chTerm kctx (ctxLetCons ctx x (VarTypeChange (tyInject ty))) c t2 in
                 let t1'' = if isIdentity c1 then t1' else TypeBoundary defaultTypeBoundaryMD c1 t1' in
-                c2 /\ Let md x binds t1'' ty t2' (snd (getEndpoints c2))
-            c /\ Buffer md t1 ty1 t2 bodyTy ->
+                c2 /\ Let md x binds t1'' ty t2'
+            c /\ Buffer md t1 ty1 t2 ->
                 let c1 /\ t1' = chTerm kctx ctx (tyInject ty1) t1 in
                 let c2 /\ t2' = chTerm kctx ctx c t2 in
-                c2 /\ Buffer md t1' (snd (getEndpoints c1)) t2' (snd (getEndpoints c2))
-            c /\ TLet md x params ty t bodyType ->
-                if not (fst (getEndpoints c) == bodyType) then unsafeThrow "shouldn't happen" else
+                c2 /\ Buffer md t1' (snd (getEndpoints c1)) t2'
+            c /\ TLet md x params ty t ->
                 let ty' /\ tyChange = chType kctx ty in
                 let c' /\ t' = chTerm (ctxKindCons kctx x (TVarTypeChange tyChange)) ctx c t in
-                c' /\ TLet md x params ty' t' (snd (getEndpoints c')) -- TODO: what if c references x? Then it is out of scope above.
+                c' /\ TLet md x params ty' t' -- TODO: what if c references x? Then it is out of scope above.
             cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
         )
     in
@@ -106,7 +103,7 @@ Inputs (implicit D) C1 t, and outputs t2 and C2 such that
 D |- t1 ---[C1 o (C2 ^-1)]---> t2
 -}
 doInsertArgs :: Change -> Term -> Change /\ Term
-doInsertArgs (Plus ty c) t = doInsertArgs c (App defaultAppMD t (Hole defaultHoleMD) ty (snd (getEndpoints c)))
+doInsertArgs (Plus ty c) t = doInsertArgs c (App defaultAppMD t (Hole defaultHoleMD) ty)
 doInsertArgs c t = c /\ t
 
 --chTerm :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Change  /\ Term

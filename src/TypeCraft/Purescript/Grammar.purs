@@ -20,16 +20,16 @@ type TermVarID = Int
 type TypeVarID = Int
 data Type = Arrow ArrowMD Type Type | THole THoleMD TypeHoleID | TNeu TNeuMD TypeVarID (List TypeArg)
 data TypeArg = TypeArg TypeArgMD Type
-data Term = App AppMD Term Term Type Type -- The type of the argument, then the type of the output
-          | Lambda LambdaMD TermBind Type Term Type -- first Type is arg, second is type of body
+data Term = App AppMD Term Term Type -- The type of the argument
+          | Lambda LambdaMD TermBind Type Term -- Type of the argument
           | Var VarMD TermVarID (List TypeArg) {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}
-          | Let LetMD TermBind (List TypeBind) Term Type Term Type
-          | Data GADTMD TypeBind (List TypeBind) (List Constructor) Term Type
-          | TLet TLetMD TypeBind (List TypeBind) Type Term Type -- last Type is type of body!
+          | Let LetMD TermBind (List TypeBind) Term Type Term
+          | Data GADTMD TypeBind (List TypeBind) (List Constructor) Term
+          | TLet TLetMD TypeBind (List TypeBind) Type Term
           | TypeBoundary TypeBoundaryMD Change Term -- the change goes from type inside to type outside. That is, getEndpoints gives inside type on left and outside on right.
           | ContextBoundary ContextBoundaryMD TermVarID Change Term
           | Hole HoleMD
-          | Buffer BufferMD Term Type Term Type
+          | Buffer BufferMD Term Type Term
 
 data TypeBind = TypeBind TypeBindMD TypeVarID
 data TermBind = TermBind TermBindMD TermVarID
@@ -67,43 +67,42 @@ The type <thing>Path is the set of possible paths when the cursor is on a <thing
 -- Can tell what path is up by what type the constructor name came from
 data Tooth =
     -- TermPath (all ups are TermPaths)
-      App1 AppMD {-Term-} Term Type Type
-    | App2 AppMD Term {-Term-} Type Type
-    | Lambda3 LambdaMD TermBind Type {-Term-} Type
-    | Let2 LetMD TermBind (List TypeBind) {-Term-} Type Term Type
-    | Let4 LetMD TermBind (List TypeBind) Term Type {-Term-} Type
-    | Buffer1 BufferMD {-Term-} Type Term Type
-    | Buffer3 BufferMD Term Type {-Term-} Type
+      App1 AppMD {-Term-} Term Type
+    | App2 AppMD Term {-Term-} Type
+    | Lambda1 LambdaMD {-TermBind-} Type Term
+    | Lambda2 LambdaMD TermBind {-Type-} Term
+    | Lambda3 LambdaMD TermBind Type {-Term-}
+    | Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term
+    | Let2 LetMD TermBind (List TypeBind) {-Term-} Type Term
+    | Let3 LetMD TermBind (List TypeBind) Term {-Type-} Term
+    | Let4 LetMD TermBind (List TypeBind) Term Type {-Term-}
+    | Buffer1 BufferMD {-Term-} Type Term
+    | Buffer2 BufferMD Term {-Type-} Term
+    | Buffer3 BufferMD Term Type {-Term-}
     | TypeBoundary1 TypeBoundaryMD Change {-Term-}
     | ContextBoundary1 ContextBoundaryMD TermVarID Change {-Term-}
-    | TLet2 TLetMD TypeBind (List TypeBind) Type {-Term-} Type
-    | Data3 GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-} Type
+    | TLet1 TLetMD TypeBind (List TypeBind) Term
+    | TLet2 TLetMD TypeBind (List TypeBind) Type {-Term-}
+    | Data1 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term
+    | Data3 GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-}
     -- TypePath
     | Arrow1 ArrowMD Type -- up TypePath
     | Arrow2 ArrowMD Type -- up TypePath
-    | Let3 LetMD TermBind (List TypeBind) Term {-Type-} Term Type -- up TermPath
     | TNeu1 TNeuMD (List TypeArg) -- up TypePath
-     -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
-    | TNeu2 TNeuMD (List Change) Int -- up TypePath
-    | Buffer2 BufferMD Term {-Type-} Term Type -- up TermPath
-    | Lambda2 LambdaMD TermBind {-Type-} Term Type -- up TermPath
-    | TLet1 TLetMD TypeBind (List TypeBind) Term Type -- up TermPath
+         -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
+    | TNeu2 TNeuMD (List Change) Int -- up TypePath -- TODO: why is this List Change? That can't be right.
     -- CtrListPath
-    | Data1 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type -- up TermPath
     | CtrListCons2 Constructor {-List Constructor-} -- up CtrListPath
-    --    ConstructorPath
     | CtrListCons1 CtrMD {-List CtrParam-} (List CtrParam) -- up CtrListPath
     -- CtrParamListPath
     | CtrParamListCons2 CtrParam {-List CtrParam-} -- up CtrParamListPath
+    --    ConstructorPath
     | Constructor1 {-List CtrParam-} -- up ConstructorPath
     -- CtrParamPath
     | CtrParamListCons1 CtrParam (List CtrParam) -- up CtrParamListPath
     -- TermBindPath
-    | Lambda1 LambdaMD {-TermBind-} Type Term Type -- up TermPath
-    | Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term Type
-    -- TODO: Add Let 1, rename other let paths
 
-type UpPath = List Tooth
+--type UpPath = List Tooth -- I believe the correct design is to only use DownPath
 type DownPath = List Tooth
 
 
