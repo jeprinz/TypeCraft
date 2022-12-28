@@ -106,6 +106,7 @@ getCursorChildren (TermBindCursor _ _ _) = Nil
 parent :: CursorLocation -> Maybe (CursorLocation /\ Int)
 parent (TermCursor ctxs mdty ty Nil term) = Nothing
 parent (TermCursor ctxs mdty ty termPath term) =
+    let mdty = getMDType termPath in
     recTermPath
         {
             let2: \upRec md bind tbinds defTy body bodyTy ->
