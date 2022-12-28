@@ -69,25 +69,27 @@ data Tooth =
     -- TermPath (all ups are TermPaths)
       App1 AppMD {-Term-} Term Type Type
     | App2 AppMD Term {-Term-} Type Type
+    | Lambda1 LambdaMD {-TermBind-} Type Term Type -- up TermPath
+    | Lambda2 LambdaMD TermBind {-Type-} Term Type -- up TermPath
     | Lambda3 LambdaMD TermBind Type {-Term-} Type
+    | Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term Type
     | Let2 LetMD TermBind (List TypeBind) {-Term-} Type Term Type
+    | Let3 LetMD TermBind (List TypeBind) Term {-Type-} Term Type -- up TermPath
     | Let4 LetMD TermBind (List TypeBind) Term Type {-Term-} Type
     | Buffer1 BufferMD {-Term-} Type Term Type
     | Buffer3 BufferMD Term Type {-Term-} Type
     | TypeBoundary1 TypeBoundaryMD Change {-Term-}
     | ContextBoundary1 ContextBoundaryMD TermVarID Change {-Term-}
+    | TLet1 TLetMD TypeBind (List TypeBind) Term Type -- up TermPath
     | TLet2 TLetMD TypeBind (List TypeBind) Type {-Term-} Type
     | Data3 GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-} Type
     -- TypePath
     | Arrow1 ArrowMD Type -- up TypePath
     | Arrow2 ArrowMD Type -- up TypePath
-    | Let3 LetMD TermBind (List TypeBind) Term {-Type-} Term Type -- up TermPath
     | TNeu1 TNeuMD (List TypeArg) -- up TypePath
      -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
     | TNeu2 TNeuMD (List Change) Int -- up TypePath
     | Buffer2 BufferMD Term {-Type-} Term Type -- up TermPath
-    | Lambda2 LambdaMD TermBind {-Type-} Term Type -- up TermPath
-    | TLet1 TLetMD TypeBind (List TypeBind) Term Type -- up TermPath
     -- CtrListPath
     | Data1 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type -- up TermPath
     | CtrListCons2 Constructor {-List Constructor-} -- up CtrListPath
@@ -99,8 +101,6 @@ data Tooth =
     -- CtrParamPath
     | CtrParamListCons1 CtrParam (List CtrParam) -- up CtrParamListPath
     -- TermBindPath
-    | Lambda1 LambdaMD {-TermBind-} Type Term Type -- up TermPath
-    | Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term Type
     -- TODO: Add Let 1, rename other let paths
 
 type UpPath = List Tooth

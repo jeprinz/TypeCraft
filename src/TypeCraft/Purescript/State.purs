@@ -70,8 +70,8 @@ The TypeContext, TermContext, and Type are understood as being inside the second
 e.g. if the term selection is  path1[path2[term]], then the contexts and type given are for inside path2 and outside term.
 -}
 data Select
-    = TermSelect TypeContext TermContext Type UpPath UpPath Term
-    | TypeSelect TypeContext TermContext UpPath UpPath Type
+    = TermSelect AllContext Type Boolean UpPath UpPath Term -- Boolean is true if root is at top, false if at bottom. The Type is the type of the Term, regardless of root.
+    | TypeSelect AllContext UpPath UpPath Type
 
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor ctxs mdty ty up term) =

@@ -78,7 +78,9 @@ termToNode aboveInfo term =
             dat: partialNode.dat
             , kids : [partialNode.kids]
             , getCursor : Just \_ -> initState $ initCursorMode $ TermCursor term.ctxs term.mdty term.ty (aIGetPath aboveInfo) term.term
-            , getSelect : hole
+            , getSelect : case aboveInfo of
+                     AICursor path -> Nothing
+                     AISelect top middle -> Just \_ -> initState $ SelectMode $ TermSelect term.ctxs term.ty false top middle term.term
             , style : hole
     }
 

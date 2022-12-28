@@ -38,6 +38,10 @@ getMDType (App1 _ _ _ _ : _ : _) = defaultMDType{onLeftOfApp = true}
 getMDType (App2 _ _ _ _ : _ : _) = defaultMDType{onRightOfApp = true}
 getMDType _ = defaultMDType
 
+getParentMDType :: UpPath -> MDType
+getParentMDType (_ : teeth) = getMDType teeth
+getParentMDType _ = defaultMDType
+
 recTermPath :: forall a. TermPathRec a -> TermPathRecValue -> a
 recTermPath args {ctxs, ty, termPath: (Let2 md bind@(TermBind xmd x) tBinds defTy body bodyTy) : up} =
     if not (ty == defTy) then unsafeThrow "dynamic type error detected" else

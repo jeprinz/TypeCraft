@@ -21,10 +21,12 @@ import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Kinds (bindsToKind)
 
--- TODO: figure out how to use row polymorphism to remove redundancy in record definitions
 type TermRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, term :: Term}
 type TypeRecValue = {ctxs :: AllContext, ty :: Type}
 type ListConstructorRecValue = {ctxs :: AllContext, ctrs :: List Constructor}
+
+-- TODO: make a RecValue for each grammatical sort. Even if I don't write recursors for all of them, at least those might be useful!
+
 {-
 There isn't really any needs for recursors on grammatical sorts other than terms, because no other part of the syntax
 binds anything into the context or does anything nontrivial with types.

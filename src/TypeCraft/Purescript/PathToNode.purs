@@ -45,10 +45,12 @@ termPathToNode belowInfo termPath innerNode =
         , kids : [partialNode.kids]
         , getCursor :
             let belowTerm = case belowInfo of
-                                 BITerm term -> term
-                                 BISelect middlePath term -> combineDownPathTerm middlePath term
+                 BITerm term -> term
+                 BISelect middlePath term -> combineDownPathTerm middlePath term
             in Just \_ -> initState $ initCursorMode $ TermCursor termPath.ctxs mdty termPath.ty termPath.termPath belowTerm
-        , getSelect : hole
+        , getSelect : case belowInfo of
+                 BITerm term -> Nothing
+                 BISelect middlePath term -> Just \_ -> initState $ SelectMode $ TermSelect termPath.ctxs ?h true termPath.termPath middlePath term
         , style : hole
     } in
     recTermPath ({
@@ -56,8 +58,13 @@ termPathToNode belowInfo termPath innerNode =
             let mdctx' = hole in -- the ctx above the let, with the variable removed
             let innerNode' = makeNode' {
                 dat : makeNodeData {indentation : hole, isParenthesized: mdty.onLeftOfApp, label: "Let"}
-                , kids: []
-              } in termPathToNode (stepBI hole belowInfo) upRecVal innerNode
+                , kids: [
+                    termBindToNode termPath.ctxs (AICursor (Let1 md {-tbind-} tbinds (bIGetTerm belowInfo) ty.ty body.term bodyTy : upRecVal.termPath)) tbind
+                    , innerNode
+                    , typeToNode (AICursor (Let3 md tbind tbinds (bIGetTerm belowInfo) {-Type-} body.term bodyTy : upRecVal.termPath)) ty
+                    , termToNode (AICursor (Let4 md tbind tbinds (bIGetTerm belowInfo) ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
+                ]
+              } in termPathToNode (stepBI hole belowInfo) upRecVal innerNode'
         , let4 : \upRecVal md tbind tbinds def defTy {-body-} bodyTy -> hole
         , data3 : \upRecVal md tbind tbinds ctrs {-body-} bodyTy -> hole
     }) termPath
@@ -88,7 +95,7 @@ typePathToNode ctxs belowInfo ty path@(tooth : teeth) innerNode =
                     , termToNode (AICursor (Let4 md tbind tbinds def (bIGetTerm belowInfo) bodyTy : teeth))
                         {ctxs, mdty: defaultMDType, ty, term: body}
                 ]
-            } in hole -- termPathToNode mdctx' defaultMDType (BITerm (Let md tbind tbinds def (bIGetTerm belowInfo) body bodyTy)) {kctx, ctx, ty} teeth innerNode'
+            } in termPathToNode (BITerm (Let md tbind tbinds def (bIGetTerm belowInfo) body bodyTy)) {ctxs, mdty: getParentMDType teeth, ty, termPath: teeth} innerNode'
         _ -> hole
 
 {-
