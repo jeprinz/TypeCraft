@@ -20,10 +20,9 @@ import Data.Tuple (fst)
 import TypeCraft.Purescript.TypeChangeAlgebra (getSubstitution)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
-import TypeCraft.Purescript.TermRec (TermRecValue)
-import TypeCraft.Purescript.TermRec (TypeRecValue)
+import TypeCraft.Purescript.TermRec
 
-type TermPathRecValue = {mdkctx :: MDTypeContext, mdctx :: MDTermContext, mdty :: MDType, kctx :: TypeContext, ctx :: TermContext, ty :: Type}
+type TermPathRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, termPath :: UpPath}
 -- TypePathRecValue needs ctx and ty so that when it gets up to a TermPath (e.g. in Let3), it knows the context and type
 
 -- TODO: in the future, when I implement editing lists of constructors and stuff, more things will need to be
@@ -34,20 +33,28 @@ type TermPathRec a = {
     , data3 :: TermPathRecValue -> GADTMD -> TypeBind -> List TypeBind -> List Constructor -> Type -> a
 }
 
-recTermPath :: forall a. TermPathRec a -> TermPathRecValue -> Tooth -> a
-recTermPath args {mdkctx, mdctx, kctx, ctx, ty} (Let2 md bind@(TermBind _ x) tBinds defTy body bodyTy) =
+getMDType :: UpPath -> MDType
+getMDType (App1 _ _ _ _ : _ : _) = defaultMDType{onLeftOfApp = true}
+getMDType (App2 _ _ _ _ : _ : _) = defaultMDType{onRightOfApp = true}
+getMDType _ = defaultMDType
+
+recTermPath :: forall a. TermPathRec a -> TermPathRecValue -> a
+recTermPath args {ctxs, ty, termPath: (Let2 md bind@(TermBind xmd x) tBinds defTy body bodyTy) : up} =
     if not (ty == defTy) then unsafeThrow "dynamic type error detected" else
-    args.let2 {mdkctx, mdctx: delete x mdctx, mdty: hole, kctx, ctx: delete x ctx, ty: bodyTy} md bind tBinds
-        {mdkctx, mdctx, kctx, ctx, ty: defTy} -- defTy
-        {mdkctx, mdctx, mdty: defaultMDType, kctx, ctx, ty: bodyTy, term: body} -- body
+    let ctxs' = ctxs{mdctx = delete x ctxs.mdctx, ctx = delete x ctxs.ctx} in
+    args.let2 {ctxs: ctxs', mdty: getMDType up, ty: bodyTy, termPath: up} md bind tBinds
+        {ctxs: ctxs', ty: defTy}
+        {ctxs, mdty: defaultMDType, ty: bodyTy, term: body} -- body
         bodyTy -- bodyTy
-recTermPath args {kctx, ctx, ty} (Let4 md bind@(TermBind _ x) tBinds def defTy bodyTy) =
+recTermPath args {ctxs, ty, termPath: (Let4 md bind@(TermBind _ x) tBinds def defTy bodyTy) : up} =
     if not (ty == bodyTy) then unsafeThrow "dynamic type error detedted" else
-    args.let4 {kctx, ctx: delete x ctx, ty: ty} md bind tBinds
-        {kctx, ctx, ty: defTy, term: def} --def
-        {kctx, ctx, ty: defTy} -- defTy
+    let ctxs' = ctxs{mdctx = delete x ctxs.mdctx, ctx = delete x ctxs.ctx} in
+    args.let4 {ctxs: ctxs', mdty: getMDType up, ty: ty, termPath: up} md bind tBinds
+        {ctxs, mdty: defaultMDType, ty: defTy, term: def} --def
+        {ctxs: ctxs', ty: defTy} -- defTy
         bodyTy -- bodyTy
-recTermPath args {kctx, ctx, ty} (Data3 md bind@(TypeBind _ x) tbinds ctrs bodyTy) =
+recTermPath args {ctxs, ty, termPath: (Data3 md bind@(TypeBind _ x) tbinds ctrs bodyTy) : up} =
     if not (ty == bodyTy) then unsafeThrow "dynamic type error detedted" else
-    args.data3 {kctx: delete x kctx, ctx, ty: ty} md bind tbinds ctrs bodyTy
-recTermPath _ _ _ = hole
+    let ctxs' = ctxs{mdkctx = delete x ctxs.mdkctx,kctx = delete x ctxs.kctx} in
+    args.data3 {ctxs: ctxs', mdty: getMDType up, ty: ty, termPath: up} md bind tbinds ctrs bodyTy
+recTermPath _ _ = hole

@@ -85,7 +85,8 @@ defaultMDType = {onLeftOfApp : false, onRightOfApp : false}
 --------------------------------------------------------------------------------
 
 type AllContext = {
-    kctx :: TypeContext
+    mdkctx :: MDTypeContext
+    , mdctx :: MDTermContext
+    , kctx :: TypeContext
     , ctx :: TermContext
-    , mdctx :: MDContext
 }
