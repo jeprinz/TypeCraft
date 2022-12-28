@@ -8,7 +8,7 @@ import TypeCraft.Purescript.Node
 import TypeCraft.Purescript.State
 import TypeCraft.Purescript.TermRec
 
-import Data.List (List(..), (:))
+import Data.List (List(..), (:), reverse)
 import Data.Map.Internal (Map(..), empty, lookup, insert, union)
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Util (hole)
@@ -39,13 +39,13 @@ bIGetTerm :: forall term. BelowInfo term -> term
 bIGetTerm (BITerm t) = t
 bIGetTerm (BISelect path t) = hole -- use a typeclass to implement a combinePathSyn "term" for each syntactic type "term". Implement these instances in Dentist.purs.
 
-termPathToNode :: BelowInfo Term -> TermPathRecValue -> Node -> Node
-termPathToNode _ {termPath: Nil} node = node
-termPathToNode belowInfo pathRecVal@{termPath: tooth : _} innerNode =
+termPathToNode :: Syntax -> UpPath -> TermPathRecValue -> Node -> Node
+termPathToNode _ _ {termPath: Nil} node = node
+termPathToNode innerSyn above pathRecVal@{termPath: tooth : down} innerNode =
     let kids' = recTermPath ({
           let2 : \down md tbind tbinds ty {-def-} body -> [
             typeToNode hole ty
-            , termPathToNode hole down innerNode
+            , termPathToNode innerSyn (Let2 md tbind tbinds ty.ty body.term : above) down innerNode
             , termToNode hole body
           ]
         , let4 : \down md tbind tbinds ty def {-body-} -> hole
@@ -55,7 +55,7 @@ termPathToNode belowInfo pathRecVal@{termPath: tooth : _} innerNode =
     makeNode {
             dat: toothToDat tooth pathRecVal.mdkctx pathRecVal.mdctx pathRecVal.mdty
             , kids : [kids]
-            , getCursor : Just \_ -> initState $ initCursorMode $ hole
+            , getCursor : Just \_ -> initState $ initCursorMode $ TermCursor (reverse above) (combineDownPathTerm down innerSyn)
             , getSelect : hole
             , style : makeNormalNodeStyle
     }

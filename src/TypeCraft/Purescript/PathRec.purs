@@ -31,6 +31,7 @@ type TermPathRecValue = {mdkctx :: MDTypeContext, mdctx :: MDTermContext, mdty :
 -- <thing>RecValue instead of just <thing>
 type TermPathRec a = {
       let2 :: TermPathRecValue -> LetMD -> TermBind -> List TypeBind {-def-} -> TypeRecValue -> TermRecValue ->  a
+    , let3 :: TermPathRecValue -> LetMD -> TermBind -> List TypeBind -> TermRecValue {-Type-} -> TermRecValue -> a
     , let4 :: TermPathRecValue -> LetMD -> TermBind -> List TypeBind -> TermRecValue -> TypeRecValue {-body-} -> a
     , data3 :: TermPathRecValue -> GADTMD -> TypeBind -> List TypeBind -> List Constructor {-body-} -> a
 }
@@ -41,6 +42,12 @@ recTermPath args {mdkctx, mdctx, kctx, ctx, ty, termPath : (Let2 md bind@(TermBi
     let mdctx' = insert x xmd.varName mdctx in
     let ctx' = insert x defTy ctx in
     args.let2 {mdkctx, mdctx: mdctx', mdty: hole, kctx, ctx: ctx', ty: defTy, termPath: down} md bind tBinds
+        {mdkctx, mdctx, kctx, ctx, ty: defTy} -- defTy
+        {mdkctx, mdctx: mdctx', mdty: defaultMDType, kctx, ctx: ctx', ty: ty, term: body} -- body
+recTermPath args {mdkctx, mdctx, kctx, ctx, ty, termPath : (Let3 md bind@(TermBind xmd x) tBinds def {-defTy-} body) : down} =
+    let mdctx' = insert x xmd.varName mdctx in
+    let ctx' = insert x defTy ctx in
+    args.let3 {mdkctx, mdctx: mdctx', mdty: hole, kctx, ctx: ctx', ty: defTy, termPath: down} md bind tBinds
         {mdkctx, mdctx, kctx, ctx, ty: defTy} -- defTy
         {mdkctx, mdctx: mdctx', mdty: defaultMDType, kctx, ctx: ctx', ty: ty, term: body} -- body
 recTermPath args {mdkctx, mdctx, kctx, ctx, ty, termPath: (Let4 md bind@(TermBind xmd x) tBinds def defTy : down)} =

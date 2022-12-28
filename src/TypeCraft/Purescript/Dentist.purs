@@ -10,7 +10,7 @@ import TypeCraft.Purescript.Util (hole)
 combineToothTerm :: Tooth -> Term -> Term
 combineToothTerm _ _ = hole
 
-combineDownPathTerm :: DownPath -> Term -> Term
+combineDownPathTerm :: DownPath -> Syntax -> Term
 combineDownPathTerm = hole
 
 combineToothType :: Tooth -> Type -> Type

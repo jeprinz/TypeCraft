@@ -57,10 +57,10 @@ Each of these has a type of terms and of paths.
 The type <thing>Path is the set of possible paths when the cursor is on a <thing>
 -}
 -- Thankfully, I don't think I need Syntax after all
---data Syntax =
---    STerm Term | SType Type | SCtrList (List Constructor) | SCtrParamList (List CtrParam)
---    | TypeArgList (List TypeArg) | TypeBindList (List TypeBind) | SConstructor Constructor
---    | SCtrParam CtrParam | STypeArg TypeArg | STypeBind TypeBind | STermBind TermBind
+data Syntax =
+    STerm Term | SType Type | SCtrList (List Constructor) | SCtrParamList (List CtrParam)
+    | TypeArgList (List TypeArg) | TypeBindList (List TypeBind) | SConstructor Constructor
+    | SCtrParam CtrParam | STypeArg TypeArg | STypeBind TypeBind | STermBind TermBind
 
 -- If Term has a constructor named <name>, then here a constructor named <name>n
 -- refers to a zipper path piece with a hole as the nth term in that constructor.
@@ -91,18 +91,34 @@ data Tooth =
     | TNeu1 TNeuMD (List TypeArg) -- up TypePath
          -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
     | TNeu2 TNeuMD (List Change) Int -- up TypePath -- TODO: why is this List Change? That can't be right.
-    -- CtrListPath
+    -- Constructor List Path
+    | CtrListCons1 {-Constructor-} (List CtrParam) -- up CtrListPath
     | CtrListCons2 Constructor {-List Constructor-} -- up CtrListPath
-    | CtrListCons1 CtrMD {-List CtrParam-} (List CtrParam) -- up CtrListPath
     -- CtrParamListPath
+    | CtrParamListCons1 {-CtrParam-} (List CtrParam) -- up CtrParamListPath
     | CtrParamListCons2 CtrParam {-List CtrParam-} -- up CtrParamListPath
+    -- TypeArg List Path
+    | TypeArgListCons1 {-TypeArg-} (List TypeArg)
+    | TypeArgListCons2 (TypeArg) {-List TypeArg-}
+    -- TypeBind List Path
+    | TypeBindListCons1 {-TypeBind-} (List TypeBind)
+    | TypeBindListCons2 (TypeBind) {-List TypeBind-}
     --    ConstructorPath
     | Constructor1 {-List CtrParam-} -- up ConstructorPath
     -- CtrParamPath
-    | CtrParamListCons1 CtrParam (List CtrParam) -- up CtrParamListPath
-    -- TermBindPath
+    | CtrParam1 CtrParamMD {-Type-}
+    -- TypeArg Path
+    | TypeArg1 TypeArgMD {-Type-}
 
---type UpPath = List Tooth -- I believe the correct design is to only use DownPath
+{-
+The following is a list of the grammatical sorts within this editor:
+Term, Type, (List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
+Constructor, CtrParam, TypeArg, TypeBind, TermBind
+Each of these has a type of terms and of paths.
+The type <thing>Path is the set of possible paths when the cursor is on a <thing>
+-}
+
+type UpPath = List Tooth -- I believe the correct design is to only use DownPath
 type DownPath = List Tooth
 
 
