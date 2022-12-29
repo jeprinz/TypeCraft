@@ -31,8 +31,8 @@ getCursorChildren (TermCursor ctxs mdty ty up term) =
             , dataa : \md x tbinds ctrs body bodyTy -> TermCursor body.ctxs body.mdty body.ty (Data4 md x tbinds ctrs.ctrs bodyTy : up) body.term: Nil
             , tlet : \md tbind tbinds def body bodyTy ->
                 -- Add TypeBindList child!
-                TypeCursor def.ctxs (TLet1 md tbind tbinds body.term bodyTy : up) def.ty
-                : TermCursor body.ctxs body.mdty body.ty (TLet2 md tbind tbinds def.ty bodyTy : up) body.term
+                TypeCursor def.ctxs (TLet3 md tbind tbinds body.term bodyTy : up) def.ty
+                : TermCursor body.ctxs body.mdty body.ty (TLet4 md tbind tbinds def.ty bodyTy : up) body.term
                 : Nil
             , typeBoundary: \md c t -> TermCursor t.ctxs t.mdty t.ty (TypeBoundary1 md c : up) t.term : Nil
             , contextBoundary: \md x c t -> TermCursor t.ctxs t.mdty t.ty (ContextBoundary1 md x c : up) t.term : Nil
@@ -63,6 +63,14 @@ parent (TermCursor ctxs mdty ty termPath term) =
                 Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Let md bind tbinds def.term defTy.ty term bodyTy) /\ (3 - 1)
             , data4: \upRec md bind tbinds ctrs bodyTy ->
                 Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Data md bind tbinds ctrs term bodyTy) /\ (4 - 1)
+            , app1 : \upRecVal md {-Term-} t2 argTy bodyTy -> hole
+            , app2 : \upRecVal md t1 {-Term-} argTy bodyTy -> hole
+            , lambda3 : \upRecVal md tbind argTy {-body-} bodyTy -> hole
+            , buffer1 : \upRecVal md {-Term-} bufTy body bodyTy -> hole
+            , buffer3 : \upRecVal md buf bufTy {-Term-} bodyTy -> hole
+            , typeBoundary1 : \upRecVal md change {-Term-} -> hole
+            , contextBoundary1 : \upRecVal md x change {-Term-} -> hole
+            , tLet4 : \upRecVal md tyBind tyBinds def {-Term-} bodyTy -> hole
         }
         {ctxs, mdty, ty, termPath}
 parent (TypeCursor ctxs (Arrow1 md tOut : up) ty) =

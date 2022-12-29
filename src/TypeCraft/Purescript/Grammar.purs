@@ -84,8 +84,10 @@ data Tooth =
     | Buffer3 BufferMD Term Type {-Term-} Type
     | TypeBoundary1 TypeBoundaryMD Change {-Term-}
     | ContextBoundary1 ContextBoundaryMD TermVarID Change {-Term-}
-    | TLet1 TLetMD TypeBind (List TypeBind) Term Type
-    | TLet2 TLetMD TypeBind (List TypeBind) Type {-Term-} Type
+    | TLet1 TLetMD {-TypeBind-} (List TypeBind) Type Term Type
+    | TLet2 TLetMD TypeBind {-List TypeBind-} Type Term Type
+    | TLet3 TLetMD TypeBind (List TypeBind) {-Type-} Term Type
+    | TLet4 TLetMD TypeBind (List TypeBind) Type {-Term-} Type
     | Data1 GADTMD {-TypeBind-} (List TypeBind) (List Constructor) Term Type
     | Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
     | Data3 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type

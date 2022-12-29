@@ -65,6 +65,14 @@ termPathToNode belowInfo termPath innerNode =
                     , termToNode (AICursor (Let4 md tbind tbinds (bIGetTerm belowInfo) ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
                 ]
               } in termPathToNode (stepBI hole belowInfo) upRecVal innerNode'
+        , app1 : \upRecVal md {-Term-} t2 argTy bodyTy -> hole
+        , app2 : \upRecVal md t1 {-Term-} argTy bodyTy -> hole
+        , lambda3 : \upRecVal md tbind argTy {-body-} bodyTy -> hole
+        , buffer1 : \upRecVal md {-Term-} bufTy body bodyTy -> hole
+        , buffer3 : \upRecVal md buf bufTy {-Term-} bodyTy -> hole
+        , typeBoundary1 : \upRecVal md change {-Term-} -> hole
+        , contextBoundary1 : \upRecVal md x change {-Term-} -> hole
+        , tLet4 : \upRecVal md tyBind tyBinds def {-Term-} bodyTy -> hole
         , let4 : \upRecVal md tbind tbinds def defTy {-body-} bodyTy -> hole
         , data4 : \upRecVal md tbind tbinds ctrs {-body-} bodyTy -> hole
     }) termPath
