@@ -9,7 +9,7 @@ import TypeCraft.Purescript.State
 import TypeCraft.Purescript.TermRec
 
 import Data.List (List(..), (:))
-import Data.Map.Internal (Map(..), empty, lookup, insert, union)
+
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.TermToNode
@@ -69,9 +69,10 @@ termPathToNode belowInfo termPath innerNode =
         , data4 : \upRecVal md tbind tbinds ctrs {-body-} bodyTy -> hole
     }) termPath
 
-typePathToNode :: AllContext -> BelowInfo Type Unit -> Type -> UpPath -> Node -> Node
-typePathToNode _ _ _ Nil node = node
-typePathToNode ctxs belowInfo ty path@(tooth : teeth) innerNode =
+typePathToNode :: AllContext -> BelowInfo Type Unit -> UpPath -> Node -> Node
+typePathToNode _ _ Nil node = node
+typePathToNode ctxs belowInfo path@(tooth : teeth) innerNode =
+    let ty = bIGetTerm belowInfo in
     let makeNode' partialNode = makeNode { -- specialize a version of makeNode with the pieces that will be the same for each case
         dat: partialNode.dat
         , kids : [partialNode.kids]
@@ -89,14 +90,42 @@ typePathToNode ctxs belowInfo ty path@(tooth : teeth) innerNode =
             let innerNode' = makeNode' {
                 dat : hole
                 , kids : [
-                    termToNode (AICursor (Let2 md tbind tbinds (bIGetTerm belowInfo) body bodyTy : teeth))
-                        {ctxs, mdty: defaultMDType, ty, term: def}
+                    termBindToNode ctxs (AICursor (Let1 md {-tbind-} tbinds def ty body bodyTy : teeth)) tbind
+                    , termToNode (AICursor (Let2 md tbind tbinds (bIGetTerm belowInfo) body bodyTy : teeth))
+                        {ctxs, mdty: defaultMDType, ty: ty, term: def}
                     , innerNode
                     , termToNode (AICursor (Let4 md tbind tbinds def (bIGetTerm belowInfo) bodyTy : teeth))
-                        {ctxs, mdty: defaultMDType, ty, term: body}
+                        {ctxs, mdty: defaultMDType, ty: bodyTy, term: body}
                 ]
-            } in termPathToNode (BITerm (Let md tbind tbinds def (bIGetTerm belowInfo) body bodyTy)) {ctxs, mdty: getParentMDType teeth, ty, termPath: teeth} innerNode'
+            } in termPathToNode (BITerm (Let md tbind tbinds def (bIGetTerm belowInfo) body bodyTy)) {ctxs, mdty: getParentMDType teeth, ty : ty, termPath: teeth} innerNode'
         _ -> hole
+
+constructorPathToNode :: AllContext -> BelowInfo Constructor Unit -> UpPath -> Node -> Node
+constructorPathToNode ctxs belowInfo up innerNode = hole
+
+ctrParamPathToNode :: AllContext -> BelowInfo CtrParam Unit -> UpPath -> Node -> Node
+ctrParamPathToNode ctxs belowInfo up innerNode = hole
+
+typeArgPathToNode :: AllContext -> BelowInfo TypeArg Unit -> UpPath -> Node -> Node
+typeArgPathToNode ctxs belowInfo up innerNode = hole
+
+typeBindPathToNode :: AllContext -> BelowInfo TypeBind Unit -> UpPath -> Node -> Node
+typeBindPathToNode ctxs belowInfo up innerNode = hole
+
+termBindPathToNode :: AllContext -> BelowInfo TermBind Unit -> UpPath -> Node -> Node
+termBindPathToNode ctxs belowInfo up innerNode = hole
+
+ctrListPathToNode :: AllContext -> BelowInfo (List Constructor) Unit -> UpPath -> Node -> Node
+ctrListPathToNode ctxs belowInfo up innerNode = hole
+
+ctrParamListPathToNode :: AllContext -> BelowInfo (List CtrParam) Unit -> UpPath -> Node -> Node
+ctrParamListPathToNode ctxs belowInfo up innerNode = hole
+
+typeArgListToNode :: AllContext -> BelowInfo (List TypeArg) Unit -> UpPath -> Node -> Node
+typeArgListToNode  ctxs belowInfo up innerNode = hole
+
+typeBindListToNode :: AllContext -> BelowInfo (List TypeBind) Unit -> UpPath -> Node -> Node
+typeBindListToNode  ctxs belowInfo up innerNode = hole
 
 {-
 Problems currently:

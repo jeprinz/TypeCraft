@@ -4,7 +4,6 @@ import Prelude
 import Prim hiding (Type)
 import TypeCraft.Purescript.Grammar
 import Data.List (List(..), (:))
-import TypeCraft.Purescript.ChangeType (chType)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 import Data.Tuple.Nested (type (/\), (/\))
@@ -43,9 +42,13 @@ getCursorChildren (TermCursor ctxs mdty ty up term) =
         {ctxs, mdty, ty, term}
 getCursorChildren (TypeCursor ctxs up (Arrow md t1 t2)) =
     TypeCursor ctxs (Arrow1 md t2 : up) t1 : TypeCursor ctxs (Arrow2 md t1 : up) t2 : Nil
--- TODO: add TNeu case, which just has no children!
+getCursorChildren (TypeBindCursor ctxs up _) = hole
+getCursorChildren (TermBindCursor ctxs up _) = hole
 getCursorChildren (TypeCursor ctxs up _) = hole
-getCursorChildren (TermBindCursor _ _ _) = Nil
+getCursorChildren (CtrListCursor _ _ _) = Nil
+getCursorChildren (CtrParamListCursor _ _ _) = Nil
+getCursorChildren (TypeArgListCursor _ _ _) = Nil
+getCursorChildren (TypeBindListCursor _ _ _) = Nil
 
 -- the Int is what'th child the input is of the output
 parent :: CursorLocation -> Maybe (CursorLocation /\ Int)

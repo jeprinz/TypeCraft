@@ -8,7 +8,7 @@ import TypeCraft.Purescript.Node
 import TypeCraft.Purescript.State
 import TypeCraft.Purescript.TermRec
 
-import Data.List (List, (:))
+import Data.List (List(..), (:))
 import Data.Map.Internal (Map(..), empty, lookup, insert, union)
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Util (hole)
@@ -104,20 +104,35 @@ typeToNode aboveInfo {ctxs, ty}
         , style : partialNode.style
     }
 
-ctrListToNode :: AllContext -> UpPath -> List Constructor -> Node
-ctrListToNode ctxs up ctrs = hole
+ctrListToNode :: AllContext -> AboveInfo -> UpPath -> List Constructor -> Node
+ctrListToNode ctxs aboveInfo up Nil = hole
+ctrListToNode ctxs aboveInfo up (ctr : ctrs) = hole
 
-ctrToNode :: AllContext -> UpPath -> Constructor -> Node
-ctrToNode ctxs up ctr = hole
+ctrToNode :: AllContext -> AboveInfo -> UpPath -> Constructor -> Node
+ctrToNode ctxs aboveInfo up (Constructor md tbind ctrParams) = hole
 
-ctrParamToNode :: AllContext -> UpPath -> CtrParam -> Node
-ctrParamToNode ctxs up param = hole
+ctrParamToNode :: AllContext -> AboveInfo -> UpPath -> CtrParam -> Node
+ctrParamToNode ctxs aboveInfo up (CtrParam md ty) = hole
+
+typeArgToNode :: AllContext -> UpPath -> AboveInfo -> TypeArg -> Node
+typeArgToNode ctxs aboveInfo up (TypeArg md ty) = hole
+
+typeBindToNode :: AllContext -> AboveInfo -> TypeBind -> Node
+typeBindToNode ctxs aboveInfo (TypeBind md x) = hole
 
 termBindToNode :: AllContext -> AboveInfo -> TermBind -> Node
 termBindToNode ctxs aboveInfo tbind@(TermBind md x) = makeNode {
-    dat : makeNodeData {indentation: hole, isParenthesized: false, label: "TypeBind"}
+    dat : makeNodeData {indentation: hole, isParenthesized: false, label: "TermBind"}
     , kids: []
     , getCursor : Just \_ -> initState $ initCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tbind
     , getSelect: Nothing
     , style: makeNormalNodeStyle
 }
+
+ctrParamListToNode :: AllContext -> AboveInfo -> UpPath -> List CtrParam -> Node
+ctrParamListToNode ctxs aboveInfo up Nil = hole
+ctrParamListToNode ctxs aboveInfo up (ctrParam : ctrParams) = hole
+
+typeArgListToNode :: AllContext -> AboveInfo -> UpPath -> List TypeArg -> Node
+typeArgListToNode ctxs aboveInfo up Nil = hole
+typeArgListToNode ctxs aboveInfo up (tyArg : tyArgs) = hole

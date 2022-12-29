@@ -4,7 +4,6 @@ import Prelude
 import Prim hiding (Type)
 import TypeCraft.Purescript.Grammar
 import Data.List (List(..), (:))
-import TypeCraft.Purescript.ChangeType (chType)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 import Data.Tuple.Nested (type (/\), (/\))

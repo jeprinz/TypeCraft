@@ -55,6 +55,8 @@ Term, Type, Constructor, CtrParam, TypeArg, TypeBind, TermBind
 (List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
 Each of these has a type of terms and of paths.
 The type <thing>Path is the set of possible paths when the cursor is on a <thing>
+
+I'm considering removing the following: Constructor, ConstructorParam, TypeArg
 -}
 -- Thankfully, I don't think I need Syntax after all
 --data Syntax =
@@ -65,8 +67,9 @@ The type <thing>Path is the set of possible paths when the cursor is on a <thing
 -- If Term has a constructor named <name>, then here a constructor named <name>n
 -- refers to a zipper path piece with a hole as the nth term in that constructor.
 -- Can tell what path is up by what type the constructor name came from
+-- A <blank>-path is a path whose last tooth has a <blank> missing inside it, in the curly braces
 data Tooth =
-    -- TermPath (all ups are TermPaths)
+    -- Term
       App1 AppMD {-Term-} Term Type Type
     | App2 AppMD Term {-Term-} Type Type
     | Lambda1 LambdaMD {-TermBind-} Type Term Type
@@ -87,31 +90,29 @@ data Tooth =
     | Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
     | Data3 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type
     | Data4 GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-} Type
-    -- TypePath
-    | Arrow1 ArrowMD Type -- up TypePath
-    | Arrow2 ArrowMD Type -- up TypePath
-    | TNeu1 TNeuMD (List TypeArg) -- up TypePath
-     -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
-    | TNeu2 TNeuMD (List Change) Int -- up TypePath
-    -- CtrListPath
-    -- Constructor List Path
+    -- Type
+    | Arrow1 ArrowMD Type
+    | Arrow2 ArrowMD Type
+    | TNeu1 TNeuMD (List TypeArg)
+    | TNeu2 TNeuMD (List Change) Int -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
+    -- Constructor
+    | Constructor1 {-List CtrParam-} -- up ConstructorPath
+    -- CtrParam
+    | CtrParam1 CtrParamMD {-Type-}
+    -- TypeArg
+    | TypeArg1 TypeArgMD {-Type-}
+    -- Constructor List
     | CtrListCons1 {-Constructor-} (List CtrParam)
     | CtrListCons2 Constructor {-List Constructor-}
-    -- CtrParamListPath
+    -- CtrParam List
     | CtrParamListCons1 {-CtrParam-} (List CtrParam)
     | CtrParamListCons2 CtrParam {-List CtrParam-}
-    -- TypeArg List Path
+    -- TypeArg List
     | TypeArgListCons1 {-TypeArg-} (List TypeArg)
     | TypeArgListCons2 (TypeArg) {-List TypeArg-}
-    -- TypeBind List Path
+    -- TypeBind List
     | TypeBindListCons1 {-TypeBind-} (List TypeBind)
     | TypeBindListCons2 (TypeBind) {-List TypeBind-}
-    --    ConstructorPath
-    | Constructor1 {-List CtrParam-} -- up ConstructorPath
-    -- CtrParamPath
-    | CtrParam1 CtrParamMD {-Type-}
-    -- TypeArg Path
-    | TypeArg1 TypeArgMD {-Type-}
 
 type UpPath = List Tooth
 type DownPath = List Tooth

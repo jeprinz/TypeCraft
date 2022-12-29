@@ -13,10 +13,7 @@ import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints, composeChange)
 import Data.Tuple (snd)
 import TypeCraft.Purescript.MD
 import Data.List (List(..), (:))
-import TypeCraft.Purescript.ChangeType (chType)
-import TypeCraft.Purescript.TypeChangeAlgebra (isIdentity, invert)
 import Data.Tuple (fst)
-import TypeCraft.Purescript.TypeChangeAlgebra (getSubstitution)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Kinds (bindsToKind)
