@@ -51,8 +51,8 @@ data KindChange = KCArrow KindChange | KCType
 
 {-
 The following is a list of the grammatical sorts within this editor:
-Term, Type, (List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
-Constructor, CtrParam, TypeArg, TypeBind, TermBind
+Term, Type, Constructor, CtrParam, TypeArg, TypeBind, TermBind
+(List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
 Each of these has a type of terms and of paths.
 The type <thing>Path is the set of possible paths when the cursor is on a <thing>
 -}
