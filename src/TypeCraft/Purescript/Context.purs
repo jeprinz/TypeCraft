@@ -13,12 +13,19 @@ import TypeCraft.Purescript.MD (defaultArrowMD)
 {-
 This file defines term contexts and type contexts!
 -}
--- This should have two maps for let bound and lambda bound!
+--------------------------------------------------------------------------------
+-------------- Regular contexts -----------------------------------------------
+--------------------------------------------------------------------------------
 type TermContext = Map TermVarID Type
 type TypeContext = Map TypeVarID Kind
 
+--------------------------------------------------------------------------------
+-------------- Change contexts ------------------------------------------------
+--------------------------------------------------------------------------------
+
 data VarChange = VarTypeChange Change | VarDelete -- | VarInsert Type
 -- Let-bound on left and lambda-bound variables on right
+-- TODO: TODO: TODO: I need to combine these and instead have Map TermVarID (K)
 data ChangeCtx = ChangeCtx (Map TermVarID VarChange) (Map TermVarID VarChange)
 ctxLetCons :: ChangeCtx -> TermBind -> VarChange -> ChangeCtx
 ctxLetCons (ChangeCtx lets lams) (TermBind _ x) c = ChangeCtx (insert x c lets) lams
@@ -50,3 +57,35 @@ constructorTypes dataType (Constructor _ (TermBind _ x) params : ctrs)
 ctrParamsToType :: Type -> List CtrParam -> Type
 ctrParamsToType dataType Nil = dataType
 ctrParamsToType dataType (CtrParam _ ty : params) = Arrow defaultArrowMD ty (ctrParamsToType dataType params)
+
+--------------------------------------------------------------------------------
+-------------- Metadatta contexts ---------------------------------------------
+--------------------------------------------------------------------------------
+
+type MDTypeContext = Map TypeVarID String
+type MDTermContext = Map TermVarID String
+
+--type MDContext = {
+--    indentation :: Int, -- TODO: hopefully the frontend can handle this instead
+--    termVarNames :: MDTermContext,
+--    typeVarNames :: MDTypeContext
+--}
+
+-- term metadata that is per-term, as opposed to MDContext which is more accumulative
+type MDType = { -- needs to be in MDContext, because it needs to be in the state: if I have select the left of an app, then the term inside needs to know that when its rendered
+    onLeftOfApp :: Boolean
+    , onRightOfApp :: Boolean
+}
+
+defaultMDType :: MDType
+defaultMDType = {onLeftOfApp : false, onRightOfApp : false}
+
+--------------------------------------------------------------------------------
+-------------- Complete Context -----------------------------------------------
+--------------------------------------------------------------------------------
+
+type AllContext = {
+    kctx :: TypeContext
+    , ctx :: TermContext
+    , mdctx :: MDContext
+}
