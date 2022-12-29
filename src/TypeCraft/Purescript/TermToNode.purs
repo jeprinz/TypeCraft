@@ -87,21 +87,21 @@ termToNode aboveInfo term =
 typeToNode :: AboveInfo -> TypeRecValue -> Node
 typeToNode aboveInfo {ctxs, ty}
     = let partialNode = case ty of
-            Arrow md ty1 ty2 -> hole
+            Arrow md ty1 ty2 -> {
+                dat: makeNodeData {indentation: hole, isParenthesized: true, label: "Arrow"}
+                , kids: [
+                ]
+            }
             THole md x -> hole
             TNeu md x targs -> hole
     in makeNode {
         dat: partialNode.dat
         , kids : partialNode.kids
-        , getCursor : 
-            if partialNode.isCursorable
-                then Just \_ -> initState $ initCursorMode $ TypeCursor ctxs hole ty -- Isn't this the same for every case?
-                else Nothing
-        , getSelect: 
-            if partialNode.isSelectable
-                then Just hole
-                else Nothing
-        , style : partialNode.style
+        , getCursor : Just \_ -> initState $ initCursorMode $ TypeCursor ctxs (aIGetPath aboveInfo) ty
+        , getSelect : case aboveInfo of
+                 AICursor path -> Nothing
+                 AISelect top middle -> Just \_ -> initState $ SelectMode $ TypeSelect ctxs false top middle ty
+        , style : makeNormalNodeStyle
     }
 
 ctrListToNode :: AllContext -> AboveInfo -> UpPath -> List Constructor -> Node
@@ -112,7 +112,13 @@ ctrToNode :: AllContext -> AboveInfo -> UpPath -> Constructor -> Node
 ctrToNode ctxs aboveInfo up (Constructor md tbind ctrParams) = hole
 
 ctrParamToNode :: AllContext -> AboveInfo -> UpPath -> CtrParam -> Node
-ctrParamToNode ctxs aboveInfo up (CtrParam md ty) = hole
+ctrParamToNode ctxs aboveInfo up (CtrParam md ty) = makeNode {
+    dat: makeNodeData {indentation: hole, isParenthesized: false, label: "CtrParam"}
+    , kids: [[typeToNode (stepAI (CtrParam1 md) (aIOnlyCursor aboveInfo)) {ctxs, ty}]]
+    , getCursor: Nothing
+    , getSelect: Nothing
+    , style: makeNormalNodeStyle
+}
 
 typeArgToNode :: AllContext -> UpPath -> AboveInfo -> TypeArg -> Node
 typeArgToNode ctxs aboveInfo up (TypeArg md ty) = hole

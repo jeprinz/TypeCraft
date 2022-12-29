@@ -77,8 +77,8 @@ e.g. if the term selection is  path1[path2[term]], then the contexts and type gi
 -}
 data Select
     = TermSelect AllContext Type Boolean UpPath UpPath Term -- Boolean is true if root is at top, false if at bottom. The Type and Context are at thte type of the Term, regardless of root.
-    | TypeSelect AllContext UpPath UpPath Type
-    | CtrListSelect AllContext UpPath UpPath (List Constructor)
-    | CtrParamListSelect AllContext UpPath UpPath (List CtrParam)
-    | TypeArgListSelect AllContext UpPath UpPath (List TypeArg)
-    | TypeBindListSelect AllContext UpPath UpPath (List TypeBind)
+    | TypeSelect AllContext Boolean UpPath UpPath Type
+    | CtrListSelect AllContext Boolean UpPath UpPath (List Constructor)
+    | CtrParamListSelect AllContext Boolean UpPath UpPath (List CtrParam)
+    | TypeArgListSelect AllContext Boolean UpPath UpPath (List TypeArg)
+    | TypeBindListSelect AllContext Boolean UpPath UpPath (List TypeBind)
