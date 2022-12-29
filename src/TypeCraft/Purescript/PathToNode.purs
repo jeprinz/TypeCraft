@@ -16,7 +16,7 @@ import TypeCraft.Purescript.TermToNode
 import TypeCraft.Purescript.PathRec
 import TypeCraft.Purescript.Dentist
 
-data BelowInfo term = BITerm term | BISelect DownPath term -- middle path, then bottom term
+data BelowInfo term ty = BITerm term | BISelect DownPath term ty -- middle path, then bottom term. ty is type of term.
 
 --stepBI :: forall gsort1 gsort2. Tooth -> BelowInfo gsort1 -> BelowInfo gsort2
 ----stepBI tooth (BITerm syn) = BITerm (step syn)
@@ -25,18 +25,18 @@ data BelowInfo term = BITerm term | BISelect DownPath term -- middle path, then 
 -- TODO: this function is the sketchies thing about my whole setup!!!!!
 -- TODO: TODO: think about this!
 
-stepBI :: forall syn . ToothAppendable syn => Tooth -> BelowInfo syn -> BelowInfo syn
+stepBI :: forall syn synty . ToothAppendable syn => Tooth -> BelowInfo syn synty -> BelowInfo syn synty
 stepBI tooth (BITerm term) = BITerm (toothAppend tooth term)
-stepBI tooth (BISelect middle bottom) = BISelect (tooth : middle) bottom
+stepBI tooth (BISelect middle bottom ty) = BISelect (tooth : middle) bottom ty
 
 --bIOnlyCursor :: BelowInfo -> BelowInfo
 
-bIGetTerm :: forall term. BelowInfo term -> term
+bIGetTerm :: forall term ty. ToothAppendable term => BelowInfo term ty -> term
 bIGetTerm (BITerm t) = t
-bIGetTerm (BISelect path t) = hole -- use a typeclass to implement a combinePathSyn "term" for each syntactic type "term". Implement these instances in Dentist.purs.
+bIGetTerm (BISelect path t ty) = teethAppend path t
 
 -- The MDType is for the top of the path (which is the end of the list)
-termPathToNode :: BelowInfo Term -> TermPathRecValue -> (Node -> Node)
+termPathToNode :: BelowInfo Term Type -> TermPathRecValue -> (Node -> Node)
 termPathToNode _ {termPath: Nil} node = node
 termPathToNode belowInfo termPath innerNode =
     let mdty = getMDType termPath.termPath in
@@ -46,11 +46,11 @@ termPathToNode belowInfo termPath innerNode =
         , getCursor :
             let belowTerm = case belowInfo of
                  BITerm term -> term
-                 BISelect middlePath term -> combineDownPathTerm middlePath term
+                 BISelect middlePath term ty -> combineDownPathTerm middlePath term
             in Just \_ -> initState $ initCursorMode $ TermCursor termPath.ctxs mdty termPath.ty termPath.termPath belowTerm
         , getSelect : case belowInfo of
                  BITerm term -> Nothing
-                 BISelect middlePath term -> Just \_ -> initState $ SelectMode $ TermSelect termPath.ctxs ?h true termPath.termPath middlePath term
+                 BISelect middlePath term ty -> Just \_ -> initState $ SelectMode $ TermSelect termPath.ctxs ty true termPath.termPath middlePath term
         , style : hole
     } in
     recTermPath ({
@@ -66,10 +66,10 @@ termPathToNode belowInfo termPath innerNode =
                 ]
               } in termPathToNode (stepBI hole belowInfo) upRecVal innerNode'
         , let4 : \upRecVal md tbind tbinds def defTy {-body-} bodyTy -> hole
-        , data3 : \upRecVal md tbind tbinds ctrs {-body-} bodyTy -> hole
+        , data4 : \upRecVal md tbind tbinds ctrs {-body-} bodyTy -> hole
     }) termPath
 
-typePathToNode :: AllContext -> BelowInfo Type -> Type -> UpPath -> Node -> Node
+typePathToNode :: AllContext -> BelowInfo Type Unit -> Type -> UpPath -> Node -> Node
 typePathToNode _ _ _ Nil node = node
 typePathToNode ctxs belowInfo ty path@(tooth : teeth) innerNode =
     let makeNode' partialNode = makeNode { -- specialize a version of makeNode with the pieces that will be the same for each case
@@ -78,7 +78,7 @@ typePathToNode ctxs belowInfo ty path@(tooth : teeth) innerNode =
         , getCursor :
             let belowTerm = case belowInfo of
                                  BITerm term -> term
-                                 BISelect middlePath term -> hole -- combineDownPathTerm middlePath term
+                                 BISelect middlePath term _ -> hole -- combineDownPathTerm middlePath term
             in Just \_ -> initState $ initCursorMode $ TypeCursor ctxs path belowTerm
         , getSelect : hole
         , style : hole

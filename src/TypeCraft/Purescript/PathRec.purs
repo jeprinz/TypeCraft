@@ -30,7 +30,7 @@ type TermPathRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, termPat
 type TermPathRec a = {
       let2 :: TermPathRecValue -> LetMD -> TermBind -> List TypeBind -> TypeRecValue -> TermRecValue -> Type -> a
     , let4 :: TermPathRecValue -> LetMD -> TermBind -> List TypeBind -> TermRecValue -> TypeRecValue -> Type -> a
-    , data3 :: TermPathRecValue -> GADTMD -> TypeBind -> List TypeBind -> List Constructor -> Type -> a
+    , data4 :: TermPathRecValue -> GADTMD -> TypeBind -> List TypeBind -> List Constructor -> Type -> a
 }
 
 getMDType :: UpPath -> MDType
@@ -57,8 +57,8 @@ recTermPath args {ctxs, ty, termPath: (Let4 md bind@(TermBind _ x) tBinds def de
         {ctxs, mdty: defaultMDType, ty: defTy, term: def} --def
         {ctxs: ctxs', ty: defTy} -- defTy
         bodyTy -- bodyTy
-recTermPath args {ctxs, ty, termPath: (Data3 md bind@(TypeBind _ x) tbinds ctrs bodyTy) : up} =
+recTermPath args {ctxs, ty, termPath: (Data4 md bind@(TypeBind _ x) tbinds ctrs bodyTy) : up} =
     if not (ty == bodyTy) then unsafeThrow "dynamic type error detedted" else
     let ctxs' = ctxs{mdkctx = delete x ctxs.mdkctx,kctx = delete x ctxs.kctx} in
-    args.data3 {ctxs: ctxs', mdty: getMDType up, ty: ty, termPath: up} md bind tbinds ctrs bodyTy
+    args.data4 {ctxs: ctxs', mdty: getMDType up, ty: ty, termPath: up} md bind tbinds ctrs bodyTy
 recTermPath _ _ = hole

@@ -4,6 +4,7 @@ import Prelude
 import Prim hiding (Type)
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Util (hole)
+import Data.List(List(..), (:))
 
 -- Code pertaining to teeth
 
@@ -24,5 +25,12 @@ annotation of a lambda.
 class ToothAppendable syn where
     toothAppend :: Tooth -> syn -> syn
 
-instance toothAppendableterm :: ToothAppendable Term where
+teethAppend :: forall syn. ToothAppendable syn => UpPath -> syn -> syn
+teethAppend Nil syn = syn
+teethAppend (tooth : teeth) syn = teethAppend teeth (toothAppend tooth syn)
+
+instance toothAppendableTerm :: ToothAppendable Term where
     toothAppend tooth term = hole
+
+instance toothAppendableType :: ToothAppendable Type where
+    toothAppend tooth ty = hole

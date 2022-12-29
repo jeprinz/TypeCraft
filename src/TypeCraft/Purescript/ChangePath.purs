@@ -29,12 +29,12 @@ chTermPath kctx ctx c (Let4 md x tbinds def ty {-body = here-} tybody : up) =
     let def' = chTermBoundary kctx (ctxLetCons ctx x (VarTypeChange (tyInject ty))) (tyInject ty) def in
     let up' = chTermPath kctx ctx c up in
     Let4 md x tbinds def' ty (snd (getEndpoints c)) : up
-chTermPath kctx ctx c (Data3 md x tbinds ctrs {-body = here-} bodyTy : up) =
+chTermPath kctx ctx c (Data4 md x tbinds ctrs {-body = here-} bodyTy : up) =
     if not (fst (getEndpoints c) == bodyTy) then unsafeThrow "shouldn't happen" else
     -- TODO: update ctrs using kctx and chCtrList
     let up' = chTermPath kctx ctx c up in
-    Data3 md x tbinds ctrs (snd (getEndpoints c)) : up'
---Data3 TermPath GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-}
+    Data4 md x tbinds ctrs (snd (getEndpoints c)) : up'
+--Data4 TermPath GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-}
 --App2 TermPath AppMD Term {-Term-} Type
 --Lambda2 TermPath LambdaMD TermBind Type {-Term-}
 --Buffer1 TermPath BufferMD {-Term-} Type Term | Buffer3 TermPath BufferMD Term Type {-Term-}

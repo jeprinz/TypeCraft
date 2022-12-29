@@ -84,7 +84,7 @@ getCursorChildren (TermCursor ctxs mdty ty up term) =
             , lett: \md x tBinds def defTy body bodyTy -> TermCursor def.ctxs def.mdty def.ty (Let2 md x tBinds defTy.ty body.term bodyTy : up) def.term
                 : TypeCursor defTy.ctxs (Let3 md x tBinds def.term body.term bodyTy : up) defTy.ty
                 : TermCursor body.ctxs body.mdty body.ty (Let4 md x tBinds def.term defTy.ty bodyTy : up) body.term : Nil
-            , dataa : \md x tbinds ctrs body bodyTy -> TermCursor body.ctxs body.mdty body.ty (Data3 md x tbinds ctrs.ctrs bodyTy : up) body.term: Nil
+            , dataa : \md x tbinds ctrs body bodyTy -> TermCursor body.ctxs body.mdty body.ty (Data4 md x tbinds ctrs.ctrs bodyTy : up) body.term: Nil
             , tlet : \md tbind tbinds def body bodyTy ->
                 -- Add TypeBindList child!
                 TypeCursor def.ctxs (TLet1 md tbind tbinds body.term bodyTy : up) def.ty
@@ -113,7 +113,7 @@ parent (TermCursor ctxs mdty ty termPath term) =
                 Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Let md bind tbinds term defTy.ty body.term bodyTy) /\ (1 - 1)
             , let4: \upRec md bind tbinds def defTy bodyTy ->
                 Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Let md bind tbinds def.term defTy.ty term bodyTy) /\ (3 - 1)
-            , data3: \upRec md bind tbinds ctrs bodyTy ->
+            , data4: \upRec md bind tbinds ctrs bodyTy ->
                 Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Data md bind tbinds ctrs term bodyTy) /\ 0 -- for now, since the other children of Data aren't implemented
         }
         {ctxs, mdty, ty, termPath}
