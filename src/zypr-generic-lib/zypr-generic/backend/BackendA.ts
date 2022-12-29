@@ -6,14 +6,14 @@ import language from "../Language";
 
 // uses the iteroperations defined in TypeCraft/Typescript/Interop to build a
 // backend that calls the purescript backend
-export const backend = (state: State.State): Backend.Backend => {
+export const makeBackend = (state: State.State): Backend.Backend => {
   return {
     props: {
       language: language(),
       format: (st: State.State) => {
         throw new Error("TODO: use purescript backend");
       },
-      handleKeyboardAction: (event) => (st) => {
+      handleKeyboardEvent: (event) => (st) => {
         // TODO: conditions on `event`
         return undefined
         return ModifyState.moveCursorNext(st)

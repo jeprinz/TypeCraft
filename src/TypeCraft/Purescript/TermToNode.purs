@@ -52,7 +52,7 @@ termToNode mdctx up term =
             , kids : partialNode.kids
             , getCursor : 
                 if partialNode.isCursorable
-                    then Just \_ -> initState $ initCursorMode $ TermCursor term.kctx term.ctx term.ty up term.term -- Isn't this the same for every case?
+                    then Just \_ -> makeState $ makeCursorMode $ TermCursor term.kctx term.ctx term.ty up term.term -- Isn't this the same for every case?
                     else Nothing
             , getSelect : 
                 if partialNode.isSelectable
@@ -72,7 +72,7 @@ typeToNode mdctx up kctx ctx ty
         , kids : partialNode.kids
         , getCursor : 
             if partialNode.isCursorable
-                then Just \_ -> initState $ initCursorMode $ TypeCursor kctx ctx up ty -- Isn't this the same for every case?
+                then Just \_ -> makeState $ makeCursorMode $ TypeCursor kctx ctx up ty -- Isn't this the same for every case?
                 else Nothing
         , getSelect: 
             if partialNode.isSelectable

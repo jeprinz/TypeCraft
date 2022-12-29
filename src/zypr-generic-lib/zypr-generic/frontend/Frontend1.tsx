@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Backend } from '../Backend';
-import Editor, { doAction, isMouseDown, renderEditor, setMouseDown, setMouseUp } from "../Editor";
+import Editor, { isMouseDown, renderEditor, setMouseDown, setMouseUp } from "../Editor";
 import { BndTmVal, BndTyVal, kid_ixs, Orient } from '../Language';
 import { Node } from "../Node";
 
@@ -143,7 +143,8 @@ class ExpElement extends React.Component<ExpElementProps, ExpElementState> {
               const cursor = this.props.node.getCursor()
               if (cursor === undefined)
                 throw new Error("if isCursorable === 'true', then must have good cursor");
-              doAction(this.props.editor, { case: 'set_cursor', cursor })
+              // doAction(this.props.editor, { case: 'set_cursor', cursor })
+              // TODO: call backend
               return
             }
             case 'false': {
@@ -160,7 +161,8 @@ class ExpElement extends React.Component<ExpElementProps, ExpElementState> {
             const select = this.props.node.getSelect()
             if (select === undefined || select === 'empty')
               throw new Error("if isSelectable !== 'false', then must have good select")
-            doAction(this.props.editor, { case: 'set_select', select })
+            // doAction(this.props.editor, { case: 'set_select', select })
+            // TODO: call backend
             event.stopPropagation()
           }
           // otherwise, propogate upwards
@@ -215,13 +217,14 @@ export default function frontend(backend: Backend) {
         elems: ((expElemPar: ExpElemPar) => JSX.Element)[],
         classNames: string[]
       ) =>
-        (expElemPar: ExpElemPar) => {
+        (expElemPar: ExpElemPar): JSX.Element => {
           if (node.style === undefined)
             return renderExp(editor, expElemPar, node, elems, classNames)
           switch (node.style.case) {
+            case 'normal': return renderExp(editor, expElemPar, node, elems, classNames)
             case 'cursor': return renderExp(editor, expElemPar, node, elems, classNames.concat(["node-cursor"]))
-            case 'select-top': return renderExp(editor, expElemPar, node, elems, classNames.concat([["node-select-top"], node.style.isValid ? [] : ["node-select-top-invalid"]].flat()))
-            case 'select-bot': return renderExp(editor, expElemPar, node, elems, classNames.concat([["node-select-bot"], node.style.isValid ? [] : ["node-select-bot-invalid"]].flat()))
+            case 'select-top': return renderExp(editor, expElemPar, node, elems, classNames.concat(["node-select-top"]))
+            case 'select-bot': return renderExp(editor, expElemPar, node, elems, classNames.concat(["node-select-bot"]))
             case 'query-insert-top': return renderExp(editor, expElemPar, node, elems, classNames.concat("node-query-insert-top"))
             case 'query-insert-bot': return renderExp(editor, expElemPar, node, elems, classNames.concat("node-query-insert-bot"))
             case 'query-replace-new': return renderExp(editor, expElemPar, node, elems, classNames.concat(["node-query-replace-new"]))
@@ -535,12 +538,7 @@ export default function frontend(backend: Backend) {
     }
     return go(node).map(elem => elem(expElemPar))
   }
-  return renderEditor({
-    renderNode:
-      (
-        node: Node,
-        editor: Editor
-      ) =>
-        renderNode(node, editor, undefined)
-  })(backend)
+  return renderEditor(
+    (node: Node, editor: Editor) =>
+      renderNode(node, editor, undefined))(backend)
 }

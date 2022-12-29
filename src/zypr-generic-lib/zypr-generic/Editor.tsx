@@ -1,11 +1,10 @@
 import React, { MouseEvent } from "react"
-import { EndoReadPart } from "../Endo"
+import { EndoPart, EndoReadPart } from "../Endo"
 import * as Backend from './Backend'
 import { Node } from "./Node"
-import interactQuery from "./QueryInteraction"
 import './Editor.css'
 import { debug } from "../Debug"
-import { State } from "../../TypeCraft/Typescript/Interop"
+import { State } from "../../TypeCraft/Typescript/State"
 
 export var isMouseDown: boolean = false
 export function setMouseDown(event: MouseEvent) { isMouseDown = event.button === 0 ? true : isMouseDown }
@@ -51,33 +50,25 @@ export default class Editor
 
 export function modifyBackendState(
     editor: Editor,
-    f: EndoReadPart<Backend.Props, State>
+    f: EndoPart<State>
 ): void {
-    const state = f(editor.props.backend, editor.state)
+    const state = f(editor.state)
     debug(1, "modifyBackendState success = " + (state !== undefined))
     if (state !== undefined) editor.setState(state)
 }
 
 export function doKeyboardAction(
     editor: Editor,
-    act: Backend.KeyboardAction
+    event: KeyboardEvent
 ): void {
     modifyBackendState(
         editor,
-        editor.props.backend.handleKeyboardAction(act)
+        editor.props.backend.handleKeyboardEvent(event)
     )
 }
 
 export function renderEditor(
-    { renderNode }: {
-        renderNode: (
-            node: Node,
-            editor: Editor,
-            // doKeyboardAction: (act: Backend.KeyboardAction<Met,Rul,Val>) => void,
-        ) =>
-            JSX.Element[]
-    }) {
-
+    renderNode: (node: Node, editor: Editor) => JSX.Element[]) {
     return (backend: Backend.Backend) => {
 
         function render(editor: Editor) {

@@ -13,7 +13,7 @@ export type Backend = {
 export type Props = {
     language: Language,
     format: (st: State.State) => Node[],
-    handleKeyboardAction: (event: KeyboardEvent) => EndoPart<State.State>,
+    handleKeyboardEvent: (event: KeyboardEvent) => EndoPart<State.State>,
 }
 
 // rendering environment

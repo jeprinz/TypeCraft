@@ -2,21 +2,22 @@ module TypeCraft.Purescript.State where
 
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.Grammar
-import Data.List (List(..), (:))
-import TypeCraft.Purescript.ChangeType (chType)
 import TypeCraft.Purescript.Context
-import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Grammar
+
+import Data.List (List(..), (:))
+import Data.List (index)
+import Data.List (length)
+import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.Tuple.Nested (type (/\), (/\))
-import TypeCraft.Purescript.TermRec (TermRecValue)
-import TypeCraft.Purescript.TermRec (recTerm)
-import TypeCraft.Purescript.TermRec (TypeRecValue)
+import TypeCraft.Purescript.ChangeType (chType)
 import TypeCraft.Purescript.PathRec (recTermPath)
 import TypeCraft.Purescript.PathRec (recTypePath)
-import Data.Maybe (Maybe)
-import Data.Maybe (Maybe(..))
-import Data.List (length)
-import Data.List (index)
+import TypeCraft.Purescript.TermRec (TermRecValue)
+import TypeCraft.Purescript.TermRec (TypeRecValue)
+import TypeCraft.Purescript.TermRec (recTerm)
+import TypeCraft.Purescript.Util (hole)
 
 -- state of the editor
 type State = {
@@ -43,17 +44,19 @@ emptyQuery =
     , completionOption_i: 0
     }
 
-initCursorMode :: CursorLocation -> Mode
-initCursorMode cursorLocation = CursorMode 
+makeCursorMode :: CursorLocation -> Mode
+makeCursorMode cursorLocation = CursorMode 
     { cursorLocation
     , query: emptyQuery
     }
 
-initState :: Mode -> State
-initState mode = 
+makeState :: Mode -> State
+makeState mode = 
     { mode
     }
 
+initState :: State
+initState = hole -- TODO: choose initial state
 
 {-
 This file will contain possible states for the editor
