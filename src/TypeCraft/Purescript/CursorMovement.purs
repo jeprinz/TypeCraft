@@ -16,6 +16,7 @@ import Data.Maybe (Maybe(..))
 import Data.List (length)
 import Data.List (index)
 import TypeCraft.Purescript.State
+import Effect.Exception.Unsafe (unsafeThrow)
 
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor ctxs mdty ty up term) =
@@ -37,7 +38,9 @@ getCursorChildren (TermCursor ctxs mdty ty up term) =
             , typeBoundary: \md c t -> TermCursor t.ctxs t.mdty t.ty (TypeBoundary1 md c : up) t.term : Nil
             , contextBoundary: \md x c t -> TermCursor t.ctxs t.mdty t.ty (ContextBoundary1 md x c : up) t.term : Nil
             , hole: \md -> Nil
-            , buffer: \md def defTy body bodyTy -> Nil
+            , buffer: \md def defTy body bodyTy -> TermCursor def.ctxs def.mdty def.ty (Buffer1 md defTy.ty body.term bodyTy : up) def.term
+              : TypeCursor defTy.ctxs (Buffer2 md def.term body.term bodyTy : up) defTy.ty
+              : TermCursor body.ctxs body.mdty body.ty (Buffer3 md def.term defTy.ty bodyTy : up) body.term : Nil
         }
         {ctxs, mdty, ty, term}
 getCursorChildren (TypeCursor ctxs up (Arrow md t1 t2)) =
@@ -63,14 +66,22 @@ parent (TermCursor ctxs mdty ty termPath term) =
                 Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Let md bind tbinds def.term defTy.ty term bodyTy) /\ (3 - 1)
             , data4: \upRec md bind tbinds ctrs bodyTy ->
                 Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Data md bind tbinds ctrs term bodyTy) /\ (4 - 1)
-            , app1 : \upRecVal md {-Term-} t2 argTy bodyTy -> hole
-            , app2 : \upRecVal md t1 {-Term-} argTy bodyTy -> hole
-            , lambda3 : \upRecVal md tbind argTy {-body-} bodyTy -> hole
-            , buffer1 : \upRecVal md {-Term-} bufTy body bodyTy -> hole
-            , buffer3 : \upRecVal md buf bufTy {-Term-} bodyTy -> hole
-            , typeBoundary1 : \upRecVal md change {-Term-} -> hole
-            , contextBoundary1 : \upRecVal md x change {-Term-} -> hole
-            , tLet4 : \upRecVal md tyBind tyBinds def {-Term-} bodyTy -> hole
+            , app1 : \upRec md {-Term-} t2 argTy bodyTy ->
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (App md term t2.term argTy bodyTy) /\ (1 - 1)
+            , app2 : \upRec md t1 {-Term-} argTy bodyTy ->
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (App md t1.term term argTy bodyTy) /\ (2 - 1)
+            , lambda3 : \upRec md tbind argTy {-body-} bodyTy ->
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Lambda md tbind argTy.ty term bodyTy) /\ (3 - 1)
+            , buffer1 : \upRec md {-Term-} bufTy body bodyTy ->
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Buffer md term bufTy.ty body.term bodyTy) /\ (1 - 1)
+            , buffer3 : \upRec md buf bufTy {-Term-} bodyTy ->
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Buffer md buf.term bufTy.ty term bodyTy) /\ (3 - 1)
+            , typeBoundary1 : \upRec md change {-Term-} ->
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (TypeBoundary md change term) /\ (1 - 1)
+            , contextBoundary1 : \upRec md x change {-Term-} ->
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (ContextBoundary md x change term) /\ (1 - 1)
+            , tLet4 : \upRec md tyBind tyBinds def {-Term-} bodyTy ->
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (TLet md tyBind tyBinds def.ty term bodyTy) /\ (4 - 1)
         }
         {ctxs, mdty, ty, termPath}
 parent (TypeCursor ctxs (Arrow1 md tOut : up) ty) =
@@ -79,7 +90,17 @@ parent (TypeCursor ctxs (Arrow2 md tIn : up) ty) =
     Just $ TypeCursor ctxs up (Arrow md tIn ty) /\ (2 - 1)
 parent (TypeCursor ctxs (Let3 md bind tbinds def body bodyTy : up) ty) =
     Just $ TermCursor ctxs (getMDType up) ty up(Let md bind tbinds def ty body bodyTy) /\ (2 - 1)
-parent _ = hole
+parent (TypeBindCursor ctxs (TLet1 md {-TypeBind-} tyBinds def body bodyTy : up) tyBind) =
+    Just $ TermCursor ctxs (getMDType up) bodyTy up (TLet md tyBind tyBinds def body bodyTy) /\ (1 - 1)
+parent (TypeBindCursor ctxs (TypeBindListCons1 {-TypeBind-} tyBinds : up) tyBind) =
+    Just $ TypeBindListCursor ctxs up (tyBind : tyBinds) /\ (1 - 1)
+parent (TermBindCursor ctxs up _) = hole
+parent (TypeCursor ctxs up _) = hole
+parent (CtrListCursor _ _ _) = hole
+parent (CtrParamListCursor _ _ _) = hole
+parent (TypeArgListCursor _ _ _) = hole
+parent (TypeBindListCursor _ _ _) = hole
+parent _ = unsafeThrow "given an ill-typed upPath to parent function (or I missed a case)"
 
 stepCursorForwards :: CursorLocation -> CursorLocation
 stepCursorForwards cursor = stepCursorForwardsImpl 0 cursor
