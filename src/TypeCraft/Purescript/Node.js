@@ -22,3 +22,8 @@ export function makeNodeData_(data) {
   console.log("makeNodeData_", data)
   return data
 }
+
+// NodeIndentation
+export const makeInlineNodeIndentation = { case: 'inline' }
+export const makeNewlineNodeIndentation  = { case: 'newline' }
+export const makeIndentNodeIndentation  = { case: 'indent' }

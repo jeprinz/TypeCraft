@@ -37,22 +37,27 @@ makeNode x =
 -- NodeData
 foreign import data NodeData :: Type
 
+foreign import data NodeIndentation :: Type
+foreign import makeInlineNodeIndentation :: NodeIndentation
+foreign import makeNewlineNodeIndentation :: NodeIndentation -- doesn't indent
+foreign import makeIndentNodeIndentation :: NodeIndentation
+
 foreign import makeNodeData_ ::
-  { indentation :: Nullable Int
+  { indentation :: NodeIndentation
   , isParenthesized :: Boolean
   , label :: Nullable String
   } ->
   NodeData
 
 makeNodeData ::
-  { indentation :: Maybe Int
+  { indentation :: NodeIndentation
   , isParenthesized :: Boolean
   , label :: String
   } ->
   NodeData
 makeNodeData { indentation, isParenthesized, label } =
   makeNodeData_
-    { indentation: fromMaybe indentation
+    { indentation
     , isParenthesized
     , label: pureNullable label
     }
