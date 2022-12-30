@@ -19,18 +19,19 @@ import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.TermRec
 import Data.Set (member)
+import TypeCraft.Purescript.Util (lookup')
 
-type TermPathRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, termPath :: UpPath}
-type TypePathRecValue = {ctxs :: AllContext, mdty :: MDType, typePath :: UpPath}
-type CtrPathRecValue = {ctxs :: AllContext, mdty :: MDType, ctrPath :: UpPath}
-type CtrParamPathRecValue = {ctxs :: AllContext, mdty :: MDType, ctrParamPath :: UpPath}
-type TypeArgPathRecValue = {ctxs :: AllContext, mdty :: MDType, typeArgPath :: UpPath}
-type TypeBindPathRecValue = {ctxs :: AllContext, mdty :: MDType, typeBindPath :: UpPath}
-type TermBindPathRecValue = {ctxs :: AllContext, mdty :: MDType, termBindPath :: UpPath}
-type ListCtrPathRecValue = {ctxs :: AllContext, mdty :: MDType, listCtrPath :: UpPath}
-type ListCtrParamPathRecValue = {ctxs :: AllContext, mdty :: MDType, listCtrParamPath :: UpPath}
-type ListTypeArgPathRecValue = {ctxs :: AllContext, mdty :: MDType, listTypeArgPath :: UpPath}
-type ListTypeBindPathRecValue = {ctxs :: AllContext, mdty :: MDType, listTypeBindPath :: UpPath}
+type TermPathRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, term :: Term, termPath :: UpPath}
+type TypePathRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, typePath :: UpPath}
+type CtrPathRecValue = {ctxs :: AllContext, mdty :: MDType, ctr :: Constructor, ctrPath :: UpPath}
+type CtrParamPathRecValue = {ctxs :: AllContext, mdty :: MDType, ctrParam :: CtrParam, ctrParamPath :: UpPath}
+type TypeArgPathRecValue = {ctxs :: AllContext, mdty :: MDType, typeArg :: TypeArg, typeArgPath :: UpPath}
+type TypeBindPathRecValue = {ctxs :: AllContext, mdty :: MDType, tyBind :: TypeBind, typeBindPath :: UpPath}
+type TermBindPathRecValue = {ctxs :: AllContext, mdty :: MDType, tBind :: TermBind, termBindPath :: UpPath}
+type ListCtrPathRecValue = {ctxs :: AllContext, mdty :: MDType, ctrs :: List Constructor, listCtrPath :: UpPath}
+type ListCtrParamPathRecValue = {ctxs :: AllContext, mdty :: MDType, ctrParams :: List CtrParam, listCtrParamPath :: UpPath}
+type ListTypeArgPathRecValue = {ctxs :: AllContext, mdty :: MDType, tyArgs :: List TypeArg, listTypeArgPath :: UpPath}
+type ListTypeBindPathRecValue = {ctxs :: AllContext, mdty :: MDType, tyBinds :: List TypeBind, listTypeBindPath :: UpPath}
 -- TypePathRecValue needs ctx and ty so that when it gets up to a TermPath (e.g. in Let3), it knows the context and type
 
 
@@ -62,84 +63,116 @@ getParentMDType (_ : teeth) = getMDType teeth
 getParentMDType _ = defaultMDType
 
 recTermPath :: forall a. TermPathRec a -> TermPathRecValue -> a
-recTermPath args {ctxs, ty, termPath: (Let2 md tBind@(TermBind xmd x) tyBinds defTy body bodyTy) : up} =
+recTermPath args {ctxs, ty, term, termPath: (Let2 md tBind@(TermBind xmd x) tyBinds {-Term-} defTy body bodyTy) : up} =
     if not (ty == defTy) then unsafeThrow "dynamic type error detected" else
     let ctxs' = ctxs{mdctx = delete x ctxs.mdctx, ctx = delete x ctxs.ctx} in
-    args.let2 {ctxs: ctxs', mdty: getMDType up, ty: bodyTy, termPath: up} md
+    args.let2 {ctxs: ctxs', mdty: getMDType up, ty: bodyTy, term: Let md tBind tyBinds term defTy body bodyTy, termPath: up} md
         {ctxs, mdty: defaultMDType, tBind} {ctxs, mdty: defaultMDType, tyBinds}
         {ctxs: ctxs', mdty: defaultMDType, ty: defTy}
         {ctxs, mdty: defaultMDType, ty: bodyTy, term: body} -- body
         bodyTy -- bodyTy
-recTermPath args {ctxs, ty, termPath: (Let4 md tBind@(TermBind _ x) tyBinds def defTy bodyTy) : up} =
+recTermPath args {ctxs, ty, term, termPath: (Let4 md tBind@(TermBind _ x) tyBinds def defTy {-Term-} bodyTy) : up} =
     if not (ty == bodyTy) then unsafeThrow "dynamic type error detedted" else
     let ctxs' = ctxs{mdctx = delete x ctxs.mdctx, ctx = delete x ctxs.ctx} in
-    args.let4 {ctxs: ctxs', mdty: getMDType up, ty: ty, termPath: up} md
+    args.let4 {ctxs: ctxs', mdty: getMDType up, ty: ty, term: (Let md tBind tyBinds def defTy term bodyTy), termPath: up} md
         {ctxs, mdty: defaultMDType, tBind} {ctxs, mdty: defaultMDType, tyBinds}
         {ctxs, mdty: defaultMDType, ty: defTy, term: def} --def
         {ctxs: ctxs', mdty: defaultMDType, ty: defTy} -- defTy
         bodyTy -- bodyTy
-recTermPath args {ctxs, ty, termPath: (App1 md {-Term-} t2 argTy outTy) : up} =
+recTermPath args {ctxs, ty, term, termPath: (App1 md {-Term-} t2 argTy outTy) : up} =
     if not (Arrow defaultArrowMD argTy outTy == ty) then unsafeThrow "dynamic type error detected" else
-    args.app1 {ctxs, mdty: getMDType up, ty: outTy, termPath: up} md
+    args.app1 {ctxs, mdty: getMDType up, ty: outTy, term: App md term t2 argTy outTy, termPath: up} md
         {ctxs, mdty: defaultMDType{onRightOfApp= true}, ty: argTy, term: t2}
         argTy outTy
-recTermPath args {ctxs, ty, termPath: (App2 md t1 {-Term-} argTy outTy) : up} =
+recTermPath args {ctxs, ty, term, termPath: (App2 md t1 {-Term-} argTy outTy) : up} =
     if not (argTy == ty) then unsafeThrow "dynamic type error detected" else
-    args.app2 {ctxs, mdty: getMDType up, ty: outTy, termPath: up} md
+    args.app2 {ctxs, mdty: getMDType up, ty: outTy, term: App md t1 term argTy outTy, termPath: up} md
         {ctxs, mdty: defaultMDType{onLeftOfApp= true}, ty: Arrow defaultArrowMD argTy outTy, term: t1}
         argTy outTy
-recTermPath args {ctxs, ty, termPath: (Lambda3 md tbind@(TermBind _ x) argTy {-Term-} bodyTy) : up} =
+recTermPath args {ctxs, ty, term, termPath: (Lambda3 md tbind@(TermBind _ x) argTy {-Term-} bodyTy) : up} =
     if not (bodyTy == ty) then unsafeThrow "dynamic type error detected" else
     let ctxs' = ctxs{mdctx= delete x ctxs.mdctx, ctx= delete x ctxs.ctx} in
-    args.lambda3 {ctxs: ctxs', mdty: getMDType up, ty: Arrow defaultArrowMD argTy bodyTy, termPath: up}
+    args.lambda3 {ctxs: ctxs', mdty: getMDType up, ty: Arrow defaultArrowMD argTy bodyTy, term: Lambda md tbind argTy term bodyTy, termPath: up}
         md tbind {ctxs: ctxs', mdty: defaultMDType, ty: argTy}
         bodyTy
-recTermPath args {ctxs, ty, termPath: (Buffer1 md {-Term-} bufTy body bodyTy) : up} =
+recTermPath args {ctxs, ty, term, termPath: (Buffer1 md {-Term-} bufTy body bodyTy) : up} =
     if not (bufTy == ty) then unsafeThrow "dynamic type error detected" else
-    args.buffer1 {ctxs, mdty: getMDType up, ty: bodyTy, termPath: up}
+    args.buffer1 {ctxs, mdty: getMDType up, ty: bodyTy, term: Buffer md term bufTy body bodyTy, termPath: up}
         md {ctxs, mdty: defaultMDType, ty: bufTy}
         {ctxs, mdty: defaultMDType, ty: bodyTy, term: body}
         bodyTy
-recTermPath args {ctxs, ty, termPath: (Buffer3 md buf bufTy {-Term-} bodyTy) : up} =
+recTermPath args {ctxs, ty, term, termPath: (Buffer3 md buf bufTy {-Term-} bodyTy) : up} =
     if not (bodyTy == ty) then unsafeThrow "dynamic type error detected" else
-    args.buffer3 {ctxs, mdty: getMDType up, ty: bodyTy, termPath: up}
+    args.buffer3 {ctxs, mdty: getMDType up, ty: bodyTy, term: Buffer md buf bufTy term bodyTy, termPath: up}
         md {ctxs, mdty: defaultMDType, ty: bufTy, term: buf}
         {ctxs, mdty: defaultMDType, ty: bufTy} bodyTy
-recTermPath args {ctxs, ty, termPath: (TypeBoundary1 md c {-Term-}) : up} =
-    args.typeBoundary1 {ctxs, mdty: getMDType up, ty: ty, termPath: up} md c
-recTermPath args {ctxs, ty, termPath: (ContextBoundary1 md x c) : up} =
-    args.contextBoundary1 {ctxs, mdty: getMDType up, ty: ty, termPath: up} md x c
-recTermPath args {ctxs, ty, termPath: (TLet4 md tybind@(TypeBind _ x) tyBinds def {-Term-} bodyTy) : up} =
+recTermPath args {ctxs, ty, term, termPath: (TypeBoundary1 md c {-Term-}) : up} =
+    args.typeBoundary1 {ctxs, mdty: getMDType up, ty: ty, term: TypeBoundary md c term, termPath: up} md c
+recTermPath args {ctxs, ty, term, termPath: (ContextBoundary1 md x c) : up} =
+    args.contextBoundary1 {ctxs, mdty: getMDType up, ty: ty, term: ContextBoundary md x c term, termPath: up} md x c
+recTermPath args {ctxs, ty, term, termPath: (TLet4 md tybind@(TypeBind _ x) tyBinds def {-Term-} bodyTy) : up} =
     if not (bodyTy == ty) then unsafeThrow "dynamic type error detected" else
     let ctxs' = ctxs {mdkctx = delete x ctxs.mdkctx, kctx = delete x ctxs.kctx} in
-    args.tLet4 {ctxs: ctxs', mdty: getMDType up, ty: bodyTy, termPath: up}
+    args.tLet4 {ctxs: ctxs', mdty: getMDType up, ty: bodyTy, term: TLet md tybind tyBinds def term bodyTy, termPath: up}
         md tybind {ctxs, mdty: defaultMDType, tyBinds} {ctxs: ctxs', mdty: defaultMDType, ty: def} bodyTy
-recTermPath args {ctxs, ty, termPath: (Data4 md tyBind@(TypeBind _ x) tyBinds ctrs {-Term-} bodyTy) : up} =
+recTermPath args {ctxs, ty, term, termPath: (Data4 md tyBind@(TypeBind _ x) tyBinds ctrs {-Term-} bodyTy) : up} =
     if not (bodyTy == ty) then unsafeThrow "dynamic type error detected" else
     let ctrIds = constructorIds ctrs in
     let ctxs' = ctxs {mdkctx = delete x ctxs.mdkctx, kctx = delete x ctxs.kctx
             ,ctx = filterKeys (\x -> not (member x ctrIds)) ctxs.ctx
             ,mdctx = filterKeys (\x -> not (member x ctrIds)) ctxs.mdctx} in
-    args.data4 {ctxs: ctxs', mdty: getMDType up, ty: bodyTy, termPath: up}
+    args.data4 {ctxs: ctxs', mdty: getMDType up, ty: bodyTy, term: Data md tyBind tyBinds ctrs term bodyTy, termPath: up}
         md tyBind {ctxs, mdty: defaultMDType, tyBinds}
         {ctxs: ctxs', mdty: defaultMDType, ctrs} bodyTy
 recTermPath _ _ = unsafeThrow "recTermPath given something that isn't a term path"
 
+type TypePathRec a = {
+      lambda2 :: TermPathRecValue -> LambdaMD -> TermBindRecValue -> TermRecValue -> Type -> a
+      , let3 :: TermPathRecValue -> LetMD -> TermBindRecValue -> ListTypeBindRecValue -> TermRecValue -> TermRecValue -> Type -> a
+      , buffer2 :: TermPathRecValue -> BufferMD -> TermRecValue -> TermRecValue -> Type -> a
+      , tLet3 :: TermPathRecValue -> TLetMD -> TypeBindRecValue -> ListTypeBindRecValue -> TermRecValue -> Type -> a
+      , ctrParam1 :: CtrParamPathRecValue -> CtrParamMD -> a
+      , typeArg1 :: TypeArgPathRecValue -> TypeArgMD -> a
+      , arrow1 :: TypePathRecValue -> ArrowMD -> TypeRecValue -> a
+      , arrow2 :: TypePathRecValue -> ArrowMD -> TypeRecValue -> a
+}
 
-
-
-
-
-
---  Type
---    Lambda2 LambdaMD TermBind {-Type-} Term Type
---    Let3 LetMD TermBind (List TypeBind) Term {-Type-} Term Type
---    Buffer2 BufferMD Term {-Type-} Term Type
---    TLet3 TLetMD TypeBind (List TypeBind) {-Type-} Term Type
---    CtrParam1 CtrParamMD {-Type-}
---    TypeArg1 TypeArgMD {-Type-}
---    Arrow1 ArrowMD {-Type-} Type
---    Arrow2 ArrowMD Type {-Type-}
+recTypePath :: forall a. TypePathRec a -> TypePathRecValue -> a
+recTypePath args {ctxs, ty, typePath: (Lambda2 md tBind@(TermBind xmd x) {-Type-} body bodyTy) : termPath} =
+  let ctxs' = ctxs{mdctx= insert x xmd.varName ctxs.mdctx, ctx= insert x ty ctxs.ctx} in
+    args.lambda2 {ctxs, ty: Arrow defaultArrowMD ty bodyTy,
+            mdty: getMDType termPath, term: Lambda md tBind ty body bodyTy, termPath} md
+        {ctxs, mdty: defaultMDType, tBind}
+        {ctxs: ctxs', mdty: defaultMDType, ty: bodyTy, term: body}
+        bodyTy
+recTypePath args {ctxs, ty, typePath: (Let3 md tBind@(TermBind xmd x) tyBinds def {-Type-} body bodyTy) : termPath} =
+    let ctxs' = ctxs{ctx = insert x ty ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx} in
+    args.let3 {ctxs, ty: bodyTy, mdty: getMDType termPath, term: Let md tBind tyBinds def ty body bodyTy, termPath}
+        md {ctxs, mdty: defaultMDType{indented= md.varIndented}, tBind}
+        {ctxs, mdty: defaultMDType, tyBinds}
+        {ctxs: ctxs', mdty: defaultMDType{indented= md.defIndented}, ty: ty, term: def}
+        {ctxs: ctxs', mdty: defaultMDType{indented= md.bodyIndented}, ty: bodyTy, term: body} bodyTy
+recTypePath args {ctxs, ty, typePath: (TLet3 md tyBind@(TypeBind _ x) tyBinds {-Type-} body bodyTy) : termPath} =
+    let ctxs' = ctxs{kctx= delete x ctxs.kctx, mdkctx= delete x ctxs.mdkctx} in
+    args.tLet3 {ctxs: ctxs', mdty: getMDType termPath, ty: bodyTy, term: TLet md tyBind tyBinds ty body bodyTy, termPath}
+        md {ctxs: ctxs', mdty: defaultMDType, tyBind}
+        {ctxs: ctxs', mdty: defaultMDType, tyBinds}
+        {ctxs, mdty: defaultMDType, ty: bodyTy, term: body} bodyTy
+recTypePath args {ctxs, ty, typePath: (Buffer2 md def {-Type-} body bodyTy) : termPath} =
+    args.buffer2 {ctxs, mdty: getMDType termPath, ty: bodyTy, term: Buffer md def ty body bodyTy, termPath}
+        md {ctxs, mdty: defaultMDType, ty, term: def}
+        {ctxs, mdty: defaultMDType, ty: bodyTy, term: body} bodyTy
+recTypePath args {ctxs, ty, typePath: (CtrParam1 md {-Type-}) : ctrParamPath} =
+    args.ctrParam1 {ctxs, mdty: getMDType ctrParamPath, ctrParam: CtrParam md ty, ctrParamPath} md
+recTypePath args {ctxs, ty, typePath: (TypeArg1 md {-Type-}) : typeArgPath} =
+    args.typeArg1 {ctxs, mdty: getMDType typeArgPath, typeArg: TypeArg md ty, typeArgPath} md
+recTypePath args {ctxs, ty, typePath: (Arrow1 md {-Type-} t2) : typePath} =
+    args.arrow1 {ctxs, mdty: getMDType typePath, ty: Arrow md ty t2, typePath} md
+        {ctxs, mdty: defaultMDType{indented= md.codIndented}, ty: t2}
+recTypePath args {ctxs, ty, typePath: (Arrow2 md t1 {-Type-}) : typePath} =
+    args.arrow2 {ctxs, mdty: getMDType typePath, ty: Arrow md t1 ty, typePath} md
+        {ctxs, mdty: defaultMDType, ty: t1}
+recTypePath _ _ = unsafeThrow "Either wasn't a TypePath or I forgot a case!"
 
 --  Constructor
 --    CtrListCons1 {-Constructor-} (List CtrParam)

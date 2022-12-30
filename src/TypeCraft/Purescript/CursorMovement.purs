@@ -61,29 +61,29 @@ parent (TermCursor ctxs mdty ty termPath term) =
     recTermPath
         {
             let2: \upRec md tBind tyBinds defTy body bodyTy ->
-                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Let md tBind.tBind tyBinds.tyBinds term defTy.ty body.term bodyTy) /\ (1 - 1)
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (1 - 1)
             , let4: \upRec md tBind tyBinds def defTy bodyTy ->
-                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Let md tBind.tBind tyBinds.tyBinds def.term defTy.ty term bodyTy) /\ (3 - 1)
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (3 - 1)
             , data4: \upRec md bind tyBinds ctrs bodyTy ->
-                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Data md bind tyBinds.tyBinds ctrs.ctrs term bodyTy) /\ (4 - 1)
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (4 - 1)
             , app1 : \upRec md {-Term-} t2 argTy bodyTy ->
-                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (App md term t2.term argTy bodyTy) /\ (1 - 1)
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (1 - 1)
             , app2 : \upRec md t1 {-Term-} argTy bodyTy ->
-                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (App md t1.term term argTy bodyTy) /\ (2 - 1)
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (2 - 1)
             , lambda3 : \upRec md tbind argTy {-body-} bodyTy ->
-                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Lambda md tbind argTy.ty term bodyTy) /\ (3 - 1)
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (3 - 1)
             , buffer1 : \upRec md {-Term-} bufTy body bodyTy ->
-                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Buffer md term bufTy.ty body.term bodyTy) /\ (1 - 1)
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (1 - 1)
             , buffer3 : \upRec md buf bufTy {-Term-} bodyTy ->
-                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (Buffer md buf.term bufTy.ty term bodyTy) /\ (3 - 1)
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (3 - 1)
             , typeBoundary1 : \upRec md change {-Term-} ->
-                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (TypeBoundary md change term) /\ (1 - 1)
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (1 - 1)
             , contextBoundary1 : \upRec md x change {-Term-} ->
-                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (ContextBoundary md x change term) /\ (1 - 1)
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (1 - 1)
             , tLet4 : \upRec md tyBind tyBinds def {-Term-} bodyTy ->
-                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath (TLet md tyBind tyBinds.tyBinds def.ty term bodyTy) /\ (4 - 1)
+                Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (4 - 1)
         }
-        {ctxs, mdty, ty, termPath}
+        {ctxs, mdty, ty, term, termPath}
 parent (TypeCursor ctxs (Arrow1 md tOut : up) ty) =
     Just $ TypeCursor ctxs up (Arrow md ty tOut) /\ (1 - 1)
 parent (TypeCursor ctxs (Arrow2 md tIn : up) ty) =
