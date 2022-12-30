@@ -14,7 +14,7 @@ import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Util (hole)
 
 
-data AboveInfo = AICursor DownPath | AISelect DownPath DownPath -- top path, then middle path
+data AboveInfo = AICursor UpPath | AISelect UpPath UpPath -- top path, then middle path
 
 stepAI :: Tooth -> AboveInfo -> AboveInfo
 stepAI tooth (AICursor path) = AICursor (tooth : path)
@@ -22,11 +22,11 @@ stepAI tooth (AISelect topPath middlePath) = AISelect topPath (tooth : middlePat
 
 aIOnlyCursor :: AboveInfo -> AboveInfo
 aIOnlyCursor (AICursor path) = AICursor path
-aIOnlyCursor (AISelect topPath middlePath) = AICursor (topPath <> middlePath)
+aIOnlyCursor (AISelect topPath middlePath) = AICursor (middlePath <> topPath)
 
-aIGetPath :: AboveInfo -> DownPath
+aIGetPath :: AboveInfo -> UpPath
 aIGetPath (AICursor path) = path
-aIGetPath (AISelect top middle) = top <> middle
+aIGetPath (AISelect top middle) = middle <> top
 
 --type AboveInfo -- need to track a path for the cursor, and two paths for the selction.
 -- also, might consider deriving the cursor path from those two in that case?
@@ -46,7 +46,7 @@ termToNode aboveInfo term =
                     , termToNode (stepAI (Lambda3 md tbind ty.ty bodyTy) aboveInfo) body
                 ]
         }
-    , app : \md t1 t2 argTy ->
+    , app : \md t1 t2 argTy outTy ->
         {
             dat : makeNodeData {indentation : hole, isParenthesized: term.mdty.onRightOfApp, label: "App"} -- TODO: seems like there will be some redundancy in parenthesization logic?
             , kids: [
@@ -65,12 +65,12 @@ termToNode aboveInfo term =
                 , termToNode (stepAI (Let4 md tbind tbinds def.term defTy.ty bodyTy) aboveInfo) body
             ]
         }
-    , dataa : \md x tbinds ctrs body -> hole
-    , tlet : \md x tbinds def body -> hole
+    , dataa : \md x tbinds ctrs body bodyTy -> hole
+    , tlet : \md x tbinds def body bodyTy -> hole
     , typeBoundary : \md c t -> hole
     , contextBoundary : \md x c t -> hole
     , hole : \md -> hole
-    , buffer : \md def defTy body -> hole
+    , buffer : \md def defTy body bodyTy -> hole
     }) -- term
     in let partialNode = partialNode' term in
     -- pieces that are the same for every syntactic form are done here:

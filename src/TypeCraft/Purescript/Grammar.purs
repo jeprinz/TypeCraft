@@ -59,10 +59,10 @@ The type <thing>Path is the set of possible paths when the cursor is on a <thing
 I'm considering removing the following: Constructor, ConstructorParam, TypeArg
 -}
 -- Thankfully, I don't think I need Syntax after all
-data Syntax =
-    STerm Term | SType Type | SCtrList (List Constructor) | SCtrParamList (List CtrParam)
-    | TypeArgList (List TypeArg) | TypeBindList (List TypeBind) | SConstructor Constructor
-    | SCtrParam CtrParam | STypeArg TypeArg | STypeBind TypeBind | STermBind TermBind
+--data Syntax =
+--    STerm Term | SType Type | SCtrList (List Constructor) | SCtrParamList (List CtrParam)
+--    | TypeArgList (List TypeArg) | TypeBindList (List TypeBind) | SConstructor Constructor
+--    | SCtrParam CtrParam | STypeArg TypeArg | STypeBind TypeBind | STermBind TermBind
 
 -- If Term has a constructor named <name>, then here a constructor named <name>n
 -- refers to a zipper path piece with a hole as the nth term in that constructor.
@@ -116,7 +116,7 @@ data Tooth =
     | TypeBindListCons1 {-TypeBind-} (List TypeBind)
     | TypeBindListCons2 (TypeBind) {-List TypeBind-}
 
-type UpPath = List Tooth -- I believe the correct design is to only use DownPath
+type UpPath = List Tooth
 type DownPath = List Tooth
 
 

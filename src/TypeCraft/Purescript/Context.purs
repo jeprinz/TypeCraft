@@ -76,11 +76,11 @@ constructorIds (Constructor _ (TermBind _ x) _ : ctrs) = Set.insert x (construct
 type MDTypeContext = Map TypeVarID String
 type MDTermContext = Map TermVarID String
 
---type MDContext = {
---    indentation :: Int, -- TODO: hopefully the frontend can handle this instead
---    termVarNames :: MDTermContext,
---    typeVarNames :: MDTypeContext
---}
+type MDContext = {
+    indentation :: Int, -- TODO: hopefully the frontend can handle this instead
+    termVarNames :: MDTermContext,
+    typeVarNames :: MDTypeContext
+}
 
 -- term metadata that is per-term, as opposed to MDContext which is more accumulative
 type MDType = { -- needs to be in MDContext, because it needs to be in the state: if I have select the left of an app, then the term inside needs to know that when its rendered

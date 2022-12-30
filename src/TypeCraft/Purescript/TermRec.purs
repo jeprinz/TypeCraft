@@ -37,16 +37,16 @@ Likewise, it is only necessary to have RecValues for parts of the syntax where s
 -- So pathRec will need to have a path to the bottom!?
 
 type TermRec a = {
-      lambda :: LambdaMD -> TermBind -> TypeRecValue -> TermRecValue -> a
-    , app :: AppMD -> TermRecValue -> TermRecValue -> Type -> a
+      lambda :: LambdaMD -> TermBind -> TypeRecValue -> TermRecValue -> Type -> a
+    , app :: AppMD -> TermRecValue -> TermRecValue -> Type -> Type -> a
     , var :: VarMD -> TermVarID -> List TypeArg -> a
-    , lett :: LetMD -> TermBind -> List TypeBind -> TermRecValue -> TypeRecValue -> TermRecValue -> a
-    , dataa :: GADTMD -> TypeBind -> List TypeBind -> ListConstructorRecValue -> TermRecValue -> a -- TODO: write recConstructor!! Should be List ConstructorRecValue!
-    , tlet :: TLetMD -> TypeBind -> List TypeBind -> TypeRecValue -> TermRecValue -> a
+    , lett :: LetMD -> TermBind -> List TypeBind -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
+    , dataa :: GADTMD -> TypeBind -> List TypeBind -> ListConstructorRecValue -> TermRecValue -> Type -> a -- TODO: write recConstructor!! Should be List ConstructorRecValue!
+    , tlet :: TLetMD -> TypeBind -> List TypeBind -> TypeRecValue -> TermRecValue -> Type -> a
     , typeBoundary :: TypeBoundaryMD -> Change -> TermRecValue -> a
     , contextBoundary :: ContextBoundaryMD -> TermVarID -> Change -> TermRecValue -> a
     , hole :: HoleMD -> a
-    , buffer :: BufferMD -> TermRecValue -> TypeRecValue -> TermRecValue -> a
+    , buffer :: BufferMD -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
 }
 
 recTerm :: forall a. TermRec a -> TermRecValue -> a

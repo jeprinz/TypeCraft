@@ -11,7 +11,7 @@ import Data.List(List(..), (:))
 combineToothTerm :: Tooth -> Term -> Term
 combineToothTerm _ _ = hole
 
-combineDownPathTerm :: DownPath -> Syntax -> Term
+combineDownPathTerm :: DownPath -> Term -> Term
 combineDownPathTerm = hole
 
 combineToothType :: Tooth -> Type -> Type
