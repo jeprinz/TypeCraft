@@ -8,7 +8,7 @@ import TypeCraft.Purescript.Node
 import TypeCraft.Purescript.State
 import TypeCraft.Purescript.TermRec
 
-import Data.List (List, (:))
+import Data.List (List(..), (:))
 import Data.Map.Internal (Map(..), empty, lookup, insert, union)
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Util (hole)
@@ -37,32 +37,32 @@ aIGetPath (AISelect top middle) = top <> middle
 termToNode :: AboveInfo -> TermRecValue -> Node
 termToNode aboveInfo term =
     let partialNode' = recTerm ({
-      lambda : \md tbind@(TermBind {varName} x) ty body ->
+      lambda : \md tbind@(TermBind {varName} x) ty body bodyTy ->
         {
             dat : makeNodeData {indentation : hole, isParenthesized: term.mdty.onLeftOfApp, label: "Lambda"}
             , kids: [
---                    termBindToNode term.kctx term.ctx (stepAI (Lambda1 md ty.ty body.term) (aIOnlyCursor aboveInfo)) tbind
-                    typeToNode (stepAI (Lambda2 md tbind body.term) (aIOnlyCursor aboveInfo)) ty
-                    , termToNode (stepAI (Lambda3 md tbind ty.ty) aboveInfo) body
+                    termBindToNode term.ctxs (stepAI (Lambda1 md ty.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tbind
+                    , typeToNode (stepAI (Lambda2 md tbind body.term bodyTy) (aIOnlyCursor aboveInfo)) ty
+                    , termToNode (stepAI (Lambda3 md tbind ty.ty bodyTy) aboveInfo) body
                 ]
         }
     , app : \md t1 t2 argTy ->
         {
             dat : makeNodeData {indentation : hole, isParenthesized: term.mdty.onRightOfApp, label: "App"} -- TODO: seems like there will be some redundancy in parenthesization logic?
             , kids: [
-                termToNode (stepAI (App1 md t2.term argTy) aboveInfo) t1
-                , termToNode (stepAI (App2 md t2.term argTy) aboveInfo) t2
+                termToNode (stepAI (App1 md t2.term argTy outTy) aboveInfo) t1
+                , termToNode (stepAI (App2 md t2.term argTy outTy) aboveInfo) t2
             ]
         }
     , var : \md x targs -> hole
-    , lett : \md tbind@(TermBind {varName} x) tbinds def defTy body ->
+    , lett : \md tbind@(TermBind {varName} x) tbinds def defTy body bodyTy ->
         {
             dat : makeNodeData {indentation : hole, isParenthesized: term.mdty.onLeftOfApp, label: "Let"}
             , kids: [
 --                and the termBind
-                termToNode (stepAI (Let2 md tbind tbinds defTy.ty body.term) aboveInfo) def
-                , typeToNode (stepAI (Let3 md tbind tbinds def.term body.term) (aIOnlyCursor aboveInfo)) defTy
-                , termToNode (stepAI (Let4 md tbind tbinds def.term defTy.ty) aboveInfo) body
+                termToNode (stepAI (Let2 md tbind tbinds defTy.ty body.term bodyTy) aboveInfo) def
+                , typeToNode (stepAI (Let3 md tbind tbinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
+                , termToNode (stepAI (Let4 md tbind tbinds def.term defTy.ty bodyTy) aboveInfo) body
             ]
         }
     , dataa : \md x tbinds ctrs body -> hole
@@ -77,45 +77,68 @@ termToNode aboveInfo term =
     makeNode {
             dat: partialNode.dat
             , kids : [partialNode.kids]
-            , getCursor : Just \_ -> initState $ initCursorMode $ TermCursor (aIGetPath aboveInfo) term.term
-            , getSelect : hole
+            , getCursor : Just \_ -> initState $ initCursorMode $ TermCursor term.ctxs term.mdty term.ty (aIGetPath aboveInfo) term.term
+            , getSelect : case aboveInfo of
+                     AICursor path -> Nothing
+                     AISelect top middle -> Just \_ -> initState $ SelectMode $ TermSelect term.ctxs term.ty false top middle term.term
             , style : hole
     }
 
 typeToNode :: AboveInfo -> TypeRecValue -> Node
-typeToNode aboveInfo {kctx, ctx, ty}
+typeToNode aboveInfo {ctxs, ty}
     = let partialNode = case ty of
-            Arrow md ty1 ty2 -> hole
+            Arrow md ty1 ty2 -> {
+                dat: makeNodeData {indentation: hole, isParenthesized: true, label: "Arrow"}
+                , kids: [
+                ]
+            }
             THole md x -> hole
             TNeu md x targs -> hole
     in makeNode {
         dat: partialNode.dat
         , kids : partialNode.kids
-        , getCursor : 
-            if partialNode.isCursorable
-                then Just \_ -> initState $ initCursorMode $ TypeCursor hole ty -- Isn't this the same for every case?
-                else Nothing
-        , getSelect: 
-            if partialNode.isSelectable
-                then Just hole
-                else Nothing
-        , style : partialNode.style
+        , getCursor : Just \_ -> initState $ initCursorMode $ TypeCursor ctxs (aIGetPath aboveInfo) ty
+        , getSelect : case aboveInfo of
+                 AICursor path -> Nothing
+                 AISelect top middle -> Just \_ -> initState $ SelectMode $ TypeSelect ctxs false top middle ty
+        , style : makeNormalNodeStyle
     }
 
-ctrListToNode :: MDContext -> DownPath -> TypeContext -> TermContext -> List Constructor -> Node
-ctrListToNode mdctx up kctx ctx ctrs = hole
+ctrListToNode :: AllContext -> AboveInfo -> UpPath -> List Constructor -> Node
+ctrListToNode ctxs aboveInfo up Nil = hole
+ctrListToNode ctxs aboveInfo up (ctr : ctrs) = hole
 
-ctrToNode :: MDContext -> DownPath -> TypeContext -> TermContext -> Constructor -> Node
-ctrToNode mdctx up kctx ctx ctr = hole
+ctrToNode :: AllContext -> AboveInfo -> UpPath -> Constructor -> Node
+ctrToNode ctxs aboveInfo up (Constructor md tbind ctrParams) = hole
 
-ctrParamToNode :: MDContext -> DownPath -> TypeContext -> TermContext -> CtrParam -> Node
-ctrParamToNode mdctx up kctx ctx param = hole
-
-termBindToNode :: MDContext -> TypeContext -> TermContext -> AboveInfo -> TermBind -> Node
-termBindToNode mdctx kctx ctx aboveInfo tbind@(TermBind md x) = makeNode {
-    dat : makeNodeData {indentation: hole, isParenthesized: false, label: "TypeBind"}
-    , kids: []
-    , getCursor : Just \_ -> initState $ initCursorMode $ TermBindCursor (aIGetPath aboveInfo) tbind
+ctrParamToNode :: AllContext -> AboveInfo -> UpPath -> CtrParam -> Node
+ctrParamToNode ctxs aboveInfo up (CtrParam md ty) = makeNode {
+    dat: makeNodeData {indentation: hole, isParenthesized: false, label: "CtrParam"}
+    , kids: [[typeToNode (stepAI (CtrParam1 md) (aIOnlyCursor aboveInfo)) {ctxs, ty}]]
+    , getCursor: Nothing
     , getSelect: Nothing
     , style: makeNormalNodeStyle
 }
+
+typeArgToNode :: AllContext -> UpPath -> AboveInfo -> TypeArg -> Node
+typeArgToNode ctxs aboveInfo up (TypeArg md ty) = hole
+
+typeBindToNode :: AllContext -> AboveInfo -> TypeBind -> Node
+typeBindToNode ctxs aboveInfo (TypeBind md x) = hole
+
+termBindToNode :: AllContext -> AboveInfo -> TermBind -> Node
+termBindToNode ctxs aboveInfo tbind@(TermBind md x) = makeNode {
+    dat : makeNodeData {indentation: hole, isParenthesized: false, label: "TermBind"}
+    , kids: []
+    , getCursor : Just \_ -> initState $ initCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tbind
+    , getSelect: Nothing
+    , style: makeNormalNodeStyle
+}
+
+ctrParamListToNode :: AllContext -> AboveInfo -> UpPath -> List CtrParam -> Node
+ctrParamListToNode ctxs aboveInfo up Nil = hole
+ctrParamListToNode ctxs aboveInfo up (ctrParam : ctrParams) = hole
+
+typeArgListToNode :: AllContext -> AboveInfo -> UpPath -> List TypeArg -> Node
+typeArgListToNode ctxs aboveInfo up Nil = hole
+typeArgListToNode ctxs aboveInfo up (tyArg : tyArgs) = hole

@@ -9,6 +9,8 @@ import TypeCraft.Purescript.Freshen (freshenChange)
 import Effect.Exception.Unsafe (unsafeThrow)
 import Data.List (List(..), (:))
 import TypeCraft.Purescript.MD (defaultArrowMD)
+import Data.Set (Set)
+import Data.Set as Set
 
 {-
 This file defines term contexts and type contexts!
@@ -54,9 +56,18 @@ constructorTypes dataType Nil = empty
 constructorTypes dataType (Constructor _ (TermBind _ x) params : ctrs)
     = insert x (ctrParamsToType dataType params) (constructorTypes dataType ctrs)
 
+constructorNames :: List Constructor -> Map TermVarID String
+constructorNames Nil = empty
+constructorNames (Constructor _ (TermBind xmd x) params : ctrs)
+    = insert x xmd.varName (constructorNames ctrs)
+
 ctrParamsToType :: Type -> List CtrParam -> Type
 ctrParamsToType dataType Nil = dataType
 ctrParamsToType dataType (CtrParam _ ty : params) = Arrow defaultArrowMD ty (ctrParamsToType dataType params)
+
+constructorIds :: List Constructor -> Set TermVarID
+constructorIds Nil = Set.empty
+constructorIds (Constructor _ (TermBind _ x) _ : ctrs) = Set.insert x (constructorIds ctrs)
 
 --------------------------------------------------------------------------------
 -------------- Metadatta contexts ---------------------------------------------
@@ -85,7 +96,8 @@ defaultMDType = {onLeftOfApp : false, onRightOfApp : false}
 --------------------------------------------------------------------------------
 
 type AllContext = {
-    kctx :: TypeContext
+    mdkctx :: MDTypeContext
+    , mdctx :: MDTermContext
+    , kctx :: TypeContext
     , ctx :: TermContext
-    , mdctx :: MDContext
 }

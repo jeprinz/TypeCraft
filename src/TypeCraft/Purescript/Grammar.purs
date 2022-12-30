@@ -20,16 +20,16 @@ type TermVarID = Int
 type TypeVarID = Int
 data Type = Arrow ArrowMD Type Type | THole THoleMD TypeHoleID | TNeu TNeuMD TypeVarID (List TypeArg)
 data TypeArg = TypeArg TypeArgMD Type
-data Term = App AppMD Term Term Type -- The type of the argument
-          | Lambda LambdaMD TermBind Type Term -- Type of the argument
-          | Var VarMD TermVarID (List TypeArg) {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}
-          | Let LetMD TermBind (List TypeBind) Term Type Term
-          | Data GADTMD TypeBind (List TypeBind) (List Constructor) Term
-          | TLet TLetMD TypeBind (List TypeBind) Type Term
+data Term = App AppMD Term Term Type Type -- The type of the argument, then the type of the output
+          | Lambda LambdaMD TermBind Type Term Type -- first Type is arg, second is type of body
+          | Var VarMD TermVarID (List TypeArg)
+          | Let LetMD TermBind (List TypeBind) Term Type Term Type
+          | Data GADTMD TypeBind (List TypeBind) (List Constructor) Term Type
+          | TLet TLetMD TypeBind (List TypeBind) Type Term Type -- last Type is type of body!
           | TypeBoundary TypeBoundaryMD Change Term -- the change goes from type inside to type outside. That is, getEndpoints gives inside type on left and outside on right.
           | ContextBoundary ContextBoundaryMD TermVarID Change Term
-          | Hole HoleMD
-          | Buffer BufferMD Term Type Term
+          | Hole HoleMD {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}
+          | Buffer BufferMD Term Type Term Type
 
 data TypeBind = TypeBind TypeBindMD TypeVarID
 data TermBind = TermBind TermBindMD TermVarID
@@ -51,10 +51,12 @@ data KindChange = KCArrow KindChange | KCType
 
 {-
 The following is a list of the grammatical sorts within this editor:
-Term, Type, (List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
-Constructor, CtrParam, TypeArg, TypeBind, TermBind
+Term, Type, Constructor, CtrParam, TypeArg, TypeBind, TermBind
+(List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
 Each of these has a type of terms and of paths.
 The type <thing>Path is the set of possible paths when the cursor is on a <thing>
+
+I'm considering removing the following: Constructor, ConstructorParam, TypeArg
 -}
 -- Thankfully, I don't think I need Syntax after all
 data Syntax =
@@ -65,58 +67,54 @@ data Syntax =
 -- If Term has a constructor named <name>, then here a constructor named <name>n
 -- refers to a zipper path piece with a hole as the nth term in that constructor.
 -- Can tell what path is up by what type the constructor name came from
+-- A <blank>-path is a path whose last tooth has a <blank> missing inside it, in the curly braces
 data Tooth =
-    -- TermPath (all ups are TermPaths)
-      App1 AppMD {-Term-} Term Type
-    | App2 AppMD Term {-Term-} Type
-    | Lambda1 LambdaMD {-TermBind-} Type Term
-    | Lambda2 LambdaMD TermBind {-Type-} Term
-    | Lambda3 LambdaMD TermBind Type {-Term-}
-    | Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term
-    | Let2 LetMD TermBind (List TypeBind) {-Term-} Type Term
-    | Let3 LetMD TermBind (List TypeBind) Term {-Type-} Term
-    | Let4 LetMD TermBind (List TypeBind) Term Type {-Term-}
-    | Buffer1 BufferMD {-Term-} Type Term
-    | Buffer2 BufferMD Term {-Type-} Term
-    | Buffer3 BufferMD Term Type {-Term-}
+    -- Term
+      App1 AppMD {-Term-} Term Type Type
+    | App2 AppMD Term {-Term-} Type Type
+    | Lambda1 LambdaMD {-TermBind-} Type Term Type
+    | Lambda2 LambdaMD TermBind {-Type-} Term Type
+    | Lambda3 LambdaMD TermBind Type {-Term-} Type
+    | Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term Type
+    | Let2 LetMD TermBind (List TypeBind) {-Term-} Type Term Type
+    | Let3 LetMD TermBind (List TypeBind) Term {-Type-} Term Type
+    | Let4 LetMD TermBind (List TypeBind) Term Type {-Term-} Type
+    | Buffer1 BufferMD {-Term-} Type Term Type
+    | Buffer2 BufferMD Term {-Type-} Term Type
+    | Buffer3 BufferMD Term Type {-Term-} Type
     | TypeBoundary1 TypeBoundaryMD Change {-Term-}
     | ContextBoundary1 ContextBoundaryMD TermVarID Change {-Term-}
-    | TLet1 TLetMD TypeBind (List TypeBind) Term
-    | TLet2 TLetMD TypeBind (List TypeBind) Type {-Term-}
-    | Data1 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term
-    | Data3 GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-}
-    -- TypePath
-    | Arrow1 ArrowMD Type -- up TypePath
-    | Arrow2 ArrowMD Type -- up TypePath
-    | TNeu1 TNeuMD (List TypeArg) -- up TypePath
-         -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
-    | TNeu2 TNeuMD (List Change) Int -- up TypePath -- TODO: why is this List Change? That can't be right.
-    -- Constructor List Path
-    | CtrListCons1 {-Constructor-} (List CtrParam) -- up CtrListPath
-    | CtrListCons2 Constructor {-List Constructor-} -- up CtrListPath
-    -- CtrParamListPath
-    | CtrParamListCons1 {-CtrParam-} (List CtrParam) -- up CtrParamListPath
-    | CtrParamListCons2 CtrParam {-List CtrParam-} -- up CtrParamListPath
-    -- TypeArg List Path
+    | TLet1 TLetMD {-TypeBind-} (List TypeBind) Type Term Type
+    | TLet2 TLetMD TypeBind {-List TypeBind-} Type Term Type
+    | TLet3 TLetMD TypeBind (List TypeBind) {-Type-} Term Type
+    | TLet4 TLetMD TypeBind (List TypeBind) Type {-Term-} Type
+    | Data1 GADTMD {-TypeBind-} (List TypeBind) (List Constructor) Term Type
+    | Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
+    | Data3 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type
+    | Data4 GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-} Type
+    -- Type
+    | Arrow1 ArrowMD Type
+    | Arrow2 ArrowMD Type
+    | TNeu1 TNeuMD (List TypeArg)
+    | TNeu2 TNeuMD (List Change) Int -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
+    -- Constructor
+    | Constructor1 {-List CtrParam-} -- up ConstructorPath
+    -- CtrParam
+    | CtrParam1 CtrParamMD {-Type-}
+    -- TypeArg
+    | TypeArg1 TypeArgMD {-Type-}
+    -- Constructor List
+    | CtrListCons1 {-Constructor-} (List CtrParam)
+    | CtrListCons2 Constructor {-List Constructor-}
+    -- CtrParam List
+    | CtrParamListCons1 {-CtrParam-} (List CtrParam)
+    | CtrParamListCons2 CtrParam {-List CtrParam-}
+    -- TypeArg List
     | TypeArgListCons1 {-TypeArg-} (List TypeArg)
     | TypeArgListCons2 (TypeArg) {-List TypeArg-}
-    -- TypeBind List Path
+    -- TypeBind List
     | TypeBindListCons1 {-TypeBind-} (List TypeBind)
     | TypeBindListCons2 (TypeBind) {-List TypeBind-}
-    --    ConstructorPath
-    | Constructor1 {-List CtrParam-} -- up ConstructorPath
-    -- CtrParamPath
-    | CtrParam1 CtrParamMD {-Type-}
-    -- TypeArg Path
-    | TypeArg1 TypeArgMD {-Type-}
-
-{-
-The following is a list of the grammatical sorts within this editor:
-Term, Type, (List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
-Constructor, CtrParam, TypeArg, TypeBind, TermBind
-Each of these has a type of terms and of paths.
-The type <thing>Path is the set of possible paths when the cursor is on a <thing>
--}
 
 type UpPath = List Tooth -- I believe the correct design is to only use DownPath
 type DownPath = List Tooth

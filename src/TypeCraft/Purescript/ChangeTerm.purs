@@ -14,11 +14,9 @@ import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints, composeChange)
 import Data.Tuple (snd)
 import TypeCraft.Purescript.MD
 import Data.List (List(..), (:))
-import TypeCraft.Purescript.ChangeType (chType)
 import TypeCraft.Purescript.TypeChangeAlgebra (isIdentity, invert)
 import Data.Tuple (fst)
 import TypeCraft.Purescript.TypeChangeAlgebra (getSubstitution)
-import TypeCraft.Purescript.ChangeType (chTypeArgs)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 
@@ -106,6 +104,42 @@ doInsertArgs :: Change -> Term -> Change /\ Term
 doInsertArgs (Plus ty c) t = doInsertArgs c (App defaultAppMD t (Hole defaultHoleMD) ty)
 doInsertArgs c t = c /\ t
 
+-- could avoid returning Type (because you can get it from the change with getEndpoints), if I put metadata into Change
+chType :: KindChangeCtx -> Type -> Type /\ Change
+chType kctx (Arrow md t1 t2) =
+    let t1' /\ c1 = chType kctx t1 in
+    let t2' /\ c2 = chType kctx t2 in
+    Arrow md t1' t2' /\ CArrow c1 c2
+chType kctx (THole md x) = THole md x /\ CHole x
+chType kctx startType@(TNeu md x args) =
+    case lookup x kctx of
+    Nothing -> unsafeThrow "shouldn't get here! all variables should be bound in the context!"
+    Just (TVarKindChange kindChange) ->
+        let args' /\ cargs = chTypeArgs kctx kindChange args in
+        TNeu md x args' /\ CNeu x cargs
+    Just TVarDelete ->
+        let x = freshTypeHoleID unit in
+        let newType = THole defaultHoleMD x in
+        newType /\ Replace startType newType
+    (Just (TVarTypeChange _)) -> unsafeThrow "I need to figure out what is the deal with TVarTypeChange!!!"
+
+
+chTypeArgs :: KindChangeCtx -> KindChange -> List TypeArg -> List TypeArg /\ List ChangeParam
+chTypeArgs kctx KCType Nil = Nil /\ Nil
+chTypeArgs kctx (KPlus kc) params =
+    let tparams /\ cparams = chTypeArgs kctx kc params in
+    let x = freshTypeHoleID unit in
+    let newType = THole defaultHoleMD x in
+    (TypeArg defaultTypeArgMD newType : tparams) /\ (PlusParam newType : cparams)
+chTypeArgs kctx (KCArrow kc) (TypeArg md t : params) =
+    let t' /\ c = chType kctx t in
+    let tparams /\ cparams = chTypeArgs kctx kc params in
+    ((TypeArg md t') : tparams) /\ (ChangeParam c) : cparams
+chTypeArgs kctx (KMinus kc) (TypeArg md t : params) =
+    let tparams /\ cparams = chTypeArgs kctx kc params in
+    tparams /\ (MinusParam t) : cparams
+chTypeArgs kctx _ _ = unsafeThrow "shouldn't get here: types didn't line up with kindchanges (or I missed a case)"
+
 --chTerm :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Change  /\ Term
 
 -- The output Change is the change to the constructor itself
@@ -116,14 +150,14 @@ chCtrList = hole
 chCtr :: KindChangeCtx -> Constructor -> (List Change) /\ Constructor
 chCtr = hole
 
-chParam :: KindChangeCtx -> CtrParam -> Change /\ CtrParam
-chParam kctx (CtrParam md t) =
+chCtrParam :: KindChangeCtx -> CtrParam -> Change /\ CtrParam
+chCtrParam kctx (CtrParam md t) =
     let t' /\ c = chType kctx t in c /\ CtrParam md t'
 
 chParamList :: KindChangeCtx -> List CtrParam -> (List Change) /\ List CtrParam
 chParamList _ Nil = Nil /\ Nil
 chParamList kctx (param : params) =
-    let ch /\ param' = chParam kctx param in
+    let ch /\ param' = chCtrParam kctx param in
     let chs /\ params' = chParamList kctx params in
     (ch : chs) /\ param' : params'
 

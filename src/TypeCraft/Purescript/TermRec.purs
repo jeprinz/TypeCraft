@@ -9,23 +9,21 @@ import Data.Map.Internal (empty, lookup, insert, union)
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
-import TypeCraft.Purescript.Substitution (Sub, combineSub, subChange, subChangeCtx, unify)
 import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints, composeChange)
 import Data.Tuple (snd)
 import TypeCraft.Purescript.MD
 import Data.List (List(..), (:))
-import TypeCraft.Purescript.ChangeType (chType)
-import TypeCraft.Purescript.TypeChangeAlgebra (isIdentity, invert)
 import Data.Tuple (fst)
-import TypeCraft.Purescript.TypeChangeAlgebra (getSubstitution)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Kinds (bindsToKind)
 
--- TODO: figure out how to use row polymorphism to remove redundancy in record definitions
-type TermRecValue = {mdkctx :: MDTypeContext, mdctx :: MDTermContext, kctx :: TypeContext, ctx :: TermContext, mdty :: MDType, ty :: Type, term :: Term}
-type TypeRecValue = {mdkctx :: MDTypeContext, mdctx :: MDTermContext, kctx :: TypeContext, ctx :: TermContext, ty :: Type}
-type ListConstructorRecValue = {mdkctx :: MDTypeContext, mdctx :: MDTermContext, kctx :: TypeContext, ctx :: TermContext, ctrs :: List Constructor}
+type TermRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, term :: Term}
+type TypeRecValue = {ctxs :: AllContext, ty :: Type}
+type ListConstructorRecValue = {ctxs :: AllContext, ctrs :: List Constructor}
+
+-- TODO: make a RecValue for each grammatical sort. Even if I don't write recursors for all of them, at least those might be useful!
+
 {-
 There isn't really any needs for recursors on grammatical sorts other than terms, because no other part of the syntax
 binds anything into the context or does anything nontrivial with types.
@@ -52,45 +50,57 @@ type TermRec a = {
 }
 
 recTerm :: forall a. TermRec a -> TermRecValue -> a
-recTerm args {mdctx, mdkctx, kctx, ctx, ty: (Arrow _ ty1 ty2), term : (Lambda md bind@(TermBind xmd x) xty body)}
+recTerm args {ctxs, ty: (Arrow _ ty1 ty2), term : (Lambda md bind@(TermBind xmd x) xty body bodyTy)}
     = if not (ty1 == xty) then unsafeThrow "dynamic type error detected" else
+      if not (ty2 == bodyTy) then unsafeThrow "dynamic type error detected" else
+      let ctxs' = ctxs{mdctx= insert x xmd.varName ctxs.mdctx, ctx= insert x ty1 ctxs.ctx} in
         args.lambda md bind
-            {mdctx, mdkctx, kctx: kctx, ctx, ty: xty}
-            {mdkctx, mdctx : insert x xmd.varName mdctx, mdty: defaultMDType, kctx: kctx, ctx: (insert x ty1 ctx), ty: ty2, term : body}
-recTerm args {mdkctx, mdctx, kctx, ctx, ty: tyOut, term : (App md t1 t2 tyArg)} =
-        args.app md {mdkctx, mdctx, mdty: defaultMDType{onLeftOfApp = true}, kctx, ctx, ty: Arrow defaultArrowMD tyArg tyOut, term: t1}
-        {mdkctx, mdctx, mdty: defaultMDType{onRightOfApp = true}, kctx, ctx, ty: tyArg, term: t2}
-        tyArg
-recTerm args {mdkctx, mdctx, kctx, ctx, term : Var md x tyArgs} = args.var md x tyArgs
-recTerm args {mdkctx, mdctx, kctx, ctx, ty, term : Let md bind@(TermBind xmd x) tbinds def defTy body} =
-        let ctx' = insert x defTy ctx in -- TODO; should use number of tbinds here!
-        let mdctx' = insert x xmd.varName mdctx in
-        args.lett md bind tbinds {mdkctx, mdctx: mdctx', mdty: defaultMDType, kctx, ctx: ctx', ty: defTy, term: def}
-            {mdkctx, mdctx, kctx, ctx, ty: defTy}
-            {mdkctx, mdctx: mdctx', mdty: defaultMDType, kctx, ctx: ctx', ty: ty, term: body}
-recTerm args {mdkctx, mdctx, kctx, ctx, ty, term : Data md tbind@(TypeBind xmd x) tbinds ctrs body} =
+            {ctxs, ty: xty}
+            {ctxs: ctxs', mdty: defaultMDType, ty: ty2, term : body}
+            ty2
+recTerm args {ctxs, ty: tyOut, term : (App md t1 t2 tyArg tyOut')}
+    = if not (tyOut == tyOut') then unsafeThrow "dynamic type error: shouldn't happen" else
+        args.app md {ctxs, mdty: defaultMDType{onLeftOfApp = true}, ty: Arrow defaultArrowMD tyArg tyOut, term: t1}
+        {ctxs, mdty: defaultMDType{onRightOfApp = true}, ty: tyArg, term: t2}
+        tyArg tyOut
+recTerm args {ctxs, term : Var md x tyArgs} = args.var md x tyArgs
+recTerm args {ctxs, ty, term : Let md bind@(TermBind xmd x) tbinds def defTy body bodyTy}
+    = if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
+        -- TODO; should use number of tbinds here!
+        let ctxs' = ctxs{ctx = insert x defTy ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx} in
+        args.lett md bind tbinds {ctxs: ctxs', mdty: defaultMDType, ty: defTy, term: def}
+            {ctxs, ty: defTy}
+            {ctxs: ctxs', mdty: defaultMDType, ty: ty, term: body}
+            bodyTy
+recTerm args {ctxs, ty, term : Data md tbind@(TypeBind xmd x) tbinds ctrs body bodyTy} =
+    if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
     let dataType = TNeu defaultTNeuMD x Nil in -- TODO: should actually use tbinds to get the list! ?? (sort of, the parametrs should be outside? see how constructorTypes changes)
-    let kctx' = insert x (bindsToKind tbinds) kctx in
-    let mdkctx' = insert x xmd.varName mdkctx in
-    args.dataa md tbind tbinds {mdkctx: mdkctx', mdctx, kctx: kctx', ctx, ctrs}
+    let ctxs' = ctxs{kctx = insert x (bindsToKind tbinds) ctxs.kctx, mdkctx = insert x xmd.varName ctxs.mdkctx
+        , ctx= union ctxs.ctx (constructorTypes dataType ctrs)
+        , mdctx= union ctxs.mdctx (constructorNames ctrs)} in
+    args.dataa md tbind tbinds {ctxs: ctxs', ctrs}
         -- TODO: on line below, don't just put Type for kind, actually use the list of tbinds to get the number of parameters!!!!
         -- TODO TODO TODO TODO: actually add constructors to the context!
-        {mdkctx: mdkctx', mdctx, mdty: defaultMDType, kctx : kctx', ctx: union ctx (constructorTypes dataType ctrs), ty: ty, term: body}
-recTerm args {mdkctx, mdctx, kctx, ctx, ty, term : TLet md tybind@(TypeBind xmd x) tbinds def body} =
-    let kctx' = insert x (bindsToKind tbinds) kctx in
-    let mdkctx' = insert x xmd.varName mdkctx in
+        {ctxs: ctxs', mdty: defaultMDType, ty: ty, term: body}
+        bodyTy
+recTerm args {ctxs, ty, term : TLet md tybind@(TypeBind xmd x) tbinds def body bodyTy} =
+    if not (bodyTy == ty) then unsafeThrow "shouldn't happen" else
+    let ctxs' = ctxs{kctx = insert x (bindsToKind tbinds) ctxs.kctx, mdkctx = insert x xmd.varName ctxs.mdkctx} in
     args.tlet md tybind tbinds
-        {mdkctx, mdctx, kctx, ctx, ty: def}
-        {mdkctx: mdkctx', mdctx, mdty: defaultMDType, kctx: kctx', ctx, ty: ty, term: body}
-recTerm args {mdkctx, mdctx, kctx, ctx, ty, term : TypeBoundary md c body} =
+        {ctxs: ctxs', ty: def}
+        {ctxs: ctxs', mdty: defaultMDType, ty: bodyTy, term: body}
+        bodyTy
+recTerm args {ctxs, ty, term : TypeBoundary md c body} =
     if not (ty == snd (getEndpoints c)) then unsafeThrow "shouldn't happen" else
-    args.typeBoundary md c {mdkctx, mdctx, mdty: defaultMDType, kctx, ctx, ty: snd (getEndpoints c), term: body}
-recTerm args {mdkctx, mdctx, kctx, ctx, ty, term : ContextBoundary md x c body} =
-    args.contextBoundary md x c {mdkctx, mdctx, mdty: defaultMDType, kctx, ctx: insert x (snd (getEndpoints c)) ctx, ty: ty, term: body}
-recTerm args {kctx, ctx, ty, term : Hole md} = args.hole md
-recTerm args {mdkctx, mdctx, kctx, ctx, ty, term : Buffer md def defTy body} =
+    args.typeBoundary md c {ctxs, mdty: defaultMDType, ty: snd (getEndpoints c), term: body}
+recTerm args {ctxs, ty, term : ContextBoundary md x c body} =
+    let ctxs' = ctxs{ctx= insert x (snd (getEndpoints c)) ctxs.ctx} in
+    args.contextBoundary md x c {ctxs, mdty: defaultMDType, ty: ty, term: body}
+recTerm args {term : Hole md} = args.hole md
+recTerm args {ctxs, ty, term : Buffer md def defTy body bodyTy} =
     args.buffer md
-        {mdkctx, mdctx, mdty: defaultMDType, kctx, ctx, ty: defTy, term: def}
-        {mdkctx, mdctx, kctx, ctx, ty: defTy}
-        {mdkctx, mdctx, mdty: defaultMDType, kctx, ctx, ty: ty, term: body}
+        {ctxs, mdty: defaultMDType, ty: defTy, term: def}
+        {ctxs, ty: defTy}
+        {ctxs, mdty: defaultMDType, ty: bodyTy, term: body}
+        bodyTy
 recTerm _ _ = unsafeThrow "invalid type for a lambda probably"
