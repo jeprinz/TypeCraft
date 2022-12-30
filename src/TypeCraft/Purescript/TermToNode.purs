@@ -37,13 +37,13 @@ aIGetPath (AISelect top middle) = middle <> top
 termToNode :: AboveInfo -> TermRecValue -> Node
 termToNode aboveInfo term =
     let partialNode' = recTerm ({
-      lambda : \md tbind@(TermBind {varName} x) ty body bodyTy ->
+      lambda : \md tBind ty body bodyTy ->
         {
             dat : makeNodeData {indentation : hole, isParenthesized: term.mdty.onLeftOfApp, label: "Lambda"}
             , kids: [
-                    termBindToNode term.ctxs (stepAI (Lambda1 md ty.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tbind
-                    , typeToNode (stepAI (Lambda2 md tbind body.term bodyTy) (aIOnlyCursor aboveInfo)) ty
-                    , termToNode (stepAI (Lambda3 md tbind ty.ty bodyTy) aboveInfo) body
+                    termBindToNode (stepAI (Lambda1 md ty.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tBind
+                    , typeToNode (stepAI (Lambda2 md tBind.tBind body.term bodyTy) (aIOnlyCursor aboveInfo)) ty
+                    , termToNode (stepAI (Lambda3 md tBind.tBind ty.ty bodyTy) aboveInfo) body
                 ]
         }
     , app : \md t1 t2 argTy outTy ->
@@ -55,14 +55,14 @@ termToNode aboveInfo term =
             ]
         }
     , var : \md x targs -> hole
-    , lett : \md tbind@(TermBind {varName} x) tbinds def defTy body bodyTy ->
+    , lett : \md tBind tyBinds def defTy body bodyTy ->
         {
             dat : makeNodeData {indentation : hole, isParenthesized: term.mdty.onLeftOfApp, label: "Let"}
             , kids: [
 --                and the termBind
-                termToNode (stepAI (Let2 md tbind tbinds defTy.ty body.term bodyTy) aboveInfo) def
-                , typeToNode (stepAI (Let3 md tbind tbinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
-                , termToNode (stepAI (Let4 md tbind tbinds def.term defTy.ty bodyTy) aboveInfo) body
+                termToNode (stepAI (Let2 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
+                , typeToNode (stepAI (Let3 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
+                , termToNode (stepAI (Let4 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy) aboveInfo) body
             ]
         }
     , dataa : \md x tbinds ctrs body bodyTy -> hole
@@ -111,14 +111,14 @@ ctrListToNode ctxs aboveInfo up (ctr : ctrs) = hole
 ctrToNode :: AllContext -> AboveInfo -> UpPath -> Constructor -> Node
 ctrToNode ctxs aboveInfo up (Constructor md tbind ctrParams) = hole
 
-ctrParamToNode :: AllContext -> AboveInfo -> UpPath -> CtrParam -> Node
-ctrParamToNode ctxs aboveInfo up (CtrParam md ty) = makeNode {
-    dat: makeNodeData {indentation: hole, isParenthesized: false, label: "CtrParam"}
-    , kids: [[typeToNode (stepAI (CtrParam1 md) (aIOnlyCursor aboveInfo)) {ctxs, ty}]]
-    , getCursor: Nothing
-    , getSelect: Nothing
-    , style: makeNormalNodeStyle
-}
+--ctrParamToNode :: AllContext -> AboveInfo -> UpPath -> CtrParam -> Node
+--ctrParamToNode ctxs aboveInfo up (CtrParam md ty) = makeNode {
+--    dat: makeNodeData {indentation: hole, isParenthesized: false, label: "CtrParam"}
+--    , kids: [[typeToNode (stepAI (CtrParam1 md) (aIOnlyCursor aboveInfo)) {ctxs, ty}]]
+--    , getCursor: Nothing
+--    , getSelect: Nothing
+--    , style: makeNormalNodeStyle
+--}
 
 typeArgToNode :: AllContext -> UpPath -> AboveInfo -> TypeArg -> Node
 typeArgToNode ctxs aboveInfo up (TypeArg md ty) = hole
@@ -126,11 +126,11 @@ typeArgToNode ctxs aboveInfo up (TypeArg md ty) = hole
 typeBindToNode :: AllContext -> AboveInfo -> TypeBind -> Node
 typeBindToNode ctxs aboveInfo (TypeBind md x) = hole
 
-termBindToNode :: AllContext -> AboveInfo -> TermBind -> Node
-termBindToNode ctxs aboveInfo tbind@(TermBind md x) = makeNode {
+termBindToNode :: AboveInfo -> TermBindRecValue -> Node
+termBindToNode aboveInfo {ctxs, tBind: tBind@(TermBind md x)} = makeNode {
     dat : makeNodeData {indentation: hole, isParenthesized: false, label: "TermBind"}
     , kids: []
-    , getCursor : Just \_ -> initState $ initCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tbind
+    , getCursor : Just \_ -> initState $ initCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tBind
     , getSelect: Nothing
     , style: makeNormalNodeStyle
 }

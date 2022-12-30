@@ -93,12 +93,12 @@ data Tooth =
     | Data3 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type
     | Data4 GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-} Type
     -- Type
-    | Arrow1 ArrowMD Type
-    | Arrow2 ArrowMD Type
-    | TNeu1 TNeuMD (List TypeArg)
-    | TNeu2 TNeuMD (List Change) Int -- The Int is position to insert in the list where the hole is -- May want to go for a more functional representation here
+    | Arrow1 ArrowMD {-Type-} Type
+    | Arrow2 ArrowMD Type {-Type-}
+    | TNeu1 TNeuMD TypeVarID {-List TypeArg-}
     -- Constructor
-    | Constructor1 {-List CtrParam-} -- up ConstructorPath
+    | Constructor1 CtrMD {-TermBind-} (List CtrParam)
+    | Constructor2 CtrMD TermBind {-List CtrParam-}
     -- CtrParam
     | CtrParam1 CtrParamMD {-Type-}
     -- TypeArg
