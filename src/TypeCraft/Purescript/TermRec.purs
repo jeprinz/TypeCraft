@@ -17,6 +17,7 @@ import Data.Tuple (fst)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Kinds (bindsToKind)
+import TypeCraft.Purescript.TypeChangeAlgebra (pGetEndpoints)
 
 type TermRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, term :: Term}
 type TypeRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type}
@@ -52,7 +53,7 @@ type TermRec a = {
     , dataa :: GADTMD -> TypeBindRecValue -> ListTypeBindRecValue -> ListCtrRecValue -> TermRecValue -> Type -> a -- TODO: write recConstructor!! Should be List ConstructorRecValue!
     , tlet :: TLetMD -> TypeBindRecValue -> ListTypeBindRecValue -> TypeRecValue -> TermRecValue -> Type -> a
     , typeBoundary :: TypeBoundaryMD -> Change -> TermRecValue -> a
-    , contextBoundary :: ContextBoundaryMD -> TermVarID -> Change -> TermRecValue -> a
+    , contextBoundary :: ContextBoundaryMD -> TermVarID -> PolyChange -> TermRecValue -> a
     , hole :: HoleMD -> a
     , buffer :: BufferMD -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
 }
@@ -61,7 +62,7 @@ recTerm :: forall a. TermRec a -> TermRecValue -> a
 recTerm args {ctxs, ty: (Arrow _ ty1 ty2), term : (Lambda md bind@(TermBind xmd x) xty body bodyTy)}
     = if not (ty1 == xty) then unsafeThrow "dynamic type error detected" else
       if not (ty2 == bodyTy) then unsafeThrow "dynamic type error detected" else
-      let ctxs' = ctxs{mdctx= insert x xmd.varName ctxs.mdctx, ctx= insert x ty1 ctxs.ctx} in
+      let ctxs' = ctxs{mdctx= insert x xmd.varName ctxs.mdctx, ctx= insert x (PType ty1) ctxs.ctx} in
         args.lambda md {ctxs, mdty: defaultMDType, tBind: bind}
             {ctxs, mdty: defaultMDType, ty: xty}
             {ctxs: ctxs', mdty: defaultMDType, ty: ty2, term : body}
@@ -75,7 +76,7 @@ recTerm args {ctxs, term : Var md x tyArgs} = args.var md x {ctxs, mdty: default
 recTerm args {ctxs, ty, term : Let md tBind@(TermBind xmd x) tyBinds def defTy body bodyTy}
     = if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
         -- TODO; should use number of tbinds here!
-        let ctxs' = ctxs{ctx = insert x defTy ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx} in
+        let ctxs' = ctxs{ctx = insert x (tyBindsWrapType tyBinds defTy) ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx} in
         args.lett md {ctxs, mdty: defaultMDType, tBind} {ctxs, mdty: defaultMDType, tyBinds}
             {ctxs: ctxs', mdty: defaultMDType, ty: defTy, term: def}
             {ctxs, mdty: defaultMDType, ty: defTy}
@@ -85,7 +86,7 @@ recTerm args {ctxs, ty, term : Data md tyBind@(TypeBind xmd x) tyBinds ctrs body
     if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
     let dataType = TNeu defaultTNeuMD x Nil in -- TODO: should actually use tbinds to get the list! ?? (sort of, the parametrs should be outside? see how constructorTypes changes)
     let ctxs' = ctxs{kctx = insert x (bindsToKind tyBinds) ctxs.kctx, mdkctx = insert x xmd.varName ctxs.mdkctx
-        , ctx= union ctxs.ctx (constructorTypes dataType ctrs)
+        , ctx= union ctxs.ctx (constructorTypes dataType tyBinds ctrs)
         , mdctx= union ctxs.mdctx (constructorNames ctrs)} in
     args.dataa md {ctxs, mdty: defaultMDType, tyBind}
         {ctxs, mdty: defaultMDType, tyBinds} {ctxs: ctxs', mdty: defaultMDType, ctrs}
@@ -104,7 +105,7 @@ recTerm args {ctxs, ty, term : TypeBoundary md c body} =
     if not (ty == snd (getEndpoints c)) then unsafeThrow "shouldn't happen" else
     args.typeBoundary md c {ctxs, mdty: defaultMDType, ty: snd (getEndpoints c), term: body}
 recTerm args {ctxs, ty, term : ContextBoundary md x c body} =
-    let ctxs' = ctxs{ctx= insert x (snd (getEndpoints c)) ctxs.ctx} in
+    let ctxs' = ctxs{ctx= insert x (snd (pGetEndpoints c)) ctxs.ctx} in
     args.contextBoundary md x c {ctxs, mdty: defaultMDType, ty: ty, term: body}
 recTerm args {term : Hole md} = args.hole md
 recTerm args {ctxs, ty, term : Buffer md def defTy body bodyTy} =

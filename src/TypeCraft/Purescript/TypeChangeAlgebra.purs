@@ -52,6 +52,18 @@ getEndpointss (ChangeParam c : cs) =
 getEndpointss (PlusParam t : cs) = let t1s /\ t2s = getEndpointss cs in t1s /\ t : t2s
 getEndpointss (MinusParam t : cs) = let t1s /\ t2s = getEndpointss cs in (t : t1s) /\ t2s
 
+pGetEndpoints :: PolyChange -> PolyType /\ PolyType
+pGetEndpoints (CForall tBind pc) =
+    let pt1 /\ pt2 = pGetEndpoints pc in
+    Forall tBind pt1 /\ Forall tBind pt2
+pGetEndpoints (PPlus tBind pc) =
+    let pt1 /\ pt2 = pGetEndpoints pc in
+    pt1 /\ Forall tBind pt2
+pGetEndpoints (PMinus tBind pc) =
+    let pt1 /\ pt2 = pGetEndpoints pc in
+    Forall tBind pt1 /\ pt2
+pGetEndpoints (PChange c) = let t1 /\ t2 = getEndpoints c in PType t1 /\ PType t2
+
 
 -- Assumption: the first typechange is from A to B, and the second is from B to C. If the B's don't line up,
 -- then this function will throw an exception
@@ -92,14 +104,20 @@ invertParam (PlusParam t) = MinusParam t
 invertParam (MinusParam t) = PlusParam t
 
 
-isIdentity :: Change -> Boolean
-isIdentity (CArrow c1 c2) = isIdentity c1 && isIdentity c2
-isIdentity (CHole _) = true
-isIdentity (Replace t1 t2) = t1 == t2 -- debatable, not sure if this case should always return false?
-isIdentity (CNeu varId params) = all (\b -> b) (map (case _ of
-    ChangeParam change -> isIdentity change
+chIsId :: Change -> Boolean
+chIsId (CArrow c1 c2) = chIsId c1 && chIsId c2
+chIsId (CHole _) = true
+chIsId (Replace t1 t2) = t1 == t2 -- debatable, not sure if this case should always return false?
+chIsId (CNeu varId params) = all (\b -> b) (map (case _ of
+    ChangeParam change -> chIsId change
     _ -> false) params)
-isIdentity _ = false
+chIsId _ = false
+
+pChIsId :: PolyChange -> Boolean
+pChIsId (CForall _ c) = pChIsId c
+pChIsId (PPlus _ _) = false
+pChIsId (PMinus _ _) = false
+pChIsId (PChange c) = chIsId c
 
 {-
 Later, I need to figure out how to compose changes  more generally.

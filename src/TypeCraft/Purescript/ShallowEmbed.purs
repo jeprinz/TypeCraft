@@ -22,7 +22,7 @@ type STerm = CtxAndType -> Term
 lambda :: String -> (Term -> STerm) -> STerm
 lambda name body {kctx, ctx, ty: Arrow _ ty1 ty2} =
     let x = freshInt unit in
-    let t = body (Var defaultVarMD x Nil) {kctx, ctx: insert x ty1 ctx, ty: ty1} in
+    let t = body (Var defaultVarMD x Nil) {kctx, ctx: insert x (PType ty1) ctx, ty: ty1} in
     Lambda defaultLambdaMD (TermBind {varName: name} x) ty1 t ty2
 lambda _ _ _ = unsafeThrow "shouldn't happen"
 

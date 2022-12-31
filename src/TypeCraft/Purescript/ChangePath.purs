@@ -12,6 +12,7 @@ import Data.Tuple (fst)
 import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints)
 import Data.Tuple (snd)
 import Data.List (List(..), (:))
+import Data.Map (delete)
 
 -- For now, I won't do anything with upwards ChangeCtx. But I can implement that in the future.
 
@@ -24,11 +25,12 @@ chTermPath kctx ctx (CArrow c1 c2) (App1 md {-here-} t argTy outTy : up) =
 -- TODO: App2 case, other App1 cases with other TypeChanges
 chTermPath kctx ctx c  (Let2 md x tbinds {-Term = here-} ty body tybody : up) =
     hole
-chTermPath kctx ctx c (Let4 md x tbinds def ty {-body = here-} tybody : up) =
+chTermPath kctx ctx c (Let4 md tBind@(TermBind _ x) tbinds def ty {-body = here-} tybody : up) =
     if not (fst (getEndpoints c) == tybody) then unsafeThrow "shouldn't happen" else
-    let def' = chTermBoundary kctx (ctxLetCons ctx x (VarTypeChange (tyInject ty))) (tyInject ty) def in
-    let up' = chTermPath kctx ctx c up in
-    Let4 md x tbinds def' ty (snd (getEndpoints c)) : up
+    let ctx' = delete x ctx in
+    let def' = chTermBoundary kctx ctx (tyInject ty) def in
+    let up' = chTermPath kctx ctx' c up in
+    Let4 md tBind tbinds def' ty (snd (getEndpoints c)) : up
 chTermPath kctx ctx c (Data4 md x tbinds ctrs {-body = here-} bodyTy : up) =
     if not (fst (getEndpoints c) == bodyTy) then unsafeThrow "shouldn't happen" else
     -- TODO: update ctrs using kctx and chCtrList
@@ -42,11 +44,3 @@ chTermPath kctx ctx c (Data4 md x tbinds ctrs {-body = here-} bodyTy : up) =
 --ContextBoundary1 TermPath ContextBoundaryMD Change {-Term-}
 --TLet3 TermPath TLetMD TypeBind Type Kind {-Term-}
 chTermPath _ _ _ _ = unsafeThrow "finish implementing all cases"
-
--- trying the idea of working with a DownPath. Change is still applied to bottom.
-chTermPath' :: KindChangeCtx -> ChangeCtx -> Change -> DownPath -> DownPath
-chTermPath' kctx ctx c (Let2 md x tbinds {-Term = here-} ty body tybody : down) =
-    let ctx' = ctxLetCons ctx x (VarTypeChange (tyInject ty)) in
-    hole
-chTermPath' _ _ _ _ = hole
-

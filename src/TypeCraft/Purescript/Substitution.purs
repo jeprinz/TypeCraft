@@ -18,6 +18,7 @@ import TypeCraft.Purescript.Context
 type Sub = Map TypeHoleID Change
 -- The rest of the file is various functions related to substituion, including unification
 
+{-
 subChange :: Sub -> Change -> Change
 subChange sub = let rec = subChange sub in case _ of
     CHole h -> case (lookup h sub) of
@@ -73,3 +74,5 @@ unifyChangeParams (ChangeParam c1 : c1s) (ChangeParam c2 : c2s) = do
 unifyChangeParams (PlusParam t1 : c1s) (PlusParam t2 : c2s) | t1 == t2 = unifyChangeParams c1s c2s
 unifyChangeParams (MinusParam t1 : c1s) (MinusParam t2 : c2s) | t1 == t2 = unifyChangeParams c1s c2s
 unifyChangeParams _ _ = Nothing
+
+-}

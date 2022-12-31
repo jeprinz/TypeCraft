@@ -10,7 +10,6 @@ import Data.Map.Internal (empty, lookup, insert, delete, filterKeys)
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
-import TypeCraft.Purescript.Substitution (Sub, combineSub, subChange, subChangeCtx, unify)
 import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints, composeChange)
 import Data.Tuple (snd)
 import TypeCraft.Purescript.MD
@@ -48,7 +47,7 @@ type TermPathRec a = {
     , buffer1 :: TermPathRecValue -> BufferMD -> TypeRecValue -> TermRecValue -> Type -> a
     , buffer3 :: TermPathRecValue -> BufferMD -> TermRecValue -> TypeRecValue -> Type -> a
     , typeBoundary1 :: TermPathRecValue -> TypeBoundaryMD -> Change -> a
-    , contextBoundary1 :: TermPathRecValue -> ContextBoundaryMD -> TermVarID -> Change -> a
+    , contextBoundary1 :: TermPathRecValue -> ContextBoundaryMD -> TermVarID -> PolyChange -> a
     , tLet4 :: TermPathRecValue -> TLetMD -> TypeBind -> ListTypeBindRecValue -> TypeRecValue -> Type -> a
     , data4 :: TermPathRecValue -> GADTMD -> TypeBind -> ListTypeBindRecValue -> ListCtrRecValue -> Type -> a
 }
@@ -141,14 +140,14 @@ type TypePathRec a = {
 
 recTypePath :: forall a. TypePathRec a -> TypePathRecValue -> a
 recTypePath args {ctxs, ty, typePath: (Lambda2 md tBind@(TermBind xmd x) {-Type-} body bodyTy) : termPath} =
-  let ctxs' = ctxs{mdctx= insert x xmd.varName ctxs.mdctx, ctx= insert x ty ctxs.ctx} in
+  let ctxs' = ctxs{mdctx= insert x xmd.varName ctxs.mdctx, ctx= insert x (PType ty) ctxs.ctx} in
     args.lambda2 {ctxs, ty: Arrow defaultArrowMD ty bodyTy,
             mdty: getMDType termPath, term: Lambda md tBind ty body bodyTy, termPath} md
         {ctxs, mdty: defaultMDType, tBind}
         {ctxs: ctxs', mdty: defaultMDType, ty: bodyTy, term: body}
         bodyTy
 recTypePath args {ctxs, ty, typePath: (Let3 md tBind@(TermBind xmd x) tyBinds def {-Type-} body bodyTy) : termPath} =
-    let ctxs' = ctxs{ctx = insert x ty ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx} in
+    let ctxs' = ctxs{ctx = insert x (tyBindsWrapType tyBinds ty) ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx} in
     args.let3 {ctxs, ty: bodyTy, mdty: getMDType termPath, term: Let md tBind tyBinds def ty body bodyTy, termPath}
         md {ctxs, mdty: defaultMDType{indented= md.varIndented}, tBind}
         {ctxs, mdty: defaultMDType, tyBinds}
@@ -212,7 +211,7 @@ recTypeBindPath args {ctxs, tyBind: tyBind@(TypeBind xmd x), typeBindPath: (TLet
 recTypeBindPath args {ctxs, tyBind: tyBind@(TypeBind xmd x), typeBindPath: (Data1 md {-TypeBind-} tyBinds ctrs body bodyTy) : termPath} =
     let dataType = TNeu defaultTNeuMD x Nil in -- TODO: should actually use tbinds to get the list! ?? (sort of, the parametrs should be outside? see how constructorTypes changes)
     let ctxs' = ctxs{kctx = insert x (bindsToKind tyBinds) ctxs.kctx, mdkctx = insert x xmd.varName ctxs.mdkctx
-        , ctx= union ctxs.ctx (constructorTypes dataType ctrs)
+        , ctx= union ctxs.ctx (constructorTypes dataType tyBinds ctrs)
         , mdctx= union ctxs.mdctx (constructorNames ctrs)} in
     args.data1 {ctxs, mdty: getMDType termPath, ty: bodyTy, term: Data md tyBind tyBinds ctrs body bodyTy, termPath} md
         {ctxs, mdty: defaultMDType, tyBinds}
@@ -231,13 +230,13 @@ type TermBindPathRec a = {
 
 recTermBindPath :: forall a. TermBindPathRec a -> TermBindPathRecValue -> a
 recTermBindPath args {ctxs, tBind: tBind@(TermBind xmd x), termBindPath: (Lambda1 md {-TermBind-} argTy body bodyTy) : termPath} =
-    let ctxs' = ctxs{mdctx= insert x xmd.varName ctxs.mdctx, ctx= insert x argTy ctxs.ctx} in
+    let ctxs' = ctxs{mdctx= insert x xmd.varName ctxs.mdctx, ctx= insert x (PType argTy) ctxs.ctx} in
     args.lambda1
         {ctxs, mdty: getMDType termPath, ty: (Arrow defaultArrowMD argTy bodyTy), term: (Lambda md tBind argTy body bodyTy), termPath} md
         {ctxs, mdty: defaultMDType, ty: argTy}
         {ctxs: ctxs', mdty: defaultMDType, ty: bodyTy, term: body} bodyTy
 recTermBindPath args {ctxs, tBind: tBind@(TermBind xmd x), termBindPath: (Let1 md {-TermBind-} tyBinds def defTy body bodyTy) : termPath} =
-    let ctxs' = ctxs{ctx = insert x defTy ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx} in
+    let ctxs' = ctxs{ctx = insert x (tyBindsWrapType tyBinds defTy) ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx} in
     args.let1 {ctxs, mdty: getMDType termPath, ty: bodyTy, term: (Let md tBind tyBinds def defTy body bodyTy), termPath} md
         {ctxs, mdty: defaultMDType, tyBinds}
         {ctxs: ctxs', mdty: defaultMDType, ty: defTy, term: def}

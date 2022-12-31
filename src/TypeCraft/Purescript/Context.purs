@@ -18,52 +18,45 @@ This file defines term contexts and type contexts!
 --------------------------------------------------------------------------------
 -------------- Regular contexts -----------------------------------------------
 --------------------------------------------------------------------------------
-type TermContext = Map TermVarID Type
+type TermContext = Map TermVarID PolyType
 type TypeContext = Map TypeVarID Kind
 
 --------------------------------------------------------------------------------
 -------------- Change contexts ------------------------------------------------
 --------------------------------------------------------------------------------
 
-data VarChange = VarTypeChange Change | VarDelete -- | VarInsert Type
+data VarChange = VarTypeChange PolyChange | VarDelete -- | VarInsert PolyType
 -- Let-bound on left and lambda-bound variables on right
 -- TODO: TODO: TODO: I need to combine these and instead have Map TermVarID (K)
-data ChangeCtx = ChangeCtx (Map TermVarID VarChange) (Map TermVarID VarChange)
-ctxLetCons :: ChangeCtx -> TermBind -> VarChange -> ChangeCtx
-ctxLetCons (ChangeCtx lets lams) (TermBind _ x) c = ChangeCtx (insert x c lets) lams
-
-ctxLambdaCons :: ChangeCtx -> TermBind -> VarChange -> ChangeCtx
-ctxLambdaCons (ChangeCtx lets lams) (TermBind _ x) c = ChangeCtx lets (insert x c lams)
+type ChangeCtx = Map TermVarID VarChange
 
 data TVarChange = TVarKindChange KindChange | TVarDelete | TVarTypeChange Change
 type KindChangeCtx = Map TypeVarID TVarChange
 ctxKindCons :: KindChangeCtx -> TypeBind -> TVarChange -> KindChangeCtx
 ctxKindCons kctx (TypeBind _ x) c = insert x c kctx
 
-ctxLookup :: TermVarID -> ChangeCtx -> VarChange
-ctxLookup x (ChangeCtx letCtx lamCtx) = case lookup x lamCtx of
-                                      Just c -> c
-                                      Nothing -> case lookup x letCtx of
-                                                 Just (VarTypeChange c) -> VarTypeChange (freshenChange c)
-                                                 Just VarDelete -> VarDelete
-                                                 Nothing -> unsafeThrow "shouldn't get ehre"
-
 --data Contexts = Contexts TermContext ChangeCtx
 
 -- TODO: when I properly deal with parameters to types, this will have to be modified!
-constructorTypes :: Type -> List Constructor -> Map TermVarID Type
-constructorTypes dataType Nil = empty
-constructorTypes dataType (Constructor _ (TermBind _ x) params : ctrs)
-    = insert x (ctrParamsToType dataType params) (constructorTypes dataType ctrs)
+tyBindsWrapType :: List TypeBind -> Type -> PolyType
+tyBindsWrapType Nil ty = PType ty
+tyBindsWrapType (tyBind : tyBinds) ty = Forall tyBind (tyBindsWrapType tyBinds ty)
+
+constructorTypes :: Type -> List TypeBind -> List Constructor -> Map TermVarID PolyType
+constructorTypes dataType tyBinds Nil = empty
+constructorTypes dataType tyBinds (Constructor _ (TermBind _ x) params : ctrs)
+    = insert x (ctrParamsToType dataType tyBinds params) (constructorTypes dataType tyBinds ctrs)
 
 constructorNames :: List Constructor -> Map TermVarID String
 constructorNames Nil = empty
 constructorNames (Constructor _ (TermBind xmd x) params : ctrs)
     = insert x xmd.varName (constructorNames ctrs)
 
-ctrParamsToType :: Type -> List CtrParam -> Type
-ctrParamsToType dataType Nil = dataType
-ctrParamsToType dataType (CtrParam _ ty : params) = Arrow defaultArrowMD ty (ctrParamsToType dataType params)
+ctrParamsToType :: Type -> List TypeBind -> List CtrParam -> PolyType
+ctrParamsToType dataType tyBinds ctrParams = tyBindsWrapType tyBinds (ctrParamsToTypeImpl dataType ctrParams)
+ctrParamsToTypeImpl :: Type -> List CtrParam -> Type
+ctrParamsToTypeImpl dataType Nil = dataType
+ctrParamsToTypeImpl dataType (CtrParam _ ty : params) = Arrow defaultArrowMD ty (ctrParamsToTypeImpl dataType params)
 
 constructorIds :: List Constructor -> Set TermVarID
 constructorIds Nil = Set.empty

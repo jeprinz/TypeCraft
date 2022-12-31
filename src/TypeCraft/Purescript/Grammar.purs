@@ -19,6 +19,7 @@ type TypeHoleID = Int -- figure out unique Ids later!
 type TermVarID = Int
 type TypeVarID = Int
 data Type = Arrow ArrowMD Type Type | THole THoleMD TypeHoleID | TNeu TNeuMD TypeVarID (List TypeArg)
+data PolyType = Forall TypeBind PolyType | PType Type -- doesn't appear in source code. Instead, source code has lists of type parameters.
 data TypeArg = TypeArg TypeArgMD Type
 data Term = App AppMD Term Term Type Type -- The type of the argument, then the type of the output
           | Lambda LambdaMD TermBind Type Term Type -- first Type is arg, second is type of body
@@ -27,7 +28,7 @@ data Term = App AppMD Term Term Type Type -- The type of the argument, then the 
           | Data GADTMD TypeBind (List TypeBind) (List Constructor) Term Type
           | TLet TLetMD TypeBind (List TypeBind) Type Term Type -- last Type is type of body!
           | TypeBoundary TypeBoundaryMD Change Term -- the change goes from type inside to type outside. That is, getEndpoints gives inside type on left and outside on right.
-          | ContextBoundary ContextBoundaryMD TermVarID Change Term
+          | ContextBoundary ContextBoundaryMD TermVarID PolyChange Term
           | Hole HoleMD {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}
           | Buffer BufferMD Term Type Term Type
 
@@ -39,6 +40,9 @@ data Constructor = Constructor CtrMD TermBind (List CtrParam)
 --data Kind = KArrow KArrowMD Kind Kind | Type TypeMD
 data Kind = KArrow Kind | Type
 
+data PolyChange = CForall TypeBind PolyChange
+    | PPlus TypeBind PolyChange | PMinus TypeBind PolyChange
+    | PChange Change
 data Change = CArrow Change Change | CHole TypeHoleID
      | Replace Type Type
      | Plus Type Change | Minus Type Change
@@ -51,7 +55,7 @@ data KindChange = KCArrow KindChange | KCType
 
 {-
 The following is a list of the grammatical sorts within this editor:
-Term, Type, Constructor, CtrParam, TypeArg, TypeBind, TermBind
+Term, Type, PolyType, Constructor, CtrParam, TypeArg, TypeBind, TermBind
 (List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
 Each of these has a type of terms and of paths.
 The type <thing>Path is the set of possible paths when the cursor is on a <thing>
@@ -83,7 +87,7 @@ data Tooth =
     | Buffer2 BufferMD Term {-Type-} Term Type
     | Buffer3 BufferMD Term Type {-Term-} Type
     | TypeBoundary1 TypeBoundaryMD Change {-Term-}
-    | ContextBoundary1 ContextBoundaryMD TermVarID Change {-Term-}
+    | ContextBoundary1 ContextBoundaryMD TermVarID PolyChange {-Term-}
     | TLet1 TLetMD {-TypeBind-} (List TypeBind) Type Term Type
     | TLet2 TLetMD TypeBind {-List TypeBind-} Type Term Type
     | TLet3 TLetMD TypeBind (List TypeBind) {-Type-} Term Type
@@ -96,6 +100,10 @@ data Tooth =
     | Arrow1 ArrowMD {-Type-} Type
     | Arrow2 ArrowMD Type {-Type-}
     | TNeu1 TNeuMD TypeVarID {-List TypeArg-}
+    -- PolyType
+    | Forall1 {-TypeBind-} PolyType
+    | Forall2 TypeBind {-PolyType-}
+    | PType1 {-Type-}
     -- Constructor
     | Constructor1 CtrMD {-TermBind-} (List CtrParam)
     | Constructor2 CtrMD TermBind {-List CtrParam-}
@@ -128,6 +136,10 @@ tyInject :: Type -> Change
 tyInject (Arrow _ ty1 ty2) = CArrow (tyInject ty1) (tyInject ty2)
 tyInject (TNeu _ x args) = CNeu x (map (case _ of TypeArg _ t -> ChangeParam (tyInject t)) args)
 tyInject (THole _ id) = CHole id
+
+pTyInject :: PolyType -> PolyChange
+pTyInject (Forall x t) = CForall x (pTyInject t)
+pTyInject (PType t) = PChange (tyInject t)
 --tyInject (TLambda _ x k ty) = CLambda x (tyInject ty)
 
 -- TODO:

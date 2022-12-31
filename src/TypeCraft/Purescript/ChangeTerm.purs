@@ -5,26 +5,25 @@ import Prim hiding (Type)
 import Data.Tuple.Nested (type (/\), (/\))
 
 import TypeCraft.Purescript.Grammar
-import Data.Map.Internal (empty, lookup)
+import Data.Map.Internal (empty, lookup, insert)
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
-import TypeCraft.Purescript.Substitution (Sub, combineSub, subChange, subChangeCtx, unify)
-import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints, composeChange)
+--import TypeCraft.Purescript.Substitution (Sub, combineSub, subChange, subChangeCtx, unify)
 import Data.Tuple (snd)
 import TypeCraft.Purescript.MD
 import Data.List (List(..), (:))
-import TypeCraft.Purescript.TypeChangeAlgebra (isIdentity, invert)
+import TypeCraft.Purescript.TypeChangeAlgebra
 import Data.Tuple (fst)
-import TypeCraft.Purescript.TypeChangeAlgebra (getSubstitution)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Util (lookup')
 
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
 chTermBoundary :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Term
 chTermBoundary kctx ctx c t =
     let c /\ t' = chTerm kctx ctx c t in
-    if isIdentity c
+    if chIsId c
         then t'
         else TypeBoundary defaultTypeBoundaryMD (invert c) t'
 
@@ -42,7 +41,7 @@ chTerm kctx ctx c t =
                 (Minus _ c1') -> c1' /\ Buffer defaultBufferMD t2 argTy t1' (snd (getEndpoints c1))
                 (CArrow c1a c1b) ->
                     let c2 /\ t2' = chTerm kctx ctx c1a t2 in
-                    let t2'' = if isIdentity c2
+                    let t2'' = if chIsId c2
                         then t2'
                         else TypeBoundary defaultTypeBoundaryMD (invert c2) t2'
                     in c1b /\ App md t1' t2'' (snd (getEndpoints c1a)) (snd (getEndpoints c1b))
@@ -54,38 +53,39 @@ chTerm kctx ctx c t =
             cin /\ (Var md x params) ->
                 -- try the polymorphism case
 --                case getSubstitution cin (lookup x ctx)
-                let xVarCh = ctxLookup x ctx in
+                let xVarCh = lookup' x ctx in
                 case xVarCh of
                     VarDelete -> tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD -- later use context boundary
                     VarTypeChange xChange ->
                         let tryPolymorhpismCase =
-                                do _ <- (if isIdentity xChange then Just xChange else Nothing) -- (for now at least), polymorphism thing only works if variable type is unchanged in context
-                                   let ty = (snd (getEndpoints xChange))
-                                   sub <- getSubstitution cin ty
-                                   let c' = composeChange (invert c) (subChange sub (tyInject ty))
-                                   pure $ c' /\ (Var md x (unsafeThrow "need to deal with params!"))
+--                                do _ <- (if pChIsId xChange then Just xChange else Nothing) -- (for now at least), polymorphism thing only works if variable type is unchanged in context
+--                                   let ty = (snd (getEndpoints xChange))
+--                                   sub <- getSubstitution cin ty
+--                                   let c' = composeChange (invert c) (subChange sub (tyInject ty))
+--                                   pure $ c' /\ (Var md x (unsafeThrow "need to deal with params!"))
+                                Nothing
                         in case tryPolymorhpismCase  of
                            Just res -> res
-                           Nothing -> xChange /\ Var md x (unsafeThrow "need to deal with params!") -- if the polymorhpism case didn't apply, simply return the change and leave the variable as is
-            (CArrow c1 c2) /\ (Lambda md x ty t bodyTy) ->
+                           Nothing -> hole -- xChange /\ Var md x (unsafeThrow "need to deal with params!") -- if the polymorhpism case didn't apply, simply return the change and leave the variable as is
+            (CArrow c1 c2) /\ (Lambda md tBind@(TermBind _ x) ty t bodyTy) ->
                 if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen" else
                 if not (bodyTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen" else
-                let c2' /\ t' = chTerm kctx (ctxLambdaCons ctx x (VarTypeChange c1)) c2 t in
-                (CArrow (tyInject (snd (getEndpoints c1))) c2') /\ Lambda md x (snd (getEndpoints c1)) t' (snd (getEndpoints c2))
-            (Minus ty1 c) /\ (Lambda md x ty2 t bodyTy) ->
+                let c2' /\ t' = chTerm kctx (insert x (VarTypeChange (PChange c1)) ctx) c2 t in
+                (CArrow (tyInject (snd (getEndpoints c1))) c2') /\ Lambda md tBind (snd (getEndpoints c1)) t' (snd (getEndpoints c2))
+            (Minus ty1 c) /\ (Lambda md tBind@(TermBind _ x) ty2 t bodyTy) ->
                 if not (ty1 == ty2) then unsafeThrow "shouldn't happen" else
                 if not (bodyTy == fst (getEndpoints c)) then unsafeThrow "shouldn't happen" else
-                let c2' /\ t' = chTerm kctx (ctxLambdaCons ctx x VarDelete) c t in
+                let c2' /\ t' = chTerm kctx (insert x VarDelete ctx) c t in
                 (Minus ty1 c2') /\ t'
             (Plus ty c) /\ t ->
                 c /\ App defaultAppMD t (Hole defaultHoleMD) ty (snd (getEndpoints c))
-            c /\ Let md x binds t1 ty t2 tybody ->
+            c /\ Let md tBind@(TermBind _ x) binds t1 ty t2 tybody ->
                 -- TODO: need to include the binds into the kctx for some things I think?
                 if not (fst (getEndpoints c) == ty) then unsafeThrow "shouldn't happen" else
-                let c1 /\ t1' = chTerm kctx (ctxLetCons ctx x (VarTypeChange (tyInject ty))) (tyInject ty) t1 in
-                let c2 /\ t2' = chTerm kctx (ctxLetCons ctx x (VarTypeChange (tyInject ty))) c t2 in
-                let t1'' = if isIdentity c1 then t1' else TypeBoundary defaultTypeBoundaryMD c1 t1' in
-                c2 /\ Let md x binds t1'' ty t2' (snd (getEndpoints c2))
+                let c1 /\ t1'= chTerm kctx (insert x (VarTypeChange (pTyInject (tyBindsWrapType binds ty))) ctx) (tyInject ty) t1 in
+                let c2 /\ t2' = chTerm kctx (insert x (VarTypeChange (pTyInject (tyBindsWrapType binds ty))) ctx) c t2 in
+                let t1'' = if chIsId c1 then t1' else TypeBoundary defaultTypeBoundaryMD c1 t1' in
+                c2 /\ Let md tBind binds t1'' ty t2' (snd (getEndpoints c2))
             c /\ Buffer md t1 ty1 t2 bodyTy ->
                 let c1 /\ t1' = chTerm kctx ctx (tyInject ty1) t1 in
                 let c2 /\ t2' = chTerm kctx ctx c t2 in
