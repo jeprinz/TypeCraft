@@ -3,6 +3,7 @@ module TypeCraft.Purescript.PathRec where
 import Prelude
 import Prim hiding (Type)
 import Data.Tuple.Nested (type (/\), (/\))
+import Data.Map.Internal (empty, lookup, insert, union)
 
 import TypeCraft.Purescript.Grammar
 import Data.Map.Internal (empty, lookup, insert, delete, filterKeys)
@@ -20,12 +21,13 @@ import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.TermRec
 import Data.Set (member)
 import TypeCraft.Purescript.Util (lookup')
+import TypeCraft.Purescript.Kinds (bindsToKind)
 
 type TermPathRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, term :: Term, termPath :: UpPath}
 type TypePathRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, typePath :: UpPath}
 type CtrPathRecValue = {ctxs :: AllContext, mdty :: MDType, ctr :: Constructor, ctrPath :: UpPath}
 type CtrParamPathRecValue = {ctxs :: AllContext, mdty :: MDType, ctrParam :: CtrParam, ctrParamPath :: UpPath}
-type TypeArgPathRecValue = {ctxs :: AllContext, mdty :: MDType, typeArg :: TypeArg, typeArgPath :: UpPath}
+type TypeArgPathRecValue = {ctxs :: AllContext, mdty :: MDType, tyArg :: TypeArg, typeArgPath :: UpPath}
 type TypeBindPathRecValue = {ctxs :: AllContext, mdty :: MDType, tyBind :: TypeBind, typeBindPath :: UpPath}
 type TermBindPathRecValue = {ctxs :: AllContext, mdty :: MDType, tBind :: TermBind, termBindPath :: UpPath}
 type ListCtrPathRecValue = {ctxs :: AllContext, mdty :: MDType, ctrs :: List Constructor, listCtrPath :: UpPath}
@@ -165,7 +167,7 @@ recTypePath args {ctxs, ty, typePath: (Buffer2 md def {-Type-} body bodyTy) : te
 recTypePath args {ctxs, ty, typePath: (CtrParam1 md {-Type-}) : ctrParamPath} =
     args.ctrParam1 {ctxs, mdty: getMDType ctrParamPath, ctrParam: CtrParam md ty, ctrParamPath} md
 recTypePath args {ctxs, ty, typePath: (TypeArg1 md {-Type-}) : typeArgPath} =
-    args.typeArg1 {ctxs, mdty: getMDType typeArgPath, typeArg: TypeArg md ty, typeArgPath} md
+    args.typeArg1 {ctxs, mdty: getMDType typeArgPath, tyArg: TypeArg md ty, typeArgPath} md
 recTypePath args {ctxs, ty, typePath: (Arrow1 md {-Type-} t2) : typePath} =
     args.arrow1 {ctxs, mdty: getMDType typePath, ty: Arrow md ty t2, typePath} md
         {ctxs, mdty: defaultMDType{indented= md.codIndented}, ty: t2}
@@ -174,38 +176,91 @@ recTypePath args {ctxs, ty, typePath: (Arrow2 md t1 {-Type-}) : typePath} =
         {ctxs, mdty: defaultMDType, ty: t1}
 recTypePath _ _ = unsafeThrow "Either wasn't a TypePath or I forgot a case!"
 
---  Constructor
---    CtrListCons1 {-Constructor-} (List CtrParam)
+type CtrPathRec a = {
+    ctrListCons1 :: ListCtrPathRecValue -> ListCtrRecValue -> a
+}
 
--- CtrParam
---    CtrParamListCons1 {-CtrParam-} (List CtrParam)
+recCtrPath :: forall a. CtrPathRec a -> CtrPathRecValue -> a
+recCtrPath args {ctxs, ctr, ctrPath: (CtrListCons1 {-Constructor-} ctrs) : listCtrPath} =
+    args.ctrListCons1 {ctxs, mdty: getMDType listCtrPath, ctrs: ctr : ctrs, listCtrPath}
+        {ctxs, mdty: defaultMDType, ctrs}
+recCtrPath _ _ = unsafeThrow "Either wasn't a CtrPath or I forgot a case"
 
--- TypeArg
---    TNeu1 TNeuMD TypeVarID {-List TypeArg-}
---    TypeArgListCons1 {-TypeArg-} (List TypeArg)
+type TypeArgPathRec a = {
+    typeArgListCons1 :: ListTypeArgPathRecValue -> ListTypeArgRecValue -> a
+}
 
--- TypeBind
---    TLet1 TLetMD {-TypeBind-} (List TypeBind) Type Term Type
---    Data1 GADTMD {-TypeBind-} (List TypeBind) (List Constructor) Term Type
---    TypeBindListCons1 {-TypeBind-} (List TypeBind)
+recTypeArgPath :: forall a. TypeArgPathRec a -> TypeArgPathRecValue -> a
+recTypeArgPath args {ctxs, tyArg, typeArgPath: (TypeArgListCons1 tyArgs) : listTypeArgPath} =
+    args.typeArgListCons1 {ctxs, mdty: getMDType listTypeArgPath, tyArgs: (tyArg : tyArgs), listTypeArgPath}
+        {ctxs, mdty: defaultMDType, tyArgs}
+recTypeArgPath _ _ = unsafeThrow "Either wasn't a TypeArgPath or I forgot a case"
 
--- TermBind
---    Lambda1 LambdaMD {-TermBind-} Type Term Type
---    Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term Type
---    Constructor1 CtrMD {-TermBind-} (List CtrParam)
+type TypeBindPathRec a = {
+    tLet1 :: TermPathRecValue -> TLetMD -> ListTypeBindRecValue -> TypeRecValue -> TermRecValue -> Type -> a
+    , data1 :: TermPathRecValue -> GADTMD -> ListTypeBindRecValue -> ListCtrRecValue -> TermRecValue -> Type -> a
+    , typeBindListCons1 :: ListTypeBindPathRecValue -> ListTypeBindRecValue -> a
+}
+
+recTypeBindPath :: forall a. TypeBindPathRec a -> TypeBindPathRecValue -> a
+recTypeBindPath args {ctxs, tyBind: tyBind@(TypeBind xmd x), typeBindPath: (TLet1 md {-TypeBind-} tyBinds def body bodyTy) : termPath} =
+    let ctxs' = ctxs{kctx = insert x (bindsToKind tyBinds) ctxs.kctx, mdkctx = insert x xmd.varName ctxs.mdkctx} in
+    args.tLet1 {ctxs, mdty: getMDType termPath, ty: bodyTy, term: TLet md tyBind tyBinds def body bodyTy, termPath}
+        md {ctxs, mdty: defaultMDType, tyBinds}
+        {ctxs, mdty: defaultMDType, ty: def}
+        {ctxs, mdty: defaultMDType, ty: bodyTy, term: body} bodyTy
+recTypeBindPath args {ctxs, tyBind: tyBind@(TypeBind xmd x), typeBindPath: (Data1 md {-TypeBind-} tyBinds ctrs body bodyTy) : termPath} =
+    let dataType = TNeu defaultTNeuMD x Nil in -- TODO: should actually use tbinds to get the list! ?? (sort of, the parametrs should be outside? see how constructorTypes changes)
+    let ctxs' = ctxs{kctx = insert x (bindsToKind tyBinds) ctxs.kctx, mdkctx = insert x xmd.varName ctxs.mdkctx
+        , ctx= union ctxs.ctx (constructorTypes dataType ctrs)
+        , mdctx= union ctxs.mdctx (constructorNames ctrs)} in
+    args.data1 {ctxs, mdty: getMDType termPath, ty: bodyTy, term: Data md tyBind tyBinds ctrs body bodyTy, termPath} md
+        {ctxs, mdty: defaultMDType, tyBinds}
+        {ctxs, mdty: defaultMDType, ctrs}
+        {ctxs, mdty: defaultMDType, ty: bodyTy, term: body} bodyTy
+recTypeBindPath args {ctxs, tyBind, typeBindPath: (TypeBindListCons1 tyBinds) : listTypeBindPath} =
+    args.typeBindListCons1 {ctxs, mdty: getMDType listTypeBindPath, tyBinds: (tyBind : tyBinds), listTypeBindPath}
+        {ctxs, mdty: defaultMDType, tyBinds}
+recTypeBindPath _ _ = unsafeThrow "Either wasn't a TypeBindPath or I forgot a case"
+
+type TermBindPathRec a = {
+    lambda1 :: TermPathRecValue -> LambdaMD -> TypeRecValue -> TermRecValue -> Type -> a
+    , let1 :: TermPathRecValue -> LetMD -> ListTypeBindRecValue -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
+    , constructor1 :: CtrPathRecValue -> CtrMD -> ListCtrParamRecValue -> a
+}
+
+recTermBindPath :: forall a. TermBindPathRec a -> TermBindPathRecValue -> a
+recTermBindPath args {ctxs, tBind: tBind@(TermBind xmd x), termBindPath: (Lambda1 md {-TermBind-} argTy body bodyTy) : termPath} =
+    let ctxs' = ctxs{mdctx= insert x xmd.varName ctxs.mdctx, ctx= insert x argTy ctxs.ctx} in
+    args.lambda1
+        {ctxs, mdty: getMDType termPath, ty: (Arrow defaultArrowMD argTy bodyTy), term: (Lambda md tBind argTy body bodyTy), termPath} md
+        {ctxs, mdty: defaultMDType, ty: argTy}
+        {ctxs: ctxs', mdty: defaultMDType, ty: bodyTy, term: body} bodyTy
+recTermBindPath args {ctxs, tBind: tBind@(TermBind xmd x), termBindPath: (Let1 md {-TermBind-} tyBinds def defTy body bodyTy) : termPath} =
+    let ctxs' = ctxs{ctx = insert x defTy ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx} in
+    args.let1 {ctxs, mdty: getMDType termPath, ty: bodyTy, term: (Let md tBind tyBinds def defTy body bodyTy), termPath} md
+        {ctxs, mdty: defaultMDType, tyBinds}
+        {ctxs: ctxs', mdty: defaultMDType, ty: defTy, term: def}
+        {ctxs, mdty: defaultMDType, ty: defTy}
+        {ctxs: ctxs', mdty: defaultMDType, ty: bodyTy, term: body} bodyTy
+recTermBindPath args {ctxs, tBind, termBindPath: (Constructor1 md {-TermBind-} ctrParams) : ctrPath} =
+    args.constructor1 {ctxs, mdty: getMDType ctrPath, ctr: Constructor md tBind ctrParams, ctrPath}
+        md {ctxs, mdty: defaultMDType, ctrParams}
+recTermBindPath _ _ = unsafeThrow "Either wasn't a TermBindPath or I forgot a case"
 
 -- List Constructor
 --    Data3 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type
 --    CtrListCons2 Constructor {-List Constructor-}
---    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
 
 -- List CtrParam
 --    Constructor2 CtrMD TermBind {-List CtrParam-}
 --    CtrParamListCons2 CtrParam {-List CtrParam-}
 
 -- List TypeArg
+--    TNeu1 TNeuMD TypeVarID {-List TypeArg-}
 --    TypeArgListCons2 (TypeArg) {-List TypeArg-}
 
 -- List TypeBind
+--    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
 --    TLet2 TLetMD TypeBind {-List TypeBind-} Type Term Type
 --    TypeBindListCons2 (TypeBind) {-List TypeBind-}

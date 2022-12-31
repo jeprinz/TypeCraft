@@ -104,7 +104,7 @@ data Tooth =
     -- TypeArg
     | TypeArg1 TypeArgMD {-Type-}
     -- Constructor List
-    | CtrListCons1 {-Constructor-} (List CtrParam)
+    | CtrListCons1 {-Constructor-} (List Constructor)
     | CtrListCons2 Constructor {-List Constructor-}
     -- CtrParam List
     | CtrParamListCons1 {-CtrParam-} (List CtrParam)

@@ -160,6 +160,13 @@ type TermBindRec a = {
 recTermBind :: forall a. TermBindRec a -> TermBindRecValue -> a
 recTermBind args {ctxs, tBind: TermBind md x} = args.termBind md x
 
+type TypeBindRec a = {
+    typeBind :: TypeBindMD -> TypeVarID -> a
+}
+
+recTypeBind :: forall a. TypeBindRec a -> TypeBindRecValue -> a
+recTypeBind args {ctxs, tyBind: TypeBind md x} = args.typeBind md x
+
 type ListCtrRec a = {
     cons :: CtrRecValue -> ListCtrRecValue -> a
     , nil :: a
