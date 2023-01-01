@@ -159,6 +159,9 @@ freshInt _ =
 freshTypeHoleID :: Unit -> TypeHoleID
 freshTypeHoleID = freshInt
 
+freshTypeVarID :: Unit -> TypeVarID
+freshTypeVarID = freshInt
+
 --derive newtype instance eqType :: Eq TypeHoleID
 
 instance eqTypeParam :: Eq TypeArg where

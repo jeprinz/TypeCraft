@@ -3,7 +3,8 @@ module TypeCraft.Purescript.Context where
 import Prelude
 import Prim hiding (Type)
 import TypeCraft.Purescript.Grammar
-import Data.Map.Internal (Map, insert, empty, lookup)
+import Data.Map.Internal (Map, insert, empty, lookup, delete, filterKeys)
+import Data.Set (member)
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Freshen (freshenChange)
 import Effect.Exception.Unsafe (unsafeThrow)
@@ -11,6 +12,11 @@ import Data.List (List(..), (:))
 import TypeCraft.Purescript.MD (defaultArrowMD)
 import Data.Set (Set)
 import Data.Set as Set
+import TypeCraft.Purescript.Kinds (bindsToKind)
+import Data.Map.Internal (empty, lookup, insert, union)
+import TypeCraft.Purescript.MD (TypeBindMD)
+import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Freshen
 
 {-
 This file defines term contexts and type contexts!
@@ -42,10 +48,17 @@ tyBindsWrapType :: List TypeBind -> Type -> PolyType
 tyBindsWrapType Nil ty = PType ty
 tyBindsWrapType (tyBind : tyBinds) ty = Forall tyBind (tyBindsWrapType tyBinds ty)
 
-constructorTypes :: Type -> List TypeBind -> List Constructor -> Map TermVarID PolyType
-constructorTypes dataType tyBinds Nil = empty
-constructorTypes dataType tyBinds (Constructor _ (TermBind _ x) params : ctrs)
-    = insert x (ctrParamsToType dataType tyBinds params) (constructorTypes dataType tyBinds ctrs)
+constructorTypes :: TypeBind -> List TypeBind -> List Constructor -> Map TermVarID PolyType
+constructorTypes dataType tyBinds ctrs =
+    let sub = genFreshener (map (\(TypeBind _ x) -> x) tyBinds) in
+    let freshTyBinds = map (subTypeBind sub) tyBinds in
+    let freshCtrs = map (subConstructor sub) ctrs in
+    constructorTypesImpl dataType freshTyBinds freshCtrs
+
+constructorTypesImpl :: TypeBind -> List TypeBind -> List Constructor -> Map TermVarID PolyType
+constructorTypesImpl dataType tyBinds Nil = empty
+constructorTypesImpl dataType tyBinds (Constructor _ (TermBind _ x) params : ctrs)
+    = insert x (ctrParamsToType hole tyBinds params) (constructorTypesImpl dataType tyBinds ctrs)
 
 constructorNames :: List Constructor -> Map TermVarID String
 constructorNames Nil = empty
@@ -61,6 +74,25 @@ ctrParamsToTypeImpl dataType (CtrParam _ ty : params) = Arrow defaultArrowMD ty 
 constructorIds :: List Constructor -> Set TermVarID
 constructorIds Nil = Set.empty
 constructorIds (Constructor _ (TermBind _ x) _ : ctrs) = Set.insert x (constructorIds ctrs)
+
+addDataToCtx :: AllContext -> TypeBind -> List TypeBind -> List Constructor -> AllContext
+addDataToCtx ctxs tyBind@(TypeBind xmd x) tyBinds ctrs =
+    ctxs{
+        kctx = insert x (bindsToKind tyBinds) ctxs.kctx
+        , mdkctx = insert x xmd.varName ctxs.mdkctx
+        , ctx= union ctxs.ctx (constructorTypes tyBind tyBinds ctrs)
+        , mdctx= union ctxs.mdctx (constructorNames ctrs)
+    }
+
+removeDataFromCtx :: AllContext -> TypeBind -> List TypeBind -> List Constructor -> AllContext
+removeDataFromCtx ctxs tyBind@(TypeBind xmd x) tyBinds ctrs =
+    let ctrIds = constructorIds ctrs in
+    ctxs{
+        kctx = delete x ctxs.kctx
+        , mdkctx = delete x ctxs.mdkctx
+        , ctx= filterKeys (\k -> not (member k ctrIds)) ctxs.ctx
+        , mdctx= filterKeys (\k -> not (member k ctrIds)) ctxs.mdctx
+    }
 
 --------------------------------------------------------------------------------
 -------------- Metadatta contexts ---------------------------------------------

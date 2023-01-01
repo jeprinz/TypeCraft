@@ -84,10 +84,7 @@ recTerm args {ctxs, ty, term : Let md tBind@(TermBind xmd x) tyBinds def defTy b
             bodyTy
 recTerm args {ctxs, ty, term : Data md tyBind@(TypeBind xmd x) tyBinds ctrs body bodyTy} =
     if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
-    let dataType = TNeu defaultTNeuMD x Nil in -- TODO: should actually use tbinds to get the list! ?? (sort of, the parametrs should be outside? see how constructorTypes changes)
-    let ctxs' = ctxs{kctx = insert x (bindsToKind tyBinds) ctxs.kctx, mdkctx = insert x xmd.varName ctxs.mdkctx
-        , ctx= union ctxs.ctx (constructorTypes dataType tyBinds ctrs)
-        , mdctx= union ctxs.mdctx (constructorNames ctrs)} in
+    let ctxs' = addDataToCtx ctxs tyBind tyBinds ctrs in
     args.dataa md {ctxs, mdty: defaultMDType, tyBind}
         {ctxs, mdty: defaultMDType, tyBinds} {ctxs: ctxs', mdty: defaultMDType, ctrs}
         -- TODO: on line below, don't just put Type for kind, actually use the list of tbinds to get the number of parameters!!!!

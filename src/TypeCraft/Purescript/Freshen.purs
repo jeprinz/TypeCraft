@@ -9,6 +9,7 @@ import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
 import Data.Tuple (fst)
 import Data.List (foldr, (:), List(..))
+import TypeCraft.Purescript.Util (lookup')
 
 {-
 This file has functions which traverse over various pieces of the grammar and freshen the variables.
@@ -77,3 +78,28 @@ freshenTypeImpl m (THole md x) =
     Nothing -> let y = freshTypeHoleID unit in
         THole md y /\ insert x y m
 
+type TyVarSub = Map TypeVarID TypeVarID
+genFreshener :: List TypeVarID -> TyVarSub
+genFreshener Nil = empty
+genFreshener (x : xs) = insert x (freshTypeVarID unit) (genFreshener xs)
+
+--freshenTyBinds :: List TypeBind -> List TypeBind /\ TyVarFreshener
+--freshenTyBinds Nil = Nil /\ empty
+--freshenTyBinds (tyBind : tyBinds) =
+--    let freshener
+subTypeBind :: TyVarSub -> TypeBind -> TypeBind
+subTypeBind sub (TypeBind md x) = TypeBind md (lookup' x sub)
+
+subTypeArg :: TyVarSub -> TypeArg -> TypeArg
+subTypeArg sub (TypeArg md ty) = TypeArg md (subType sub ty)
+
+subType :: TyVarSub -> Type -> Type
+subType sub (Arrow md t1 t2) = Arrow md (subType sub t1) (subType sub t2)
+subType sub (THole md x) = THole md x
+subType sub (TNeu md x tys) = TNeu md (lookup' x sub) (map (subTypeArg sub) tys)
+
+subCtrParam :: TyVarSub -> CtrParam -> CtrParam
+subCtrParam sub (CtrParam md ty) = CtrParam md (subType sub ty)
+
+subConstructor :: TyVarSub -> Constructor -> Constructor
+subConstructor sub (Constructor md tBind ctrParams) = Constructor md tBind (map (subCtrParam sub) ctrParams)
