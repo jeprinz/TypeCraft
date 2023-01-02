@@ -14,9 +14,8 @@ import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.TermToNode
 import TypeCraft.Purescript.PathRec
-import TypeCraft.Purescript.Dentist
 
-data BelowInfo term ty = BITerm term | BISelect DownPath term ty -- middle path, then bottom term. ty is type of term.
+data BelowInfo term ty = BITerm | BISelect DownPath term ty -- middle path, then bottom term. ty is type of term.
 
 --stepBI :: forall gsort1 gsort2. Tooth -> BelowInfo gsort1 -> BelowInfo gsort2
 ----stepBI tooth (BITerm syn) = BITerm (step syn)
@@ -25,15 +24,9 @@ data BelowInfo term ty = BITerm term | BISelect DownPath term ty -- middle path,
 -- TODO: this function is the sketchies thing about my whole setup!!!!!
 -- TODO: TODO: think about this!
 
-stepBI :: forall syn synty . ToothAppendable syn => Tooth -> BelowInfo syn synty -> BelowInfo syn synty
-stepBI tooth (BITerm term) = BITerm (toothAppend tooth term)
+stepBI :: forall syn synty . Tooth -> BelowInfo syn synty -> BelowInfo syn synty
+stepBI tooth BITerm = BITerm
 stepBI tooth (BISelect middle bottom ty) = BISelect (tooth : middle) bottom ty
-
---bIOnlyCursor :: BelowInfo -> BelowInfo
-
-bIGetTerm :: forall term ty. ToothAppendable term => BelowInfo term ty -> term
-bIGetTerm (BITerm t) = t
-bIGetTerm (BISelect path t ty) = teethAppend path t
 
 -- The MDType is for the top of the path (which is the end of the list)
 termPathToNode :: BelowInfo Term Type -> TermPathRecValue -> (Node -> Node)
@@ -44,12 +37,9 @@ termPathToNode belowInfo termPath innerNode =
         dat: partialNode.dat
         , kids : [partialNode.kids]
         , getCursor :
-            let belowTerm = case belowInfo of
-                 BITerm term -> term
-                 BISelect middlePath term ty -> combineDownPathTerm middlePath term
-            in Just \_ -> initState $ initCursorMode $ TermCursor termPath.ctxs mdty termPath.ty termPath.termPath belowTerm
+            Just \_ -> initState $ initCursorMode $ TermCursor termPath.ctxs mdty termPath.ty termPath.termPath termPath.term
         , getSelect : case belowInfo of
-                 BITerm term -> Nothing
+                 BITerm -> Nothing
                  BISelect middlePath term ty -> Just \_ -> initState $ SelectMode $ TermSelect termPath.ctxs ty true termPath.termPath middlePath term
         , style : hole
     } in
@@ -58,10 +48,10 @@ termPathToNode belowInfo termPath innerNode =
             let innerNode' = makeNode' {
                 dat : makeNodeData {indentation : hole, isParenthesized: mdty.onLeftOfApp, label: "Let"}
                 , kids: [
-                    termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds (bIGetTerm belowInfo) ty.ty body.term bodyTy : upRecVal.termPath)) tBind
+                    termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds termPath.term ty.ty body.term bodyTy : upRecVal.termPath)) tBind
                     , innerNode
-                    , typeToNode (AICursor (Let3 md tBind.tBind tyBinds.tyBinds (bIGetTerm belowInfo) {-Type-} body.term bodyTy : upRecVal.termPath)) ty
-                    , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds (bIGetTerm belowInfo) ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
+                    , typeToNode (AICursor (Let3 md tBind.tBind tyBinds.tyBinds termPath.term {-Type-} body.term bodyTy : upRecVal.termPath)) ty
+                    , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds termPath.term ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
                 ]
               } in termPathToNode (stepBI hole belowInfo) upRecVal innerNode'
         , app1 : \upRecVal md {-Term-} t2 argTy bodyTy -> hole
@@ -86,7 +76,7 @@ typePathToNode belowInfo typePath innerNode =
         , kids : [partialNode.kids]
         , getCursor :
             let belowTerm = case belowInfo of
-                                 BITerm term -> term
+                                 BITerm -> typePath.ty
                                  BISelect middlePath term _ -> hole -- combineDownPathTerm middlePath term
             in Just \_ -> initState $ initCursorMode $ TypeCursor typePath.ctxs typePath.typePath belowTerm
         , getSelect : hole
@@ -98,10 +88,10 @@ typePathToNode belowInfo typePath innerNode =
             let innerNode' = makeNode' {
                 dat : makeNodeData {indentation : hole, isParenthesized: mdty.onLeftOfApp, label: "Let"}
                 , kids: [
-                    termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term (bIGetTerm belowInfo) body.term bodyTy : termPath.termPath)) tBind
+                    termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term typePath.ty body.term bodyTy : termPath.termPath)) tBind
                     , innerNode
-                    , termToNode (AICursor (Let2 md tBind.tBind tyBinds.tyBinds {-Term-} (bIGetTerm belowInfo) body.term  bodyTy : termPath.termPath)) def
-                    , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds def.term (bIGetTerm belowInfo) {-Term-} bodyTy : termPath.termPath)) body
+                    , termToNode (AICursor (Let2 md tBind.tBind tyBinds.tyBinds {-Term-} typePath.ty body.term  bodyTy : termPath.termPath)) def
+                    , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds def.term typePath.ty {-Term-} bodyTy : termPath.termPath)) body
                 ]
               } in termPathToNode hole termPath innerNode'
       , buffer2: \termPath md def {-Type-} body bodyTy -> hole

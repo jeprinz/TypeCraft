@@ -55,7 +55,7 @@ data KindChange = KCArrow KindChange | KCType
 
 {-
 The following is a list of the grammatical sorts within this editor:
-Term, Type, PolyType, Constructor, CtrParam, TypeArg, TypeBind, TermBind
+Term, Type, Constructor, CtrParam, TypeArg, TypeBind, TermBind
 (List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
 Each of these has a type of terms and of paths.
 The type <thing>Path is the set of possible paths when the cursor is on a <thing>
@@ -100,10 +100,6 @@ data Tooth =
     | Arrow1 ArrowMD {-Type-} Type
     | Arrow2 ArrowMD Type {-Type-}
     | TNeu1 TNeuMD TypeVarID {-List TypeArg-}
-    -- PolyType
-    | Forall1 {-TypeBind-} PolyType
-    | Forall2 TypeBind {-PolyType-}
-    | PType1 {-Type-}
     -- Constructor
     | Constructor1 CtrMD {-TermBind-} (List CtrParam)
     | Constructor2 CtrMD TermBind {-List CtrParam-}
