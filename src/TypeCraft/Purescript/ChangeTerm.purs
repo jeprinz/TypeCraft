@@ -166,3 +166,11 @@ chParamList kctx (param : params) =
 
 chTypeParamList :: KindChangeCtx -> List TypeArg -> List Change /\ List TypeArg
 chTypeParamList = hole
+
+---- inputs PolyChange by which var type changed, outputs new args and TypeChange by which the whole neutral form changes
+chTypeArgsNeu :: PolyChange -> List TypeArg -> Change /\ List TypeArg
+chTypeArgsNeu (PChange ch) Nil = ch /\ Nil
+chTypeArgsNeu (CForall x ch) (arg : args) = hole
+chTypeArgsNeu (PMinus x ch) (arg : args) = hole
+chTypeArgsNeu (PPlus x ch) args = hole
+chTypeArgsNeu _ _ = unsafeThrow "shouldn't happen"

@@ -119,7 +119,7 @@ type TypeRec a = {
     , tNeu :: TNeuMD -> TypeVarID -> ListTypeArgRecValue -> a
 }
 
-recType :: forall a. TypeRec a -> TermRecValue -> a
+recType :: forall a. TypeRec a -> TypeRecValue -> a
 recType args {ctxs, ty: Arrow md ty1 ty2} =
     args.arrow md {ctxs, mdty: defaultMDType{onLeftOfArrow= true}, ty: ty1}
         {ctxs, mdty: defaultMDType, ty: ty2}
