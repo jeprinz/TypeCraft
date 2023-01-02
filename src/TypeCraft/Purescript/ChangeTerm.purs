@@ -50,23 +50,27 @@ chTerm kctx ctx c t =
                        (Buffer defaultBufferMD t2 argTy t1' (snd (getEndpoints otherChange)))
 --                _ -> composeChange (Minus argTy (tyInject (snd (getEndpoints cin)))) c1 /\ -- is this right?
 --                     Buffer defaultBufferMD t1' (snd (getEndpoints c1)) t1'
-            cin /\ (Var md x params) ->
+            cin /\ (Var md x params) -> -- TODO: actually do var case for real
                 -- try the polymorphism case
 --                case getSubstitution cin (lookup x ctx)
                 let xVarCh = lookup' x ctx in
                 case xVarCh of
                     VarDelete -> tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD -- later use context boundary
-                    VarTypeChange xChange ->
-                        let tryPolymorhpismCase =
---                                do _ <- (if pChIsId xChange then Just xChange else Nothing) -- (for now at least), polymorphism thing only works if variable type is unchanged in context
---                                   let ty = (snd (getEndpoints xChange))
---                                   sub <- getSubstitution cin ty
---                                   let c' = composeChange (invert c) (subChange sub (tyInject ty))
---                                   pure $ c' /\ (Var md x (unsafeThrow "need to deal with params!"))
-                                Nothing
-                        in case tryPolymorhpismCase  of
-                           Just res -> res
-                           Nothing -> hole -- xChange /\ Var md x (unsafeThrow "need to deal with params!") -- if the polymorhpism case didn't apply, simply return the change and leave the variable as is
+--                    VarTypeChange xChange ->
+--                        let tryPolymorhpismCase =
+----                                do _ <- (if pChIsId xChange then Just xChange else Nothing) -- (for now at least), polymorphism thing only works if variable type is unchanged in context
+----                                   let ty = (snd (getEndpoints xChange))
+----                                   sub <- getSubstitution cin ty
+----                                   let c' = composeChange (invert c) (subChange sub (tyInject ty))
+----                                   pure $ c' /\ (Var md x (unsafeThrow "need to deal with params!"))
+--                                Nothing
+--                        in case tryPolymorhpismCase  of
+--                           Just res -> res
+--                           Nothing -> hole -- xChange /\ Var md x (unsafeThrow "need to deal with params!") -- if the polymorhpism case didn't apply, simply return the change and leave the variable as is
+                    VarTypeChange (PChange cVar) ->
+                        if not (chIsId cin) then tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD
+                        else cVar /\ Var md x params
+                    VarTypeChange _ -> unsafeThrow "not implemented yet"
             (CArrow c1 c2) /\ (Lambda md tBind@(TermBind _ x) ty t bodyTy) ->
                 if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen" else
                 if not (bodyTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen" else
@@ -82,8 +86,9 @@ chTerm kctx ctx c t =
             c /\ Let md tBind@(TermBind _ x) binds t1 ty t2 tybody ->
                 -- TODO: need to include the binds into the kctx for some things I think?
                 if not (fst (getEndpoints c) == ty) then unsafeThrow "shouldn't happen" else
-                let c1 /\ t1'= chTerm kctx (insert x (VarTypeChange (pTyInject (tyBindsWrapType binds ty))) ctx) (tyInject ty) t1 in
-                let c2 /\ t2' = chTerm kctx (insert x (VarTypeChange (pTyInject (tyBindsWrapType binds ty))) ctx) c t2 in
+                let ctx' = addLetToCCtx ctx tBind binds ty in
+                let c1 /\ t1'= chTerm kctx ctx' (tyInject ty) t1 in
+                let c2 /\ t2' = chTerm kctx ctx' c t2 in
                 let t1'' = if chIsId c1 then t1' else TypeBoundary defaultTypeBoundaryMD c1 t1' in
                 c2 /\ Let md tBind binds t1'' ty t2' (snd (getEndpoints c2))
             c /\ Buffer md t1 ty1 t2 bodyTy ->
@@ -174,3 +179,5 @@ chTypeArgsNeu (CForall x ch) (arg : args) = hole
 chTypeArgsNeu (PMinus x ch) (arg : args) = hole
 chTypeArgsNeu (PPlus x ch) args = hole
 chTypeArgsNeu _ _ = unsafeThrow "shouldn't happen"
+-- TODO: there is something nontrivial to think about here. It should track a context so it knows which arguments got deleted etc.
+-- also if a type argument gets affected by the KindChangeCtx, then that needs to be reflected as well...

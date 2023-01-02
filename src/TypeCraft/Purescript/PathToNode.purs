@@ -55,7 +55,6 @@ termPathToNode belowInfo termPath innerNode =
     } in
     recTermPath ({
           let2 : \upRecVal md tBind tyBinds {-def-} ty body bodyTy ->
-            let mdctx' = hole in -- the ctx above the let, with the variable removed
             let innerNode' = makeNode' {
                 dat : makeNodeData {indentation : hole, isParenthesized: mdty.onLeftOfApp, label: "Let"}
                 , kids: [
@@ -80,7 +79,8 @@ termPathToNode belowInfo termPath innerNode =
 typePathToNode :: BelowInfo Type Unit -> TypePathRecValue -> Node -> Node
 typePathToNode  _ {typePath: Nil} node = node
 typePathToNode belowInfo typePath innerNode =
-    let ty = bIGetTerm belowInfo in
+    let ty = typePath.ty in
+    let mdty = getMDType typePath.typePath in
     let makeNode' partialNode = makeNode { -- specialize a version of makeNode with the pieces that will be the same for each case
         dat: partialNode.dat
         , kids : [partialNode.kids]
@@ -92,10 +92,25 @@ typePathToNode belowInfo typePath innerNode =
         , getSelect : hole
         , style : hole
     } in
---    recTyPath ({
---
---    }) typePath
-    hole
+    recTypePath ({
+      lambda2: \termPath md tBind {-Type-} body bodyTy -> hole
+      , let3: \termPath md tBind tyBinds def {-Type-} body bodyTy ->
+            let innerNode' = makeNode' {
+                dat : makeNodeData {indentation : hole, isParenthesized: mdty.onLeftOfApp, label: "Let"}
+                , kids: [
+                    termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term (bIGetTerm belowInfo) body.term bodyTy : termPath.termPath)) tBind
+                    , innerNode
+                    , termToNode (AICursor (Let2 md tBind.tBind tyBinds.tyBinds {-Term-} (bIGetTerm belowInfo) body.term  bodyTy : termPath.termPath)) def
+                    , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds def.term (bIGetTerm belowInfo) {-Term-} bodyTy : termPath.termPath)) body
+                ]
+              } in termPathToNode hole termPath innerNode'
+      , buffer2: \termPath md def {-Type-} body bodyTy -> hole
+      , tLet3: \termPath md tyBind tyBinds {-Type-} body bodyTy -> hole
+      , ctrParam1: \ctrParamPath md {-Type-} -> hole
+      , typeArg1 : \typeArgPath md {-Type-} -> hole
+      , arrow1: \typePath md tyIn {-Type-} -> hole
+      , arrow2 : \typePath md {-Type-} tyOut -> hole
+    }) typePath
 --typePathToNode belowInfo path@(tooth : teeth) innerNode = hole
 --    case tooth of
 --        Let3 md tbind tbinds def {-type-} body bodyTy ->

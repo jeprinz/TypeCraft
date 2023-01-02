@@ -208,3 +208,7 @@ getParamSub _ _ = Nothing
 
 -- TODO: move this elsewhere later!
 
+-- TODO: when I properly deal with parameters to types, this will have to be modified!
+tyBindsWrapChange :: List TypeBind -> Change -> PolyChange
+tyBindsWrapChange Nil ch = PChange ch
+tyBindsWrapChange (tyBind : tyBinds) ch = CForall tyBind (tyBindsWrapChange tyBinds ch)

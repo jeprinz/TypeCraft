@@ -1,6 +1,7 @@
 module TypeCraft.Purescript.Context where
 
 import Prelude
+import Data.Tuple.Nested (type (/\), (/\))
 import Prim hiding (Type)
 import TypeCraft.Purescript.Grammar
 import Data.Map.Internal (Map, insert, empty, lookup, delete, filterKeys)
@@ -41,7 +42,54 @@ type KindChangeCtx = Map TypeVarID TVarChange
 ctxKindCons :: KindChangeCtx -> TypeBind -> TVarChange -> KindChangeCtx
 ctxKindCons kctx (TypeBind _ x) c = insert x c kctx
 
---data Contexts = Contexts TermContext ChangeCtx
+type CAllContext = KindChangeCtx /\ ChangeCtx
+
+addLetToCCtx :: ChangeCtx -> TermBind -> List TypeBind -> Type -> ChangeCtx
+addLetToCCtx ctx tBind@(TermBind _ x) tyBinds ty =
+        insert x (VarTypeChange (pTyInject (tyBindsWrapType tyBinds ty))) ctx
+
+removeLetFromCCtx :: CAllContext -> TermBind -> CAllContext
+removeLetFromCCtx (kctx /\ ctx) (TermBind _ x) = kctx /\ delete x ctx
+
+--------------------------------------------------------------------------------
+-------------- Metadatta contexts ---------------------------------------------
+--------------------------------------------------------------------------------
+
+type MDTypeContext = Map TypeVarID String
+type MDTermContext = Map TermVarID String
+
+type MDContext = {
+    indentation :: Int, -- TODO: hopefully the frontend can handle this instead
+    termVarNames :: MDTermContext,
+    typeVarNames :: MDTypeContext
+}
+
+-- term metadata that is per-term, as opposed to MDContext which is more accumulative
+type MDType = { -- needs to be in MDContext, because it needs to be in the state: if I have select the left of an app, then the term inside needs to know that when its rendered
+    onLeftOfApp :: Boolean
+    , onRightOfApp :: Boolean
+    , onLeftOfArrow :: Boolean
+    , indented :: Boolean
+}
+
+defaultMDType :: MDType
+defaultMDType = {
+    onLeftOfApp : false
+    , onRightOfApp : false
+    , onLeftOfArrow : false
+    , indented : false
+    }
+
+--------------------------------------------------------------------------------
+-------------- Complete Context -----------------------------------------------
+--------------------------------------------------------------------------------
+
+type AllContext = {
+    mdkctx :: MDTypeContext
+    , mdctx :: MDTermContext
+    , kctx :: TypeContext
+    , ctx :: TermContext
+}
 
 -- TODO: when I properly deal with parameters to types, this will have to be modified!
 tyBindsWrapType :: List TypeBind -> Type -> PolyType
@@ -94,42 +142,3 @@ removeDataFromCtx ctxs tyBind@(TypeBind xmd x) tyBinds ctrs =
         , mdctx= filterKeys (\k -> not (member k ctrIds)) ctxs.mdctx
     }
 
---------------------------------------------------------------------------------
--------------- Metadatta contexts ---------------------------------------------
---------------------------------------------------------------------------------
-
-type MDTypeContext = Map TypeVarID String
-type MDTermContext = Map TermVarID String
-
-type MDContext = {
-    indentation :: Int, -- TODO: hopefully the frontend can handle this instead
-    termVarNames :: MDTermContext,
-    typeVarNames :: MDTypeContext
-}
-
--- term metadata that is per-term, as opposed to MDContext which is more accumulative
-type MDType = { -- needs to be in MDContext, because it needs to be in the state: if I have select the left of an app, then the term inside needs to know that when its rendered
-    onLeftOfApp :: Boolean
-    , onRightOfApp :: Boolean
-    , onLeftOfArrow :: Boolean
-    , indented :: Boolean
-}
-
-defaultMDType :: MDType
-defaultMDType = {
-    onLeftOfApp : false
-    , onRightOfApp : false
-    , onLeftOfArrow : false
-    , indented : false
-    }
-
---------------------------------------------------------------------------------
--------------- Complete Context -----------------------------------------------
---------------------------------------------------------------------------------
-
-type AllContext = {
-    mdkctx :: MDTypeContext
-    , mdctx :: MDTermContext
-    , kctx :: TypeContext
-    , ctx :: TermContext
-}
