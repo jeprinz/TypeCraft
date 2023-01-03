@@ -1,9 +1,10 @@
 module TypeCraft.Purescript.Node where
 
 import Prelude
-import TypeCraft.Purescript.State (State)
-import TypeCraft.Purescript.Nullable (Nullable, fromMaybe, pureNullable)
 import Data.Maybe (Maybe)
+import TypeCraft.Purescript.Nullable (Nullable)
+import TypeCraft.Purescript.Nullable as Nullable
+import TypeCraft.Purescript.State (State)
 
 -- Node
 foreign import data Node :: Type
@@ -29,8 +30,8 @@ makeNode x =
   makeNode_
     { dat: x.dat
     , kids: x.kids
-    , getCursor: fromMaybe x.getCursor
-    , getSelect: fromMaybe x.getSelect
+    , getCursor: Nullable.fromMaybe x.getCursor
+    , getSelect: Nullable.fromMaybe x.getSelect
     , style: x.style
     }
 
@@ -49,20 +50,23 @@ foreign import makeNodeData_ ::
   { indentation :: NodeIndentation
   , isParenthesized :: Boolean
   , label :: Nullable String
+  , tag :: NodeTag
   } ->
   NodeData
 
 makeNodeData ::
   { indentation :: NodeIndentation
   , isParenthesized :: Boolean
-  , label :: String
+  , label :: Maybe String -- only for variables, bindings, etc. that have string names
+  , tag :: NodeTag
   } ->
   NodeData
-makeNodeData { indentation, isParenthesized, label } =
+makeNodeData { indentation, isParenthesized, label, tag } =
   makeNodeData_
     { indentation
     , isParenthesized
-    , label: pureNullable label
+    , label: Nullable.fromMaybe label
+    , tag
     }
 
 -- NodeTag
