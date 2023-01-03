@@ -74,7 +74,6 @@ export function renderEditor(
         function render(editor: Editor) {
             const nodes = editor.props.backend.format(editor.state)
             return [
-                // TODO: onClick={...}
                 <div className="editor"
                     onMouseDown={(event) => setMouseDown(event)}
                     onMouseUp={(event) => setMouseUp(event)}
