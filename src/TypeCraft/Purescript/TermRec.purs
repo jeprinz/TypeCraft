@@ -18,6 +18,7 @@ import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.TypeChangeAlgebra (pGetEndpoints)
+import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)
 
 type TermRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, term :: Term}
 type TypeRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type}
@@ -53,7 +54,7 @@ type TermRec a = {
     , dataa :: GADTMD -> TypeBindRecValue -> ListTypeBindRecValue -> ListCtrRecValue -> TermRecValue -> Type -> a -- TODO: write recConstructor!! Should be List ConstructorRecValue!
     , tlet :: TLetMD -> TypeBindRecValue -> ListTypeBindRecValue -> TypeRecValue -> TermRecValue -> Type -> a
     , typeBoundary :: TypeBoundaryMD -> Change -> TermRecValue -> a
-    , contextBoundary :: ContextBoundaryMD -> TermVarID -> PolyChange -> TermRecValue -> a
+    , contextBoundary :: ContextBoundaryMD -> TermVarID -> VarChange -> TermRecValue -> a
     , hole :: HoleMD -> a
     , buffer :: BufferMD -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
 }
@@ -102,7 +103,7 @@ recTerm args {ctxs, ty, term : TypeBoundary md c body} =
     if not (ty == snd (getEndpoints c)) then unsafeThrow "shouldn't happen" else
     args.typeBoundary md c {ctxs, mdty: defaultMDType, ty: snd (getEndpoints c), term: body}
 recTerm args {ctxs, ty, term : ContextBoundary md x c body} =
-    let ctxs' = ctxs{ctx= insert x (snd (pGetEndpoints c)) ctxs.ctx} in
+    let ctxs' = ctxs{ctx = alterCtxVarChange ctxs.ctx x c} in
     args.contextBoundary md x c {ctxs, mdty: defaultMDType, ty: ty, term: body}
 recTerm args {term : Hole md} = args.hole md
 recTerm args {ctxs, ty, term : Buffer md def defTy body bodyTy} =

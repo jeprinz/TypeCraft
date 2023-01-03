@@ -10,12 +10,15 @@ import Data.List (unzip, (:), List(..), foldl, all)
 import Data.Tuple (fst, snd)
 import Data.Maybe (Maybe(..))
 import Control.Alt ( (<|>) )
-import Data.Map (Map, singleton, empty, unionWith, mapMaybe)
+import Data.Map (Map, singleton, empty, unionWith, mapMaybe, insert, delete)
 import Data.Map as Map
 import Control.Apply (lift2)
 import Data.Traversable (sequence)
 import TypeCraft.Purescript.Substitution (Sub)
 import Data.Map.Internal (Map, insert, empty, lookup)
+import TypeCraft.Purescript.Context
+import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Util (lookup')
 
 --data Change = CArrow Change Change | CApp Change Change | CHole TypeHoleID
 --     | CVar TypeVarID -- TODO: why is there a distinction between CVar and CHole???
@@ -90,6 +93,25 @@ composeChange c1 c2 =
 --composeParamChanges cs1 (PlusParam t : cs2) = PlusParam t : (composeParamChanges cs1 cs2)
 --composeParamChanges (MinusParam t : cs1) cs2 = MinusParam t : (composeParamChanges cs1 cs2)
 
+composePolyChange :: PolyChange -> PolyChange -> PolyChange
+composePolyChange (CForall x pc1) (CForall y pc2) =
+    if not (x == y) then unsafeThrow "uh oh" else
+    CForall x (composePolyChange pc1 pc2)
+composePolyChange (PPlus x pc1) (PMinus y pc2) =
+    if not (x == y) then unsafeThrow "uhoh" else (composePolyChange pc1 pc2)
+composePolyChange (PMinus x pc1) (PPlus y pc2) =
+    if not (x == y) then unsafeThrow "uhoh" else CForall x (composePolyChange pc1 pc2)
+composePolyChange (CForall x pc1) (PMinus y pc2) =
+    if not (x == y) then unsafeThrow "uhoh" else PMinus x (composePolyChange pc1 pc2)
+composePolyChange (PPlus x pc1) (CForall y pc2) =
+    if not (x == y) then unsafeThrow "uhoh" else PPlus x (composePolyChange pc1 pc2)
+--composePolyChange (PMinus )
+composePolyChange _ _ = hole
+-- TODO: should Replace be in PolyChange instead or in addition to in Change? Also, finish cases here!
+
+composeVarChange :: VarChange -> VarChange -> VarChange
+composeVarChange = hole
+
 invert :: Change -> Change
 invert (CArrow change1 change2) = CArrow (invert change1) (invert change2)
 invert (CHole holeId) = CHole holeId
@@ -98,11 +120,21 @@ invert (Plus t change) = Minus t (invert change)
 invert (Minus t change) = Plus t (invert change)
 invert (CNeu varId params) = CNeu varId (map invertParam params)
 
+invertPolyChange :: PolyChange -> PolyChange
+invertPolyChange (PChange c) = PChange (invert c)
+invertPolyChange (CForall tyBind c) = CForall tyBind (invertPolyChange c)
+invertPolyChange (PPlus tyBind c) = PMinus tyBind (invertPolyChange c)
+invertPolyChange (PMinus tyBind c) = PPlus tyBind (invertPolyChange c)
+
 invertParam :: ChangeParam -> ChangeParam
 invertParam (ChangeParam change) = ChangeParam (invert change)
 invertParam (PlusParam t) = MinusParam t
 invertParam (MinusParam t) = PlusParam t
 
+invertVarChange :: VarChange -> VarChange
+invertVarChange (VarTypeChange pch) = VarTypeChange (invertPolyChange pch)
+invertVarChange (VarDelete ty) = VarInsert ty
+invertVarChange (VarInsert ty) = VarDelete ty
 
 chIsId :: Change -> Boolean
 chIsId (CArrow c1 c2) = chIsId c1 && chIsId c2
@@ -211,4 +243,25 @@ getParamSub _ _ = Nothing
 -- TODO: when I properly deal with parameters to types, this will have to be modified!
 tyBindsWrapChange :: List TypeBind -> Change -> PolyChange
 tyBindsWrapChange Nil ch = PChange ch
-tyBindsWrapChange (tyBind : tyBinds) ch = CForall tyBind (tyBindsWrapChange tyBinds ch)
+tyBindsWrapChange ((TypeBind _ x) : tyBinds) ch = CForall x (tyBindsWrapChange tyBinds ch)
+
+
+
+--------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+--Context stuff
+--------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+
+
+alterCtxVarChange :: TermContext -> TermVarID -> VarChange -> TermContext
+alterCtxVarChange ctx x (VarInsert pty) = insert x pty ctx
+alterCtxVarChange ctx x (VarDelete pty) = delete x ctx
+alterCtxVarChange ctx x (VarTypeChange pch) = insert x (snd (pGetEndpoints pch)) ctx
+
+alterCCtxVarChange :: ChangeCtx -> TermVarID -> VarChange -> ChangeCtx
+alterCCtxVarChange ctx x vch = case lookup x ctx of
+    Just vchStart -> insert x (composeVarChange vchStart vch) ctx
+    Nothing -> case vch of
+               VarInsert pty -> insert x (VarInsert pty) ctx
+               _ -> unsafeThrow "Shouldn't happen"

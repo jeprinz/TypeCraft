@@ -19,7 +19,7 @@ type TypeHoleID = Int -- figure out unique Ids later!
 type TermVarID = Int
 type TypeVarID = Int
 data Type = Arrow ArrowMD Type Type | THole THoleMD TypeHoleID | TNeu TNeuMD TypeVarID (List TypeArg)
-data PolyType = Forall TypeBind PolyType | PType Type -- doesn't appear in source code. Instead, source code has lists of type parameters.
+data PolyType = Forall TypeVarID PolyType | PType Type -- doesn't appear in source code. Instead, source code has lists of type parameters.
 data TypeArg = TypeArg TypeArgMD Type
 data Term = App AppMD Term Term Type Type -- The type of the argument, then the type of the output
           | Lambda LambdaMD TermBind Type Term Type -- first Type is arg, second is type of body
@@ -28,7 +28,7 @@ data Term = App AppMD Term Term Type Type -- The type of the argument, then the 
           | Data GADTMD TypeBind (List TypeBind) (List Constructor) Term Type
           | TLet TLetMD TypeBind (List TypeBind) Type Term Type -- last Type is type of body!
           | TypeBoundary TypeBoundaryMD Change Term -- the change goes from type inside to type outside. That is, getEndpoints gives inside type on left and outside on right.
-          | ContextBoundary ContextBoundaryMD TermVarID PolyChange Term
+          | ContextBoundary ContextBoundaryMD TermVarID VarChange Term -- the VarChange goes from outside to inside.
           | Hole HoleMD {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}
           | Buffer BufferMD Term Type Term Type
 
@@ -40,13 +40,14 @@ data Constructor = Constructor CtrMD TermBind (List CtrParam)
 --data Kind = KArrow KArrowMD Kind Kind | Type TypeMD
 data Kind = KArrow Kind | Type
 
-data PolyChange = CForall TypeBind PolyChange
-    | PPlus TypeBind PolyChange | PMinus TypeBind PolyChange
+data PolyChange = CForall TypeVarID PolyChange
+    | PPlus TypeVarID PolyChange | PMinus TypeVarID PolyChange
     | PChange Change
 data Change = CArrow Change Change | CHole TypeHoleID
      | Replace Type Type
      | Plus Type Change | Minus Type Change
      | CNeu TypeVarID (List ChangeParam)
+data VarChange = VarTypeChange PolyChange | VarDelete PolyType | VarInsert PolyType
 data ChangeParam = ChangeParam Change | PlusParam Type | MinusParam Type
 
 data KindChange = KCArrow KindChange | KCType
@@ -87,7 +88,7 @@ data Tooth =
     | Buffer2 BufferMD Term {-Type-} Term Type
     | Buffer3 BufferMD Term Type {-Term-} Type
     | TypeBoundary1 TypeBoundaryMD Change {-Term-}
-    | ContextBoundary1 ContextBoundaryMD TermVarID PolyChange {-Term-}
+    | ContextBoundary1 ContextBoundaryMD TermVarID VarChange {-Term-}
     | TLet1 TLetMD {-TypeBind-} (List TypeBind) Type Term Type
     | TLet2 TLetMD TypeBind {-List TypeBind-} Type Term Type
     | TLet3 TLetMD TypeBind (List TypeBind) {-Type-} Term Type
@@ -137,6 +138,10 @@ pTyInject :: PolyType -> PolyChange
 pTyInject (Forall x t) = CForall x (pTyInject t)
 pTyInject (PType t) = PChange (tyInject t)
 --tyInject (TLambda _ x k ty) = CLambda x (tyInject ty)
+
+kindInject :: Kind -> KindChange
+kindInject (KArrow k) = KCArrow (kindInject k)
+kindInject Type = KCType
 
 -- TODO:
 -- freshenVars - freshens bound lambda variables in terms, for copy/paste to work correctly.
