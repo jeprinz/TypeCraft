@@ -82,8 +82,7 @@ termToNode aboveInfo term =
             , getCursor : Just \_ -> initState $ initCursorMode $ TermCursor term.ctxs term.mdty term.ty (aIGetPath aboveInfo) term.term
             , getSelect : case aboveInfo of
                      AICursor path -> Nothing
-                     AISelect top middle -> Just \_ -> initState $ SelectMode $ TermSelect term.ctxs term.ty false top middle term.term
-            , style : hole
+                     AISelect top middle -> Just \_ -> initState $ SelectMode $ TermSelect term.ctxs hole false term.ty middle top term.term
     }
 
 typeToNode :: AboveInfo -> TypeRecValue -> Node
@@ -107,11 +106,10 @@ typeToNode aboveInfo ty
         dat: makeNodeData {isParenthesized: partialNode.dat.isParenthesized, label: Nothing, tag: partialNode.dat.tag,
                indentation: if ty.mdty.indented then makeIndentNodeIndentation else makeInlineNodeIndentation}
         , kids : [partialNode.kids]
-        , getCursor : Just \_ -> initState $ initCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
+        , getCursor : Just \_ -> initState $ initCursorMode $ TypeCursor ty.ctxs hole (aIGetPath aboveInfo) ty.ty
         , getSelect : case aboveInfo of
                  AICursor path -> Nothing
-                 AISelect top middle -> Just \_ -> initState $ SelectMode $ TypeSelect ty.ctxs false top middle ty.ty
-        , style : makeNormalNodeStyle
+                 AISelect top middle -> Just \_ -> initState $ SelectMode $ TypeSelect ty.ctxs hole false top middle ty.ty
     }
 
 ctrListToNode :: AboveInfo -> ListCtrRecValue -> Node
@@ -139,9 +137,8 @@ termBindToNode :: AboveInfo -> TermBindRecValue -> Node
 termBindToNode aboveInfo {ctxs, tBind: tBind@(TermBind md x)} = makeNode {
     dat : makeNodeData {indentation: hole, isParenthesized: false, label: Nothing, tag: makeTermBindNodeTag}
     , kids: []
-    , getCursor : Just \_ -> initState $ initCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tBind
+    , getCursor : Just \_ -> initState $ initCursorMode $ TermBindCursor ctxs hole (aIGetPath aboveInfo) tBind
     , getSelect: Nothing
-    , style: makeNormalNodeStyle
 }
 
 ctrParamListToNode :: AboveInfo -> ListCtrParamRecValue -> Node

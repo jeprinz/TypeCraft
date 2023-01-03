@@ -15,7 +15,9 @@ import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.TermToNode
 import TypeCraft.Purescript.PathRec
 
-data BelowInfo term ty = BITerm | BISelect DownPath term ty -- middle path, then bottom term. ty is type of term.
+data BelowInfo term ty 
+    = BITerm 
+    | BISelect DownPath term ty -- middle path, then bottom term. ty is type of term.
 
 --stepBI :: forall gsort1 gsort2. Tooth -> BelowInfo gsort1 -> BelowInfo gsort2
 ----stepBI tooth (BITerm syn) = BITerm (step syn)
@@ -40,8 +42,7 @@ termPathToNode belowInfo termPath innerNode =
             Just \_ -> initState $ initCursorMode $ TermCursor termPath.ctxs mdty termPath.ty termPath.termPath termPath.term
         , getSelect : case belowInfo of
                  BITerm -> Nothing
-                 BISelect middlePath term ty -> Just \_ -> initState $ SelectMode $ TermSelect termPath.ctxs ty true termPath.termPath middlePath term
-        , style : hole
+                 BISelect middlePath term ty -> Just \_ -> initState $ SelectMode $ TermSelect termPath.ctxs mdty true ty termPath.termPath middlePath term
     } in
     recTermPath ({
           let2 : \upRecVal md tBind tyBinds {-def-} ty body bodyTy ->
@@ -78,9 +79,8 @@ typePathToNode belowInfo typePath innerNode =
             let belowTerm = case belowInfo of
                                  BITerm -> typePath.ty
                                  BISelect middlePath term _ -> hole -- combineDownPathTerm middlePath term
-            in Just \_ -> initState $ initCursorMode $ TypeCursor typePath.ctxs typePath.typePath belowTerm
+            in Just \_ -> initState $ initCursorMode $ TypeCursor typePath.ctxs mdty typePath.typePath belowTerm
         , getSelect : hole
-        , style : hole
     } in
     recTypePath ({
       lambda2: \termPath md tBind {-Type-} body bodyTy -> hole

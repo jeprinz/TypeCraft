@@ -60,6 +60,10 @@ export const makeQueryReplaceNewNodeStyle = { case: 'query-replace-new' }
 export const makeQueryReplaceOldNodeStyle = { case: 'query-replace-old' }
 export const makeQueryInvalidNodeStyle = (str) => ({ case: 'query-invalid', string: str })
 
+export const setNodeStyle = style => node => {
+  node.style = style
+}
+
 // NodeData
 export function makeNodeData_(data) {
   console.log("makeNodeData_", data)

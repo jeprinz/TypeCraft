@@ -1,23 +1,24 @@
 module TypeCraft.Purescript.Context where
 
 import Prelude
-import Data.Tuple.Nested (type (/\), (/\))
 import Prim hiding (Type)
-import TypeCraft.Purescript.Grammar
-import Data.Map.Internal (Map, insert, empty, lookup, delete, filterKeys)
-import Data.Set (member)
-import Data.Maybe (Maybe(..))
-import TypeCraft.Purescript.Freshen (freshenChange)
-import Effect.Exception.Unsafe (unsafeThrow)
-import Data.List (List(..), (:))
-import TypeCraft.Purescript.MD (defaultArrowMD)
-import Data.Set (Set)
-import Data.Set as Set
-import TypeCraft.Purescript.Kinds (bindsToKind)
-import Data.Map.Internal (empty, lookup, insert, union)
-import TypeCraft.Purescript.MD (TypeBindMD)
-import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Freshen
+import TypeCraft.Purescript.Grammar
+
+import Data.List (List(..), (:))
+import Data.Map.Internal (Map, delete, empty, filterKeys, insert, lookup)
+import Data.Map.Internal (empty, lookup, insert, union)
+import Data.Maybe (Maybe(..))
+import Data.Set (Set)
+import Data.Set (member)
+import Data.Set as Set
+import Data.Tuple.Nested (type (/\), (/\))
+import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.Freshen (freshenChange)
+import TypeCraft.Purescript.Kinds (bindsToKind)
+import TypeCraft.Purescript.MD (TypeBindMD)
+import TypeCraft.Purescript.MD (defaultArrowMD)
+import TypeCraft.Purescript.Util (hole)
 
 {-
 This file defines term contexts and type contexts!
@@ -89,6 +90,14 @@ type AllContext = {
     , mdctx :: MDTermContext
     , kctx :: TypeContext
     , ctx :: TermContext
+}
+
+emptyAllContext :: AllContext
+emptyAllContext = {
+    mdkctx: empty,
+    mdctx: empty,
+    kctx: empty,
+    ctx: empty
 }
 
 -- TODO: when I properly deal with parameters to types, this will have to be modified!

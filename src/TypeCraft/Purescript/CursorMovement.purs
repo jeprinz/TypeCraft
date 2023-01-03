@@ -27,31 +27,31 @@ getCursorChildren (TermCursor ctxs mdty ty up term) =
                 : TermCursor t2.ctxs t2.mdty t2.ty (App2 md t1.term tyArg tyOut : up) t2.term : Nil
             , var: \_ _ _ -> Nil
             , lett: \md x tBinds def defTy body bodyTy -> TermCursor def.ctxs def.mdty def.ty (Let2 md x.tBind tBinds.tyBinds defTy.ty body.term bodyTy : up) def.term
-                : TypeCursor defTy.ctxs (Let3 md x.tBind tBinds.tyBinds def.term body.term bodyTy : up) defTy.ty
+                : TypeCursor defTy.ctxs hole (Let3 md x.tBind tBinds.tyBinds def.term body.term bodyTy : up) defTy.ty
                 : TermCursor body.ctxs body.mdty body.ty (Let4 md x.tBind tBinds.tyBinds def.term defTy.ty bodyTy : up) body.term : Nil
             , dataa : \md x tyBinds ctrs body bodyTy -> TermCursor body.ctxs body.mdty body.ty (Data4 md x.tyBind tyBinds.tyBinds ctrs.ctrs bodyTy : up) body.term: Nil
             , tlet : \md tbind tyBinds def body bodyTy ->
                 -- Add TypeBindList child!
-                TypeCursor def.ctxs (TLet3 md tbind.tyBind tyBinds.tyBinds body.term bodyTy : up) def.ty
+                TypeCursor def.ctxs hole (TLet3 md tbind.tyBind tyBinds.tyBinds body.term bodyTy : up) def.ty
                 : TermCursor body.ctxs body.mdty body.ty (TLet4 md tbind.tyBind tyBinds.tyBinds def.ty bodyTy : up) body.term
                 : Nil
             , typeBoundary: \md c t -> TermCursor t.ctxs t.mdty t.ty (TypeBoundary1 md c : up) t.term : Nil
             , contextBoundary: \md x c t -> TermCursor t.ctxs t.mdty t.ty (ContextBoundary1 md x c : up) t.term : Nil
             , hole: \md -> Nil
             , buffer: \md def defTy body bodyTy -> TermCursor def.ctxs def.mdty def.ty (Buffer1 md defTy.ty body.term bodyTy : up) def.term
-              : TypeCursor defTy.ctxs (Buffer2 md def.term body.term bodyTy : up) defTy.ty
+              : TypeCursor defTy.ctxs hole (Buffer2 md def.term body.term bodyTy : up) defTy.ty
               : TermCursor body.ctxs body.mdty body.ty (Buffer3 md def.term defTy.ty bodyTy : up) body.term : Nil
         }
         {ctxs, mdty, ty, term}
-getCursorChildren (TypeCursor ctxs up (Arrow md t1 t2)) =
-    TypeCursor ctxs (Arrow1 md t2 : up) t1 : TypeCursor ctxs (Arrow2 md t1 : up) t2 : Nil
-getCursorChildren (TypeBindCursor ctxs up _) = hole
-getCursorChildren (TermBindCursor ctxs up _) = hole
-getCursorChildren (TypeCursor ctxs up _) = hole
-getCursorChildren (CtrListCursor _ _ _) = Nil
-getCursorChildren (CtrParamListCursor _ _ _) = Nil
-getCursorChildren (TypeArgListCursor _ _ _) = Nil
-getCursorChildren (TypeBindListCursor _ _ _) = Nil
+getCursorChildren (TypeCursor ctxs mdty up (Arrow md t1 t2)) =
+    TypeCursor ctxs mdty (Arrow1 md t2 : up) t1 : TypeCursor ctxs mdty (Arrow2 md t1 : up) t2 : Nil
+getCursorChildren (TypeBindCursor ctxs mdty up _) = hole
+getCursorChildren (TermBindCursor ctxs mdty up _) = hole
+getCursorChildren (TypeCursor ctxs mdty up _) = hole
+getCursorChildren (CtrListCursor _ _ _ _) = Nil
+getCursorChildren (CtrParamListCursor _ _ _ _) = Nil
+getCursorChildren (TypeArgListCursor _ _ _ _) = Nil
+getCursorChildren (TypeBindListCursor _ _ _ _) = Nil
 
 -- the Int is what'th child the input is of the output
 parent :: CursorLocation -> Maybe (CursorLocation /\ Int)
@@ -84,22 +84,22 @@ parent (TermCursor ctxs mdty ty termPath term) =
                 Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (4 - 1)
         }
         {ctxs, mdty, ty, term, termPath}
-parent (TypeCursor ctxs (Arrow1 md tOut : up) ty) =
-    Just $ TypeCursor ctxs up (Arrow md ty tOut) /\ (1 - 1)
-parent (TypeCursor ctxs (Arrow2 md tIn : up) ty) =
-    Just $ TypeCursor ctxs up (Arrow md tIn ty) /\ (2 - 1)
-parent (TypeCursor ctxs (Let3 md bind tyBinds def body bodyTy : up) ty) =
+parent (TypeCursor ctxs mdty (Arrow1 md tOut : up) ty) =
+    Just $ TypeCursor ctxs mdty up (Arrow md ty tOut) /\ (1 - 1)
+parent (TypeCursor ctxs mdty (Arrow2 md tIn : up) ty) =
+    Just $ TypeCursor ctxs mdty up (Arrow md tIn ty) /\ (2 - 1)
+parent (TypeCursor ctxs mdty (Let3 md bind tyBinds def body bodyTy : up) ty) =
     Just $ TermCursor ctxs (getMDType up) ty up(Let md bind tyBinds def ty body bodyTy) /\ (2 - 1)
-parent (TypeBindCursor ctxs (TLet1 md {-TypeBind-} tyBinds def body bodyTy : up) tyBind) =
+parent (TypeBindCursor ctxs mdty (TLet1 md {-TypeBind-} tyBinds def body bodyTy : up) tyBind) =
     Just $ TermCursor ctxs (getMDType up) bodyTy up (TLet md tyBind tyBinds def body bodyTy) /\ (1 - 1)
-parent (TypeBindCursor ctxs (TypeBindListCons1 {-TypeBind-} tyBinds : up) tyBind) =
-    Just $ TypeBindListCursor ctxs up (tyBind : tyBinds) /\ (1 - 1)
-parent (TermBindCursor ctxs up _) = hole
-parent (TypeCursor ctxs up _) = hole
-parent (CtrListCursor _ _ _) = hole
-parent (CtrParamListCursor _ _ _) = hole
-parent (TypeArgListCursor _ _ _) = hole
-parent (TypeBindListCursor _ _ _) = hole
+parent (TypeBindCursor ctxs mdty (TypeBindListCons1 {-TypeBind-} tyBinds : up) tyBind) =
+    Just $ TypeBindListCursor ctxs mdty  up (tyBind : tyBinds) /\ (1 - 1)
+parent (TermBindCursor ctxs mdty up _) = hole
+parent (TypeCursor ctxs mdty up _) = hole
+parent (CtrListCursor _ _ _ _) = hole
+parent (CtrParamListCursor _ _ _ _) = hole
+parent (TypeArgListCursor _ _ _ _) = hole
+parent (TypeBindListCursor _ _ _ _) = hole
 parent _ = unsafeThrow "given an ill-typed upPath to parent function (or I missed a case)"
 
 stepCursorForwards :: CursorLocation -> CursorLocation

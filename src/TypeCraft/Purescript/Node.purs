@@ -23,7 +23,6 @@ makeNode ::
   , kids :: Array (Array Node)
   , getCursor :: Maybe (Unit -> State)
   , getSelect :: Maybe (Unit -> State)
-  , style :: NodeStyle
   } ->
   Node
 makeNode x =
@@ -32,8 +31,10 @@ makeNode x =
     , kids: x.kids
     , getCursor: Nullable.fromMaybe x.getCursor
     , getSelect: Nullable.fromMaybe x.getSelect
-    , style: x.style
+    , style: makeNormalNodeStyle
     }
+
+foreign import setNodeStyle :: NodeStyle -> Node -> Node
 
 -- NodeData
 foreign import data NodeData :: Type
