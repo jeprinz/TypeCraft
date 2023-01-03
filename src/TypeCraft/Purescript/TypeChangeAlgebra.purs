@@ -267,7 +267,7 @@ alterCtxVarChange ctx x (VarTypeChange pch) = insert x (snd (pGetEndpoints pch))
 
 alterCCtxVarChange :: ChangeCtx -> TermVarID -> VarChange -> ChangeCtx
 alterCCtxVarChange ctx x vch = case lookup x ctx of
-    Just vchStart -> insert x (composeVarChange vchStart vch) ctx
+    Just vchStart -> hole -- insert x (composeVarChange vchStart vch) ctx
     Nothing -> case vch of
                VarInsert pty -> insert x (VarInsert pty) ctx
                _ -> unsafeThrow "Shouldn't happen"
