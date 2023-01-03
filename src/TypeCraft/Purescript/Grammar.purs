@@ -173,3 +173,7 @@ instance eqType :: Eq Type where
     eq (THole _ x) (THole _ y) = x == y
     eq (TNeu _ x argsx) (TNeu _ y argsy) = x == y && argsx == argsy
     eq _ _  = false
+
+--instance eqPolyType :: EqPolyType where
+--        eq (Forall x)
+--data PolyType = Forall TypeVarID PolyType | PType Type -- doesn't appear in source code. Instead, source code has lists of type parameters.

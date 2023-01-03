@@ -94,22 +94,28 @@ composeChange c1 c2 =
 --composeParamChanges (MinusParam t : cs1) cs2 = MinusParam t : (composeParamChanges cs1 cs2)
 
 composePolyChange :: PolyChange -> PolyChange -> PolyChange
+composePolyChange (PChange c1) (PChange c2) = PChange (composeChange c1 c2)
 composePolyChange (CForall x pc1) (CForall y pc2) =
-    if not (x == y) then unsafeThrow "uh oh" else
     CForall x (composePolyChange pc1 pc2)
-composePolyChange (PPlus x pc1) (PMinus y pc2) =
-    if not (x == y) then unsafeThrow "uhoh" else (composePolyChange pc1 pc2)
-composePolyChange (PMinus x pc1) (PPlus y pc2) =
-    if not (x == y) then unsafeThrow "uhoh" else CForall x (composePolyChange pc1 pc2)
-composePolyChange (CForall x pc1) (PMinus y pc2) =
-    if not (x == y) then unsafeThrow "uhoh" else PMinus x (composePolyChange pc1 pc2)
-composePolyChange (PPlus x pc1) (CForall y pc2) =
-    if not (x == y) then unsafeThrow "uhoh" else PPlus x (composePolyChange pc1 pc2)
---composePolyChange (PMinus )
-composePolyChange _ _ = hole
+composePolyChange (PPlus x pc1) (PMinus y pc2) | x == y =
+    (composePolyChange pc1 pc2)
+composePolyChange (PMinus x pc1) (PPlus y pc2) | x == y =
+    CForall x (composePolyChange pc1 pc2)
+composePolyChange (CForall x pc1) (PMinus y pc2) | x == y =
+    PMinus x (composePolyChange pc1 pc2)
+composePolyChange (PPlus x pc1) (CForall y pc2) | x == y =
+    PPlus x (composePolyChange pc1 pc2)
+composePolyChange (PMinus x pc1) pc2 = PMinus x (composePolyChange pc1 pc2)
+composePolyChange pc1 (PPlus x pc2) = PPlus x (composePolyChange pc1 pc2)
+composePolyChange _ _ = unsafeThrow "shouldn't get here. Could be that an x != y above or another case that shouldn't happen"
 -- TODO: should Replace be in PolyChange instead or in addition to in Change? Also, finish cases here!
 
-composeVarChange :: VarChange -> VarChange -> VarChange
+composeVarChange :: VarChange -> VarChange -> Maybe VarChange
+--composeVarChange (VarTypeChange pc1) (VarTypeChange pc2) = Just $ VarTypeChange (composePolyChange pc1 pc2)
+--composeVarChange (VarInsert pt) (VarTypeChange pc) = Just $ VarInsert (snd (pGetEndpoints pc))
+--composeVarChange (VarTypeChange pc) (VarDelete pt) = Just $ VarInsert (fst (pGetEndpoints pc))
+--composeVarChange (VarInsert t1) (VarDelete t2) | t1 == t2 = Nothing
+--composeVarChange (VarDelete t1) (VarInsert t2) | t1 == t2 = Just $ VarTypeChange (pTyInject t1)
 composeVarChange = hole
 
 invert :: Change -> Change
