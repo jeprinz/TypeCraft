@@ -1,22 +1,11 @@
 import * as React from 'react'
 import { Backend } from '../Backend';
-import Editor, { isMouseDown, renderEditor, setMouseDown, setMouseUp } from "../Editor";
-import { BndTmVal, BndTyVal, kid_ixs, Orient } from '../Language';
+import Editor from "../Editor";
 import { Node } from "../Node";
 import * as Punc from './Punctuation';
 
-export default function frontend(backend: Backend) {
-
-  function paren(node: Node, elems: JSX.Element[]): JSX.Element[] {
-    if (node.dat.isParenthesized) {
-      return [[Punc.parenL], elems, [Punc.parenR]].flat()
-    } else {
-      return elems
-    }
-  }
-
-  return renderEditor((node: Node, editor: Editor) => {
-
+export default function makeFrontend(backend: Backend): JSX.Element {
+  function render(editor: Editor): JSX.Element[] {
     function go(
       node: Node,
       classNames: string[],
@@ -92,8 +81,27 @@ export default function frontend(backend: Backend) {
       return nodes.flatMap((node) => renderNode(node))
     }
 
-    return renderNode(node)
+    const nodes = backend.props.format(editor.state)
+    return renderNodes(nodes)
   }
-  )
-    (backend)
+
+  // TODO: use ModifyState
+  function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
+    switch (event.key) {
+      case 'x': {
+        console.log("pressed 'x'")
+        break
+      }
+      default: break
+    }
+  }
+
+  const initState = backend.state
+
+  return <Editor
+    backend={backend.props}
+    render={render}
+    handleKeyboardEvent={handleKeyboardEvent}
+    initState={initState}
+  />
 }

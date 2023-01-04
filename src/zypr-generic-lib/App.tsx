@@ -1,8 +1,6 @@
 import React from 'react'
 import './App.css'
-import { intToTestType } from '../TypeCraft/Purescript/output/TypeCraft.Purescript.InteropTest'
 import { editor } from './zypr-generic/editor/EditorA1'
-import { renderEditor } from './zypr-generic/Editor'
 
 type Props = {}
 
