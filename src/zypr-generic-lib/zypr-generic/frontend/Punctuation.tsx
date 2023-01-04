@@ -2,9 +2,26 @@ function makePunc(classnames: string[], label: string) {
   return <div className={classnames.join(" ")}>{label}</div>
 }
 
-export const arrowR = makePunc(["arrowR"], "→")
-export const parenL = makePunc(["parenL"], "(")
-export const parenR = makePunc(["parenR"], ")")
-export const angleL = makePunc(["angleL"], "<")
-export const angleR = makePunc(["angleR"], ">")
+export const [parenL, parenR] = [makePunc(["parenL"], "("), makePunc(["parenR"], ")")]
+export const [angleL, angleR] = [makePunc(["angleL"], "<"), makePunc(["angleR"], ">")]
+export const [braceL, braceR] = [makePunc(["braceL"], "{"), makePunc(["braceR"], "}")]
+export const [bracketL, bracketR] = [makePunc(["bracketL"], "["), makePunc(["bracketR"], "]")]
+
 export const interrogative = makePunc(["interrogative"], "?")
+export const listNil = makePunc(["listNil"], "∅")
+
+export const lambda = makePunc(["lambda"], "λ")
+export const forall = makePunc(["forall"], "∀")
+export const let_ = makePunc(["let"], "let")
+export const in_ = makePunc(["in"], "in")
+export const assign = makePunc(["assign"], "=")
+export const data = makePunc(["data"], "data")
+export const buffer = makePunc(["buffer"], "buf")
+
+export const arrowR = makePunc(["arrowR"], "→")
+export const application = makePunc(["application"], " ")
+export const colon = makePunc(["colon"], ":")
+export const mapsto = makePunc(["mapsto"], "↦")
+export const comma = makePunc(["comma"], ",")
+export const vertical = makePunc(["vertical"], "|")
+

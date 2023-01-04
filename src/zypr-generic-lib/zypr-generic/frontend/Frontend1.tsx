@@ -3,13 +3,13 @@ import { Backend } from '../Backend';
 import Editor, { isMouseDown, renderEditor, setMouseDown, setMouseUp } from "../Editor";
 import { BndTmVal, BndTyVal, kid_ixs, Orient } from '../Language';
 import { Node } from "../Node";
-import { arrowR, parenL, parenR, interrogative, angleL, angleR } from './Punctuation';
+import * as Punc from './Punctuation';
 
 export default function frontend(backend: Backend) {
 
   function paren(node: Node, elems: JSX.Element[]): JSX.Element[] {
     if (node.dat.isParenthesized) {
-      return [[parenL], elems, [parenR]].flat()
+      return [[Punc.parenL], elems, [Punc.parenR]].flat()
     } else {
       return elems
     }
@@ -17,14 +17,14 @@ export default function frontend(backend: Backend) {
 
   return renderEditor((node: Node, editor: Editor) => {
 
-    function helpRenderNode(
+    function go(
       node: Node,
       classNames: string[],
       kids: JSX.Element[],
     ): JSX.Element[] {
 
       if (node.dat.isParenthesized)
-        kids = ([] as JSX.Element[]).concat([parenL], kids, [parenR])
+        kids = ([] as JSX.Element[]).concat([Punc.parenL], kids, [Punc.parenR])
 
       function onClick(event: React.MouseEvent) {
         // TODO: do selection
@@ -47,35 +47,44 @@ export default function frontend(backend: Backend) {
     }
 
     function renderNode(node: Node): JSX.Element[] {
+      var kid_i = -1
+      function kid(): JSX.Element[] {
+        kid_i++
+        return renderNodes(node.kids[kid_i])
+      }
       switch (node.dat.tag.case) {
-        case 'ty arr': return helpRenderNode(node, [], [renderNodes(node.kids[0]), [arrowR], renderNodes(node.kids[1])].flat())
-        case 'ty hol': return helpRenderNode(node, [], [interrogative].flat())
-        case 'ty neu': throw helpRenderNode(node, [], [renderNodes(node.kids[0]), [angleL], renderNodes(node.kids[1]), [angleR]].flat())
-        case 'poly-ty forall': throw new Error("TODO")
-        case 'poly-ty ty': throw new Error("TODO")
-        case 'ty-arg': throw new Error("TODO")
-        case 'tm app': throw new Error("TODO")
-        case 'tm lam': throw new Error("TODO")
-        case 'tm var': throw new Error("TODO")
-        case 'tm let': throw new Error("TODO")
-        case 'tm dat': throw new Error("TODO")
-        case 'tm ty-let': throw new Error("TODO")
-        case 'tm ty-boundary': throw new Error("TODO")
-        case 'tm cx-boundary': throw new Error("TODO")
-        case 'tm hol': throw new Error("TODO")
-        case 'tm buf': throw new Error("TODO")
-        case 'ty-bnd': throw new Error("TODO")
-        case 'tm-bnd': throw new Error("TODO")
-        case 'ctr-prm': throw new Error("TODO")
-        case 'ctr': throw new Error("TODO")
-        case 'ty-arg-list cons': throw new Error("TODO")
-        case 'ty-arg-list nil': throw new Error("TODO")
-        case 'ty-bnd-list cons': throw new Error("TODO")
-        case 'ty-bnd-list nil': throw new Error("TODO")
-        case 'ctr-list cons': throw new Error("TODO")
-        case 'ctr-list nil': throw new Error("TODO")
-        case 'ctr-prm-list cons': throw new Error("TODO")
-        case 'ctr-prm-list nil': throw new Error("TODO")
+        case 'ty arr': return go(node, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat())
+        case 'ty hol': return go(node, ["ty_hol"], [Punc.interrogative].flat())
+        case 'ty neu': throw go(node, ["ty_neu"], [kid(), [Punc.angleL], kid(), [Punc.angleR]].flat())
+        case 'poly-ty forall': return go(node, ["poly-ty_forall"], [[Punc.forall], kid()].flat())
+        case 'poly-ty ty': return go(node, ["poly-ty_ty"], kid())
+        case 'ty-arg': return go(node, ["ty-arg"], kid())
+        case 'tm app': return go(node, ["tm_app"], [kid(), [Punc.application], kid()].flat())
+        case 'tm lam': return go(node, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat())
+        case 'tm var': return go(node, ["tm_var"], [kid()].flat())
+        case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.colon], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat())
+        case 'tm dat': return go(node, ["tm_dat"], [[Punc.data], kid(), [Punc.data], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat())
+        case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat())
+        case 'tm ty-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat()) // TODO: render typechange
+        case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat()) // TODO: render contextchange
+        case 'tm hol': return go(node, ["tm_hol"], [Punc.interrogative].flat()) // TODO: render type; is it a node child?
+        case 'tm buf': return go(node, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat())
+        case 'ty-bnd': return go(node, ["ty-bnd"], [kid()].flat())
+        case 'tm-bnd': return go(node, ["tm-bnd"], [kid()].flat())
+        case 'ctr-prm': return go(node, ["ctr-prm"], [[/* TODO: name */], [Punc.colon], kid()].flat()) // TODO: label
+        case 'ctr': return go(node, ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat())
+        // ty-arg-list
+        case 'ty-arg-list cons': return go(node, ["ty-arg-list_cons"], [kid(), [Punc.comma], kid()].flat())
+        case 'ty-arg-list nil': return go(node, ["ty-arg-list_nil"], [Punc.listNil])
+        // ty-bnd-list
+        case 'ty-bnd-list cons': return go(node, ["ty-bnd-list_cons"], [kid(), [Punc.comma], kid()].flat())
+        case 'ty-bnd-list nil': return go(node, ["ty-bnd-list_nil"], [Punc.listNil])
+        // ctr-list
+        case 'ctr-list cons': return go(node, ["ctr-list_cons"], [kid(), [Punc.vertical], kid()].flat())
+        case 'ctr-list nil': return go(node, ["ctr-list_nil"], [Punc.listNil])
+        // ctr-prm-list
+        case 'ctr-prm-list cons': return go(node, ["ctr-prm-list_cons"], [kid(), [Punc.comma], kid()].flat())
+        case 'ctr-prm-list nil': return go(node, ["ctr-prm-list_nil"], [Punc.listNil])
       }
     }
 
