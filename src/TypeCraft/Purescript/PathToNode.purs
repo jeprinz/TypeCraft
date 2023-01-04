@@ -34,20 +34,19 @@ stepBI tooth (BISelect middle bottom ty) = BISelect (tooth : middle) bottom ty
 termPathToNode :: BelowInfo Term Type -> TermPathRecValue -> (Node -> Node)
 termPathToNode _ {termPath: Nil} node = node
 termPathToNode belowInfo termPath innerNode =
-    let mdty = getMDType termPath.termPath in
     let makeNode' partialNode = makeNode { -- specialize a version of makeNode with the pieces that will be the same for each case
         dat: partialNode.dat
         , kids : [partialNode.kids]
         , getCursor :
-            Just \_ -> initState $ initCursorMode $ TermCursor termPath.ctxs mdty termPath.ty termPath.termPath termPath.term
+            Just \_ -> initState $ initCursorMode $ TermCursor termPath.ctxs termPath.mdty termPath.ty termPath.termPath termPath.term
         , getSelect : case belowInfo of
                  BITerm -> Nothing
-                 BISelect middlePath term ty -> Just \_ -> initState $ SelectMode $ TermSelect termPath.ctxs mdty true ty termPath.termPath middlePath term
+                 BISelect middlePath term ty -> Just \_ -> initState $ SelectMode $ TermSelect termPath.ctxs termPath.mdty true ty termPath.termPath middlePath term
     } in
     recTermPath ({
           let2 : \upRecVal md tBind tyBinds {-def-} ty body bodyTy ->
             let innerNode' = makeNode' {
-                dat : makeNodeData {indentation : hole, isParenthesized: mdty.onLeftOfApp, label: Nothing, tag: makeLetNodeTag}
+                dat : makeNodeData {indentation : hole, isParenthesized: termPath.mdty.onLeftOfApp, label: Nothing, tag: makeLetNodeTag}
                 , kids: [
                     termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds termPath.term ty.ty body.term bodyTy : upRecVal.termPath)) tBind
                     , innerNode
@@ -71,7 +70,6 @@ typePathToNode :: BelowInfo Type Unit -> TypePathRecValue -> Node -> Node
 typePathToNode  _ {typePath: Nil} node = node
 typePathToNode belowInfo typePath innerNode =
     let ty = typePath.ty in
-    let mdty = getMDType typePath.typePath in
     let makeNode' partialNode = makeNode { -- specialize a version of makeNode with the pieces that will be the same for each case
         dat: partialNode.dat
         , kids : [partialNode.kids]
@@ -79,14 +77,14 @@ typePathToNode belowInfo typePath innerNode =
             let belowTerm = case belowInfo of
                                  BITerm -> typePath.ty
                                  BISelect middlePath term _ -> hole -- combineDownPathTerm middlePath term
-            in Just \_ -> initState $ initCursorMode $ TypeCursor typePath.ctxs mdty typePath.typePath belowTerm
+            in Just \_ -> initState $ initCursorMode $ TypeCursor typePath.ctxs typePath.mdty typePath.typePath belowTerm
         , getSelect : hole
     } in
     recTypePath ({
       lambda2: \termPath md tBind {-Type-} body bodyTy -> hole
       , let3: \termPath md tBind tyBinds def {-Type-} body bodyTy ->
             let innerNode' = makeNode' {
-                dat : makeNodeData {indentation : hole, isParenthesized: mdty.onLeftOfApp, label: Nothing, tag: makeLetNodeTag}
+                dat : makeNodeData {indentation : hole, isParenthesized: typePath.mdty.onLeftOfApp, label: Nothing, tag: makeLetNodeTag}
                 , kids: [
                     termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term typePath.ty body.term bodyTy : termPath.termPath)) tBind
                     , innerNode

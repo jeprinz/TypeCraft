@@ -57,7 +57,6 @@ getCursorChildren (TypeBindListCursor _ _ _ _) = Nil
 parent :: CursorLocation -> Maybe (CursorLocation /\ Int)
 parent (TermCursor ctxs mdty ty Nil term) = Nothing
 parent (TermCursor ctxs mdty ty termPath term) =
-    let mdty = getMDType termPath in
     recTermPath
         {
             let2: \upRec md tBind tyBinds defTy body bodyTy ->
@@ -83,17 +82,17 @@ parent (TermCursor ctxs mdty ty termPath term) =
             , tLet4 : \upRec md tyBind tyBinds def {-Term-} bodyTy ->
                 Just $ TermCursor upRec.ctxs upRec.mdty upRec.ty upRec.termPath upRec.term /\ (4 - 1)
         }
-        {ctxs, mdty, ty, term, termPath}
-parent (TypeCursor ctxs mdty (Arrow1 md tOut : up) ty) =
-    Just $ TypeCursor ctxs mdty up (Arrow md ty tOut) /\ (1 - 1)
-parent (TypeCursor ctxs mdty (Arrow2 md tIn : up) ty) =
-    Just $ TypeCursor ctxs mdty up (Arrow md tIn ty) /\ (2 - 1)
-parent (TypeCursor ctxs mdty (Let3 md bind tyBinds def body bodyTy : up) ty) =
-    Just $ TermCursor ctxs (getMDType up) ty up(Let md bind tyBinds def ty body bodyTy) /\ (2 - 1)
-parent (TypeBindCursor ctxs mdty (TLet1 md {-TypeBind-} tyBinds def body bodyTy : up) tyBind) =
-    Just $ TermCursor ctxs (getMDType up) bodyTy up (TLet md tyBind tyBinds def body bodyTy) /\ (1 - 1)
-parent (TypeBindCursor ctxs mdty (TypeBindListCons1 {-TypeBind-} tyBinds : up) tyBind) =
-    Just $ TypeBindListCursor ctxs mdty  up (tyBind : tyBinds) /\ (1 - 1)
+        {ctxs, mdty, ty, topmd: defaultMDType, term, termPath}
+--parent (TypeCursor ctxs mdty (Arrow1 md tOut : up) ty) =
+--    Just $ TypeCursor ctxs mdty up (Arrow md ty tOut) /\ (1 - 1)
+--parent (TypeCursor ctxs mdty (Arrow2 md tIn : up) ty) =
+--    Just $ TypeCursor ctxs mdty up (Arrow md tIn ty) /\ (2 - 1)
+--parent (TypeCursor ctxs mdty (Let3 md bind tyBinds def body bodyTy : up) ty) =
+--    Just $ TermCursor ctxs (getMDType up) ty up(Let md bind tyBinds def ty body bodyTy) /\ (2 - 1)
+--parent (TypeBindCursor ctxs mdty (TLet1 md {-TypeBind-} tyBinds def body bodyTy : up) tyBind) =
+--    Just $ TermCursor ctxs (getMDType up) bodyTy up (TLet md tyBind tyBinds def body bodyTy) /\ (1 - 1)
+--parent (TypeBindCursor ctxs mdty (TypeBindListCons1 {-TypeBind-} tyBinds : up) tyBind) =
+--    Just $ TypeBindListCursor ctxs mdty  up (tyBind : tyBinds) /\ (1 - 1)
 parent (TermBindCursor ctxs mdty up _) = hole
 parent (TypeCursor ctxs mdty up _) = hole
 parent (CtrListCursor _ _ _ _) = hole
