@@ -19,6 +19,7 @@ import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.MD (TypeBindMD)
 import TypeCraft.Purescript.MD (defaultArrowMD)
 import TypeCraft.Purescript.Util (hole)
+import Data.Tuple (snd)
 
 {-
 This file defines term contexts and type contexts!
@@ -33,12 +34,11 @@ type TypeContext = Map TypeVarID Kind
 -------------- Change contexts ------------------------------------------------
 --------------------------------------------------------------------------------
 
-data VarChange = VarTypeChange PolyChange | VarDelete -- | VarInsert PolyType
 -- Let-bound on left and lambda-bound variables on right
 -- TODO: TODO: TODO: I need to combine these and instead have Map TermVarID (K)
 type ChangeCtx = Map TermVarID VarChange
 
-data TVarChange = TVarKindChange KindChange | TVarDelete | TVarTypeChange Change
+data TVarChange = TVarKindChange KindChange | TVarDelete -- | TVarTypeChange Change
 type KindChangeCtx = Map TypeVarID TVarChange
 ctxKindCons :: KindChangeCtx -> TypeBind -> TVarChange -> KindChangeCtx
 ctxKindCons kctx (TypeBind _ x) c = insert x c kctx
@@ -51,6 +51,12 @@ addLetToCCtx ctx tBind@(TermBind _ x) tyBinds ty =
 
 removeLetFromCCtx :: CAllContext -> TermBind -> CAllContext
 removeLetFromCCtx (kctx /\ ctx) (TermBind _ x) = kctx /\ delete x ctx
+
+kCtxInject :: TypeContext -> KindChangeCtx
+kCtxInject kctx = map (\k -> TVarKindChange (kindInject k)) kctx
+
+ctxInject :: TermContext -> ChangeCtx
+ctxInject ctx = map (\ty -> VarTypeChange (pTyInject ty)) ctx
 
 --------------------------------------------------------------------------------
 -------------- Metadatta contexts ---------------------------------------------
@@ -103,7 +109,7 @@ emptyAllContext = {
 -- TODO: when I properly deal with parameters to types, this will have to be modified!
 tyBindsWrapType :: List TypeBind -> Type -> PolyType
 tyBindsWrapType Nil ty = PType ty
-tyBindsWrapType (tyBind : tyBinds) ty = Forall tyBind (tyBindsWrapType tyBinds ty)
+tyBindsWrapType ((TypeBind _ x) : tyBinds) ty = Forall x (tyBindsWrapType tyBinds ty)
 
 constructorTypes :: TypeBind -> List TypeBind -> List Constructor -> Map TermVarID PolyType
 constructorTypes dataType tyBinds ctrs =
@@ -150,4 +156,10 @@ removeDataFromCtx ctxs tyBind@(TypeBind xmd x) tyBinds ctrs =
         , ctx= filterKeys (\k -> not (member k ctrIds)) ctxs.ctx
         , mdctx= filterKeys (\k -> not (member k ctrIds)) ctxs.mdctx
     }
+
+
+-- TODO: some of these things need to be organized into different files:
+tyBindsWrapKind :: List TypeBind -> Kind -> Kind
+tyBindsWrapKind Nil k = k
+tyBindsWrapKind (_ : tyBinds) k = KArrow (tyBindsWrapKind tyBinds k)
 

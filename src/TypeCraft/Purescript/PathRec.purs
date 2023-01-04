@@ -10,7 +10,7 @@ import Data.Map.Internal (empty, lookup, insert, delete, filterKeys)
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
-import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints, composeChange)
+import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints, composeChange, invertVarChange)
 import Data.Tuple (snd)
 import TypeCraft.Purescript.MD
 import Data.List (List(..), (:))
@@ -20,6 +20,7 @@ import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.TermRec
 import TypeCraft.Purescript.Util (lookup')
 import TypeCraft.Purescript.Kinds (bindsToKind)
+import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)
 
 type TermPathRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, term :: Term, termPath :: UpPath}
 type TypePathRecValue = {ctxs :: AllContext, mdty :: MDType, ty :: Type, typePath :: UpPath}
@@ -46,7 +47,7 @@ type TermPathRec a = {
     , buffer1 :: TermPathRecValue -> BufferMD -> TypeRecValue -> TermRecValue -> Type -> a
     , buffer3 :: TermPathRecValue -> BufferMD -> TermRecValue -> TypeRecValue -> Type -> a
     , typeBoundary1 :: TermPathRecValue -> TypeBoundaryMD -> Change -> a
-    , contextBoundary1 :: TermPathRecValue -> ContextBoundaryMD -> TermVarID -> PolyChange -> a
+    , contextBoundary1 :: TermPathRecValue -> ContextBoundaryMD -> TermVarID -> VarChange -> a
     , tLet4 :: TermPathRecValue -> TLetMD -> TypeBind -> ListTypeBindRecValue -> TypeRecValue -> Type -> a
     , data4 :: TermPathRecValue -> GADTMD -> TypeBind -> ListTypeBindRecValue -> ListCtrRecValue -> Type -> a
 }
@@ -109,7 +110,8 @@ recTermPath args {ctxs, ty, term, termPath: (Buffer3 md buf bufTy {-Term-} bodyT
 recTermPath args {ctxs, ty, term, termPath: (TypeBoundary1 md c {-Term-}) : up} =
     args.typeBoundary1 {ctxs, mdty: getMDType up, ty: ty, term: TypeBoundary md c term, termPath: up} md c
 recTermPath args {ctxs, ty, term, termPath: (ContextBoundary1 md x c) : up} =
-    args.contextBoundary1 {ctxs, mdty: getMDType up, ty: ty, term: ContextBoundary md x c term, termPath: up} md x c
+    let ctxs' = ctxs{ctx = alterCtxVarChange ctxs.ctx x (invertVarChange c)} in
+    args.contextBoundary1 {ctxs: ctxs', mdty: getMDType up, ty: ty, term: ContextBoundary md x c term, termPath: up} md x c
 recTermPath args {ctxs, ty, term, termPath: (TLet4 md tybind@(TypeBind _ x) tyBinds def {-Term-} bodyTy) : up} =
     if not (bodyTy == ty) then unsafeThrow "dynamic type error detected" else
     let ctxs' = ctxs {mdkctx = delete x ctxs.mdkctx, kctx = delete x ctxs.kctx} in

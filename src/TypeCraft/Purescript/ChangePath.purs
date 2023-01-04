@@ -38,13 +38,13 @@ chTermPath kctx ctx c (Data4 md x tbinds ctrs {-body = here-} bodyTy : up) =
     -- TODO: update ctrs using kctx and chCtrList
     let up' = chTermPath kctx ctx c up in
     Data4 md x tbinds ctrs (snd (getEndpoints c)) : up'
---Data4 TermPath GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-}
---App2 TermPath AppMD Term {-Term-} Type
---Lambda2 TermPath LambdaMD TermBind Type {-Term-}
---Buffer1 TermPath BufferMD {-Term-} Type Term | Buffer3 TermPath BufferMD Term Type {-Term-}
---TypeBoundary1 TermPath TypeBoundaryMD Change {-Term-}
---ContextBoundary1 TermPath ContextBoundaryMD Change {-Term-}
---TLet3 TermPath TLetMD TypeBind Type Kind {-Term-}
+--    App2 AppMD Term {-Term-} Type Type
+--    Lambda3 LambdaMD TermBind Type {-Term-} Type
+--    Buffer1 BufferMD {-Term-} Type Term Type
+--    TypeBoundary1 TypeBoundaryMD Change {-Term-}
+--    Buffer3 BufferMD Term Type {-Term-} Type
+--    ContextBoundary1 ContextBoundaryMD TermVarID PolyChange {-Term-}
+--    TLet4 TLetMD TypeBind (List TypeBind) Type {-Term-} Type
 chTermPath _ _ _ _ = unsafeThrow "finish implementing all cases"
 
 chTypePath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
@@ -55,14 +55,66 @@ chTypePath kctx ctx ch (Let3 md tBind@(TermBind _ x) tyBinds def {-Type-} body b
     let def'' = if chIsId c1 then def' else TypeBoundary defaultTypeBoundaryMD c1 def' in
     let termPath' = chTermPath kctx ctx c2 termPath in
     Let3 md tBind tyBinds def'' body' (snd (getEndpoints c2)) : termPath'
+--    Lambda2 LambdaMD TermBind {-Type-} Term Type
+--    Let3 LetMD TermBind (List TypeBind) Term {-Type-} Term Type
+--    Buffer2 BufferMD Term {-Type-} Term Type
+--    Arrow1 ArrowMD {-Type-} Type
+--    Arrow2 ArrowMD Type {-Type-}
+--    CtrParam1 CtrParamMD {-Type-}
+--    TypeArg1 TypeArgMD {-Type-}
+--    TLet3 TLetMD TypeBind (List TypeBind) {-Type-} Term Type
 chTypePath _ _ _ _ = hole
 
--- these are the cases:
---      lambda2 :: TermPathRecValue -> LambdaMD -> TermBindRecValue -> TermRecValue -> Type -> a
---      , let3 :: TermPathRecValue -> LetMD -> TermBindRecValue -> ListTypeBindRecValue -> TermRecValue -> TermRecValue -> Type -> a
---      , buffer2 :: TermPathRecValue -> BufferMD -> TermRecValue -> TermRecValue -> Type -> a
---      , tLet3 :: TermPathRecValue -> TLetMD -> TypeBindRecValue -> ListTypeBindRecValue -> TermRecValue -> Type -> a
---      , ctrParam1 :: CtrParamPathRecValue -> CtrParamMD -> a
---      , typeArg1 :: TypeArgPathRecValue -> TypeArgMD -> a
---      , arrow1 :: TypePathRecValue -> ArrowMD -> TypeRecValue -> a
---      , arrow2 :: TypePathRecValue -> ArrowMD -> TypeRecValue -> a
+-- TODO: I believe that Constructors should change by a Change
+chCtrPath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
+--    CtrListCons1 {-Constructor-} (List Constructor)
+chCtrPath _ _ _ _ = hole
+
+-- TODO: I believe that CtrParams should change by a Change
+chCtrParamPath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
+--    CtrParamListCons1 {-CtrParam-} (List CtrParam)
+chCtrParamPath _ _ _ _ = hole
+
+
+-- I don't believe that there is any need for changing a TypeArgPath
+--    TypeArgListCons1 {-TypeArg-} (List TypeArg)
+
+-- I don't believe that there is any need for changing a TypeBindPath
+--    TLet1 TLetMD {-TypeBind-} (List TypeBind) Type Term Type
+--    TypeBindListCons1 {-TypeBind-} (List TypeBind)
+--    Data1 GADTMD {-TypeBind-} (List TypeBind) (List Constructor) Term Type
+
+-- I don't believe that there is any need for changing a TermBindPath
+--    Lambda1 LambdaMD {-TermBind-} Type Term Type
+--    Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term Type
+--    Constructor1 CtrMD {-TermBind-} (List CtrParam)
+
+-- This datatype describes how a list of constructors has changed
+-- TODO: PROBLEM: this is unable to describe re-orderings.
+-- You can have - c [+ c [...]], but when this is applied to a match expression it will not
+-- swap the cases, but rather delete one and create a new empty one!
+data ListCtrChange = ListCtrChangeNil | ListCtrChangeCons Change ListCtrChange
+    | ListCtrChangePlus Constructor ListCtrChange
+    | ListCtrChangeMinus Constructor ListCtrChange
+-- The Change by which a CtrListPath changes is the change by which the recursor
+chListCtrPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
+--    Data3 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type
+--    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
+--    CtrListCons2 Constructor {-List Constructor-}
+chListCtrPath _ _ _ _ = hole
+
+-- TODO: again, there will be a problem with swapping!
+-- TODO: Should I just use Change instead of ListCtrParamChange? They are more or less the same!
+data ListCtrParamChange = ListCtrParamChangeNil | ListCtrParamChangeCons Change ListCtrParamChange
+    | ListCtrParamChangePlus CtrParam ListCtrParamChange
+    | ListCtrParamChangeMinus CtrParam ListCtrParamChange
+chListCtrParamPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
+--    Constructor2 CtrMD TermBind {-List CtrParam-}
+--    CtrParamListCons2 CtrParam {-List CtrParam-}
+chListCtrParamPath _ _ _ _ = hole
+
+--    TypeArgListCons2 (TypeArg) {-List TypeArg-}
+--    TNeu1 TNeuMD TypeVarID {-List TypeArg-}
+
+--    TLet2 TLetMD TypeBind {-List TypeBind-} Type Term Type
+--    TypeBindListCons2 (TypeBind) {-List TypeBind-}

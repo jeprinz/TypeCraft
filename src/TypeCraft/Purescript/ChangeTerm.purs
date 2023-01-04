@@ -55,7 +55,7 @@ chTerm kctx ctx c t =
 --                case getSubstitution cin (lookup x ctx)
                 let xVarCh = lookup' x ctx in
                 case xVarCh of
-                    VarDelete -> tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD -- later use context boundary
+                    VarDelete _ -> tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD -- later use context boundary
 --                    VarTypeChange xChange ->
 --                        let tryPolymorhpismCase =
 ----                                do _ <- (if pChIsId xChange then Just xChange else Nothing) -- (for now at least), polymorphism thing only works if variable type is unchanged in context
@@ -70,6 +70,7 @@ chTerm kctx ctx c t =
                     VarTypeChange (PChange cVar) ->
                         if not (chIsId cin) then tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD
                         else cVar /\ Var md x params
+                    VarInsert _ -> unsafeThrow "shouldn't get here"
                     VarTypeChange _ -> unsafeThrow "not implemented yet"
             (CArrow c1 c2) /\ (Lambda md tBind@(TermBind _ x) ty t bodyTy) ->
                 if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen" else
@@ -79,7 +80,7 @@ chTerm kctx ctx c t =
             (Minus ty1 c) /\ (Lambda md tBind@(TermBind _ x) ty2 t bodyTy) ->
                 if not (ty1 == ty2) then unsafeThrow "shouldn't happen" else
                 if not (bodyTy == fst (getEndpoints c)) then unsafeThrow "shouldn't happen" else
-                let c2' /\ t' = chTerm kctx (insert x VarDelete ctx) c t in
+                let c2' /\ t' = chTerm kctx (insert x (VarDelete (PType ty2)) ctx) c t in
                 (Minus ty1 c2') /\ t'
             (Plus ty c) /\ t ->
                 c /\ App defaultAppMD t (Hole defaultHoleMD) ty (snd (getEndpoints c))
@@ -98,7 +99,8 @@ chTerm kctx ctx c t =
             c /\ TLet md x params ty t bodyType ->
                 if not (fst (getEndpoints c) == bodyType) then unsafeThrow "shouldn't happen" else
                 let ty' /\ tyChange = chType kctx ty in
-                let c' /\ t' = chTerm (ctxKindCons kctx x (TVarTypeChange tyChange)) ctx c t in
+--                let c' /\ t' = chTerm (ctxKindCons kctx x (TVarTypeChange tyChange)) ctx c t in
+                let c' /\ t' = chTerm (ctxKindCons kctx x (TVarKindChange (kindInject (tyBindsWrapKind params Type)))) ctx c t in
                 c' /\ TLet md x params ty' t' (snd (getEndpoints c')) -- TODO: what if c references x? Then it is out of scope above.
             cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
         )
@@ -129,7 +131,7 @@ chType kctx startType@(TNeu md x args) =
         let x = freshTypeHoleID unit in
         let newType = THole defaultHoleMD x in
         newType /\ Replace startType newType
-    (Just (TVarTypeChange _)) -> unsafeThrow "I need to figure out what is the deal with TVarTypeChange!!!"
+--    (Just (TVarTypeChange _)) -> unsafeThrow "I need to figure out what is the deal with TVarTypeChange!!!"
 
 
 chTypeArgs :: KindChangeCtx -> KindChange -> List TypeArg -> List TypeArg /\ List ChangeParam
