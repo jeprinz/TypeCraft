@@ -1,11 +1,19 @@
 module TypeCraft.Purescript.Node where
 
 import Prelude
+import Control.Applicative
+import Control.Alternative
+import Data.Bounded.Generic (genericBottom, genericTop)
+import Data.Enum (class BoundedEnum, class Enum, cardinality)
+import Data.Enum.Generic (genericCardinality, genericFromEnum, genericPred, genericSucc, genericToEnum)
+import Data.Foldable (foldr)
+import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Nullable (Nullable)
 import TypeCraft.Purescript.Nullable as Nullable
 import TypeCraft.Purescript.State (State)
+import TypeCraft.Purescript.Util (hole)
 
 -- Node
 foreign import data Node :: Type
@@ -58,7 +66,7 @@ foreign import makeNodeData_ ::
   { indentation :: NodeIndentation
   , isParenthesized :: Boolean
   , label :: Nullable String
-  , tag :: NodeTag
+  , tag :: NodeTag_
   } ->
   NodeData
 
@@ -66,12 +74,12 @@ makeNodeData ::
   { tag :: NodeTag
   } ->
   NodeData
-makeNodeData { tag } =
+makeNodeData dat =
   makeNodeData_
     { indentation: makeInlineNodeIndentation
     , isParenthesized: false
     , label: Nullable.fromMaybe Nothing
-    , tag
+    , tag: toNodeTag_ dat.tag
     }
 
 foreign import getNodeData :: Node -> NodeData
@@ -82,37 +90,7 @@ foreign import makeNodeTag_ :: String -> NodeTag_
 
 foreign import fromNodeTag_ :: NodeTag_ -> String
 
-readNodeTag :: String -> NodeTag
-readNodeTag str
-  | str == "ty arr" = ArrowNodeTag
-  | str == "ty hol" = THoleNodeTag
-  | str == "ty neu" = TNeuNodeTag
-  | str == "poly-ty forall" = ForallNodeTag
-  | str == "poly-ty ty" = PTypeNodeTag
-  | str == "ty-arg" = TypeArgNodeTag
-  | str == "tm app" = AppNodeTag
-  | str == "tm lam" = LambdaNodeTag
-  | str == "tm var" = VarNodeTag
-  | str == "tm let" = LetNodeTag
-  | str == "tm dat" = DataNodeTag
-  | str == "tm ty-let" = TLetNodeTag
-  | str == "tm ty-boundary" = TypeBoundaryNodeTag
-  | str == "tm cx-boundary" = ContextBoundaryNodeTag
-  | str == "tm hol" = HoleNodeTag
-  | str == "tm buf" = BufferNodeTag
-  | str == "ty-bnd" = TypeBindNodeTag
-  | str == "tm-bnd" = TermBindNodeTag
-  | str == "ctr-prm" = CtrParamNodeTag
-  | str == "ctr" = ConstructorNodeTag
-  | str == "ty-arg-list cons" = TypeArgListConsNodeTag
-  | str == "ty-arg-list nil" = TypeArgListNilNodeTag
-  | str == "ty-arg-list cons" = TypeBindListConsNodeTag
-  | str == "ty-arg-list nil" = TypeBindListNilNodeTag
-  | str == "ctr-list cons" = ConstructorListConsNodeTag
-  | str == "ctr-list nil" = ConstructorListNilNodeTag
-  | str == "ctr-param-list cons" = CtrParamListConsNodeTag
-  | str == "ctr-param-list nil" = CtrParamListNilNodeTag
-  | otherwise = unsafeThrow $ "invalid NodeTag: " <> str
+foreign import getNodeTag_ :: NodeData -> NodeTag_
 
 data NodeTag
   -- NodeTag: Type
@@ -156,7 +134,101 @@ data NodeTag
   | CtrParamListConsNodeTag
   | CtrParamListNilNodeTag
 
-foreign import getNodeTag_ :: NodeData -> NodeTag_
+derive instance eqNodeTag :: Eq NodeTag
+
+derive instance ordNodeTag :: Ord NodeTag
+
+derive instance genericNodeTag :: Generic NodeTag _
+
+instance enumNodeTag :: Enum NodeTag where
+  succ x = genericSucc x
+  pred x = genericPred x
+
+instance boundedNodeTag :: Bounded NodeTag where
+  top = genericTop
+  bottom = genericBottom
+
+instance boundedEnumNodeTag :: BoundedEnum NodeTag where
+  cardinality = genericCardinality
+  toEnum x = genericToEnum x
+  fromEnum x = genericFromEnum x
+
+-- iterate through all of the NodeTags until find one that has matching label
+-- (produced by `fromNodeTag_`)
+readNodeTag :: String -> NodeTag
+readNodeTag str = case foldr
+    ( \tag ->
+        ( _
+            <|> if str == fromNodeTag_ (toNodeTag_ tag) then
+                Just tag
+              else
+                Nothing
+        )
+    )
+    Nothing
+    [] of
+  Nothing -> unsafeThrow $ "invalid NodeTag: " <> str
+  Just tag -> tag
+
+-- | str == "ty arr" = ArrowNodeTag
+-- | str == "ty hol" = THoleNodeTag
+-- | str == "ty neu" = TNeuNodeTag
+-- | str == "poly-ty forall" = ForallNodeTag
+-- | str == "poly-ty ty" = PTypeNodeTag
+-- | str == "ty-arg" = TypeArgNodeTag
+-- | str == "tm app" = AppNodeTag
+-- | str == "tm lam" = LambdaNodeTag
+-- | str == "tm var" = VarNodeTag
+-- | str == "tm let" = LetNodeTag
+-- | str == "tm dat" = DataNodeTag
+-- | str == "tm ty-let" = TLetNodeTag
+-- | str == "tm ty-boundary" = TypeBoundaryNodeTag
+-- | str == "tm cx-boundary" = ContextBoundaryNodeTag
+-- | str == "tm hol" = HoleNodeTag
+-- | str == "tm buf" = BufferNodeTag
+-- | str == "ty-bnd" = TypeBindNodeTag
+-- | str == "tm-bnd" = TermBindNodeTag
+-- | str == "ctr-prm" = CtrParamNodeTag
+-- | str == "ctr" = ConstructorNodeTag
+-- | str == "ty-arg-list cons" = TypeArgListConsNodeTag
+-- | str == "ty-arg-list nil" = TypeArgListNilNodeTag
+-- | str == "ty-arg-list cons" = TypeBindListConsNodeTag
+-- | str == "ty-arg-list nil" = TypeBindListNilNodeTag
+-- | str == "ctr-list cons" = ConstructorListConsNodeTag
+-- | str == "ctr-list nil" = ConstructorListNilNodeTag
+-- | str == "ctr-prm-list cons" = CtrParamListConsNodeTag
+-- | str == "ctr-prm-list nil" = CtrParamListNilNodeTag
+-- | otherwise = unsafeThrow $ "invalid NodeTag: " <> str
+toNodeTag_ :: NodeTag -> NodeTag_
+toNodeTag_ = case _ of
+  ArrowNodeTag -> makeNodeTag_ "ty arr"
+  THoleNodeTag -> makeNodeTag_ "ty hol"
+  TNeuNodeTag -> makeNodeTag_ "ty neu"
+  ForallNodeTag -> makeNodeTag_ "poly-ty forall"
+  PTypeNodeTag -> makeNodeTag_ "poly-ty ty"
+  TypeArgNodeTag -> makeNodeTag_ "ty-arg"
+  AppNodeTag -> makeNodeTag_ "tm app"
+  LambdaNodeTag -> makeNodeTag_ "tm lam"
+  VarNodeTag -> makeNodeTag_ "tm var"
+  LetNodeTag -> makeNodeTag_ "tm let"
+  DataNodeTag -> makeNodeTag_ "tm dat"
+  TLetNodeTag -> makeNodeTag_ "tm ty-let"
+  TypeBoundaryNodeTag -> makeNodeTag_ "tm ty-boundary"
+  ContextBoundaryNodeTag -> makeNodeTag_ "tm cx-coundary"
+  HoleNodeTag -> makeNodeTag_ "tm hol"
+  BufferNodeTag -> makeNodeTag_ "tm buf"
+  TypeBindNodeTag -> makeNodeTag_ "ty-bnd"
+  TermBindNodeTag -> makeNodeTag_ "tm-bnd"
+  CtrParamNodeTag -> makeNodeTag_ "ctr-prm"
+  ConstructorNodeTag -> makeNodeTag_ "ctr"
+  TypeArgListConsNodeTag -> makeNodeTag_ "ty-arg-list cons"
+  TypeArgListNilNodeTag -> makeNodeTag_ "ty-arg-list nil"
+  TypeBindListConsNodeTag -> makeNodeTag_ "ty-bnd-list cons"
+  TypeBindListNilNodeTag -> makeNodeTag_ "ty-bnd-list nil"
+  ConstructorListConsNodeTag -> makeNodeTag_ "ctr-list cons"
+  ConstructorListNilNodeTag -> makeNodeTag_ "ctr-list nil"
+  CtrParamListConsNodeTag -> makeNodeTag_ "ctr-prm-list cons"
+  CtrParamListNilNodeTag -> makeNodeTag_ "ctr-prm-list nil"
 
 getNodeTag :: NodeData -> NodeTag
 getNodeTag = getNodeTag_ >>> fromNodeTag_ >>> readNodeTag

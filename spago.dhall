@@ -4,6 +4,7 @@
   , "control"
   , "debug"
   , "effect"
+  , "enums"
   , "exceptions"
   , "foldable-traversable"
   , "lists"
