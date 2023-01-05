@@ -2,19 +2,20 @@ module TypeCraft.Purescript.ChangePath where
 
 import Prelude
 import Prim hiding (Type)
-import Data.Tuple.Nested (type (/\), (/\))
-import TypeCraft.Purescript.Util (hole)
-import TypeCraft.Purescript.Grammar
-import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.ChangeTerm
-import Effect.Exception.Unsafe (unsafeThrow)
-import Data.Tuple (fst)
-import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints)
-import Data.Tuple (snd)
+import TypeCraft.Purescript.Context
+import TypeCraft.Purescript.Grammar
+import TypeCraft.Purescript.MD
+import TypeCraft.Purescript.TypeChangeAlgebra
+
 import Data.List (List(..), (:))
 import Data.Map.Internal (empty, lookup, insert, delete)
-import TypeCraft.Purescript.TypeChangeAlgebra
-import TypeCraft.Purescript.MD
+import Data.Tuple (fst)
+import Data.Tuple (snd)
+import Data.Tuple.Nested (type (/\), (/\))
+import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints)
+import TypeCraft.Purescript.Util (hole')
 
 -- For now, I won't do anything with upwards ChangeCtx. But I can implement that in the future.
 
@@ -26,7 +27,7 @@ chTermPath kctx ctx (CArrow c1 c2) (App1 md {-here-} t argTy outTy : up) =
     App1 md t' (snd (getEndpoints c1)) (snd (getEndpoints c2)) : up'
 -- TODO: App2 case, other App1 cases with other TypeChanges
 chTermPath kctx ctx c  (Let2 md x tbinds {-Term = here-} ty body tybody : up) =
-    hole
+    hole' "chTermPath"
 chTermPath kctx ctx c (Let4 md tBind@(TermBind _ x) tbinds def ty {-body = here-} tybody : up) =
     if not (fst (getEndpoints c) == tybody) then unsafeThrow "shouldn't happen" else
     let ctx' = delete x ctx in
@@ -63,17 +64,17 @@ chTypePath kctx ctx ch (Let3 md tBind@(TermBind _ x) tyBinds def {-Type-} body b
 --    CtrParam1 CtrParamMD {-Type-}
 --    TypeArg1 TypeArgMD {-Type-}
 --    TLet3 TLetMD TypeBind (List TypeBind) {-Type-} Term Type
-chTypePath _ _ _ _ = hole
+chTypePath _ _ _ _ = hole' "chTypePath"
 
 -- TODO: I believe that Constructors should change by a Change
 chCtrPath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
 --    CtrListCons1 {-Constructor-} (List Constructor)
-chCtrPath _ _ _ _ = hole
+chCtrPath _ _ _ _ = hole' "chCtrPath"
 
 -- TODO: I believe that CtrParams should change by a Change
 chCtrParamPath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
 --    CtrParamListCons1 {-CtrParam-} (List CtrParam)
-chCtrParamPath _ _ _ _ = hole
+chCtrParamPath _ _ _ _ = hole' "chCtrParaPath"
 
 
 -- I don't believe that there is any need for changing a TypeArgPath
@@ -101,7 +102,7 @@ chListCtrPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
 --    Data3 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type
 --    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
 --    CtrListCons2 Constructor {-List Constructor-}
-chListCtrPath _ _ _ _ = hole
+chListCtrPath _ _ _ _ = hole' "chListCtrPath"
 
 -- TODO: again, there will be a problem with swapping!
 -- TODO: Should I just use Change instead of ListCtrParamChange? They are more or less the same!
@@ -111,7 +112,7 @@ data ListCtrParamChange = ListCtrParamChangeNil | ListCtrParamChangeCons Change 
 chListCtrParamPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
 --    Constructor2 CtrMD TermBind {-List CtrParam-}
 --    CtrParamListCons2 CtrParam {-List CtrParam-}
-chListCtrParamPath _ _ _ _ = hole
+chListCtrParamPath _ _ _ _ = hole' "chListCtrParamPath"
 
 --    TypeArgListCons2 (TypeArg) {-List TypeArg-}
 --    TNeu1 TNeuMD TypeVarID {-List TypeArg-}

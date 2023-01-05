@@ -2,25 +2,16 @@ module TypeCraft.Purescript.PathRec where
 
 import Prelude
 import Prim hiding (Type)
-import Data.Tuple.Nested (type (/\), (/\))
-import Data.Map.Internal (empty, lookup, insert, union)
+import Data.Map.Internal (delete, insert)
 
-import TypeCraft.Purescript.Grammar
-import Data.Map.Internal (empty, lookup, insert, delete, filterKeys)
-import Data.Maybe (Maybe(..))
+import TypeCraft.Purescript.Grammar (Change, Constructor(..), CtrParam(..), PolyType(..), Term(..), TermBind(..), TermVarID, Tooth(..), Type(..), TypeArg(..), TypeBind(..), TypeVarID, UpPath, VarChange)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Freshen (freshenChange)
-import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints, composeChange, invertVarChange)
-import Data.Tuple (snd)
-import TypeCraft.Purescript.MD
-import Data.List (List(..), (:))
-import Data.Tuple (fst)
-import TypeCraft.Purescript.Context
-import TypeCraft.Purescript.Util (hole)
-import TypeCraft.Purescript.TermRec
-import TypeCraft.Purescript.Util (lookup')
+import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange, invertVarChange)
+import TypeCraft.Purescript.MD (AppMD, ArrowMD, BufferMD, ContextBoundaryMD, CtrMD, CtrParamMD, GADTMD, LambdaMD, LetMD, TLetMD, TNeuMD, TypeArgMD, TypeBoundaryMD, defaultArrowMD)
+import Data.List (List, (:))
+import TypeCraft.Purescript.Context (AllContext, addDataToCtx, removeDataFromCtx, tyBindsWrapType)
+import TypeCraft.Purescript.TermRec (CtrParamRecValue, CtrRecValue, ListCtrParamRecValue, ListCtrRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue)
 import TypeCraft.Purescript.Kinds (bindsToKind)
-import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)
 
 type TermPathRecValue = {ctxs :: AllContext, ty :: Type, term :: Term, termPath :: UpPath}
 type TypePathRecValue = {ctxs :: AllContext, ty :: Type, typePath :: UpPath}

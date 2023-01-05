@@ -6,7 +6,6 @@ import Data.List (List(..), (:))
 
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.Util (hole)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.MD (defaultVarMD)
 import TypeCraft.Purescript.MD (defaultLambdaMD)

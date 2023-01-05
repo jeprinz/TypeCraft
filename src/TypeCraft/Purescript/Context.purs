@@ -12,14 +12,14 @@ import Data.Maybe (Maybe(..))
 import Data.Set (Set)
 import Data.Set (member)
 import Data.Set as Set
+import Data.Tuple (snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.MD (TypeBindMD)
 import TypeCraft.Purescript.MD (defaultArrowMD)
-import TypeCraft.Purescript.Util (hole)
-import Data.Tuple (snd)
+import TypeCraft.Purescript.Util (hole')
 
 {-
 This file defines term contexts and type contexts!
@@ -105,7 +105,7 @@ constructorTypes dataType tyBinds ctrs =
 constructorTypesImpl :: TypeBind -> List TypeBind -> List Constructor -> Map TermVarID PolyType
 constructorTypesImpl dataType tyBinds Nil = empty
 constructorTypesImpl dataType tyBinds (Constructor _ (TermBind _ x) params : ctrs)
-    = insert x (ctrParamsToType hole tyBinds params) (constructorTypesImpl dataType tyBinds ctrs)
+    = insert x (ctrParamsToType (hole' "constructorTypesImpl") tyBinds params) (constructorTypesImpl dataType tyBinds ctrs)
 
 constructorNames :: List Constructor -> Map TermVarID String
 constructorNames Nil = empty

@@ -2,21 +2,22 @@ module TypeCraft.Purescript.CursorMovement where
 
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.Grammar
-import Data.List (List(..), (:))
 import TypeCraft.Purescript.Context
-import TypeCraft.Purescript.Util (hole)
-import Data.Tuple.Nested (type (/\), (/\))
-import TypeCraft.Purescript.TermRec (TermRecValue)
-import TypeCraft.Purescript.TermRec (recTerm)
-import TypeCraft.Purescript.TermRec (TypeRecValue)
+import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.PathRec
-import Data.Maybe (Maybe)
-import Data.Maybe (Maybe(..))
-import Data.List (length)
-import Data.List (index)
 import TypeCraft.Purescript.State
+
+import Data.List (List(..), (:))
+import Data.List (index)
+import Data.List (length)
+import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
+import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.TermRec (TermRecValue)
+import TypeCraft.Purescript.TermRec (TypeRecValue)
+import TypeCraft.Purescript.TermRec (recTerm)
+import TypeCraft.Purescript.Util (hole')
 
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor ctxs ty up term) =
@@ -45,9 +46,9 @@ getCursorChildren (TermCursor ctxs ty up term) =
         {ctxs, ty, term}
 getCursorChildren (TypeCursor ctxs up (Arrow md t1 t2)) =
     TypeCursor ctxs (Arrow1 md t2 : up) t1 : TypeCursor ctxs (Arrow2 md t1 : up) t2 : Nil
-getCursorChildren (TypeBindCursor ctxs up _) = hole
-getCursorChildren (TermBindCursor ctxs up _) = hole
-getCursorChildren (TypeCursor ctxs up _) = hole
+getCursorChildren (TypeBindCursor ctxs up _) = hole' "getCursorChildren"
+getCursorChildren (TermBindCursor ctxs up _) = hole' "getCursorChildren"
+getCursorChildren (TypeCursor ctxs up _) = hole' "getCursorChildren"
 getCursorChildren (CtrListCursor _ _ _) = Nil
 getCursorChildren (CtrParamListCursor _ _ _) = Nil
 getCursorChildren (TypeArgListCursor _ _ _) = Nil
@@ -93,13 +94,13 @@ parent (TermCursor ctxs ty termPath term) =
 --    Just $ TermCursor ctxs (getMDType up) bodyTy up (TLet md tyBind tyBinds def body bodyTy) /\ (1 - 1)
 --parent (TypeBindCursor ctxs (TypeBindListCons1 {-TypeBind-} tyBinds : up) tyBind) =
 --    Just $ TypeBindListCursor ctxs up (tyBind : tyBinds) /\ (1 - 1)
-parent (TermBindCursor ctxs up _) = hole
-parent (TypeCursor ctxs up _) = hole
-parent (CtrListCursor _ _ _) = hole
-parent (CtrParamListCursor _ _ _) = hole
-parent (TypeArgListCursor _ _ _) = hole
-parent (TypeBindListCursor _ _ _) = hole
-parent _ = unsafeThrow "given an ill-typed upPath to parent function (or I missed a case)"
+parent (TermBindCursor ctxs up _) = hole' "parent"
+parent (TypeCursor ctxs up _) = hole' "parent"
+parent (CtrListCursor _ _ _) = hole' "parent"
+parent (CtrParamListCursor _ _ _) = hole' "parent"
+parent (TypeArgListCursor _ _ _) = hole' "parent"
+parent (TypeBindListCursor _ _ _) = hole' "parent"
+parent _ = hole' "given an ill-typed upPath to parent function (or I missed a case)"
 
 stepCursorForwards :: CursorLocation -> CursorLocation
 stepCursorForwards cursor = stepCursorForwardsImpl 0 cursor
@@ -113,4 +114,5 @@ stepCursorForwardsImpl childrenSkip cursor =
                Just (parent /\ index) -> stepCursorForwardsImpl (index + 1) parent
                Nothing -> cursor -- couldn't move cursor anywhere: no parent or children
 
---stepCursorBackwards :: CursorLocation -> CursorLocation
+stepCursorBackwards :: CursorLocation -> CursorLocation
+stepCursorBackwards cursor = hole' "stepCursorBackwards"

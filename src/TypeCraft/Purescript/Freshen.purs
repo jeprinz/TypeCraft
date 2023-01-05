@@ -81,7 +81,7 @@ freshenTypeImpl m (THole md x) =
 type TyVarSub = Map TypeVarID TypeVarID
 genFreshener :: List TypeVarID -> TyVarSub
 genFreshener Nil = empty
-genFreshener (x : xs) = insert x (freshTypeVarID unit) (genFreshener xs)
+genFreshener (x : xs) = insert x (freshTypeVarID unit ) (genFreshener xs)
 
 --freshenTyBinds :: List TypeBind -> List TypeBind /\ TyVarFreshener
 --freshenTyBinds Nil = Nil /\ empty

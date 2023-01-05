@@ -1,6 +1,8 @@
 { name = "zypr"
 , dependencies =
-  [ "control"
+  [ "arrays"
+  , "control"
+  , "debug"
   , "effect"
   , "exceptions"
   , "foldable-traversable"

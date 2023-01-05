@@ -2,6 +2,10 @@ import { State } from "./State";
 import * as Nullable from "../Purescript/output/TypeCraft.Purescript.Nullable"
 import * as ModifyState from "../Purescript/output/TypeCraft.Purescript.ModifyState"
 
+type CursorLocation = any
+
+type Select = any
+
 export function moveCursorPrev(st: State): State | undefined {
   return Nullable.fromMaybe(ModifyState.moveCursorNext(st))
 }
@@ -10,10 +14,8 @@ export function moveCursorNext(st: State): State | undefined {
   return Nullable.fromMaybe(ModifyState.moveCursorNext(st))
 }
 
-type CursorLocation = any
-
 export function setCursor(cursorLoc: CursorLocation, st: State): State | undefined {
-  return Nullable.fromMaybe(ModifyState.setCursor(cursorLoc))
+  return Nullable.fromMaybe(ModifyState.setCursor(cursorLoc)(st))
 }
 
 export function moveSelectPrev(st: State): State | undefined {
@@ -22,6 +24,10 @@ export function moveSelectPrev(st: State): State | undefined {
 
 export function moveSelectNext(st: State): State | undefined {
   return Nullable.fromMaybe(ModifyState.moveSelectNext(st))
+}
+
+export function setSelect(select: Select, st: State): State | undefined {
+  return Nullable.fromMaybe(ModifyState.setSelect(select)(st))
 }
 
 export function undo(st: State): State | undefined {

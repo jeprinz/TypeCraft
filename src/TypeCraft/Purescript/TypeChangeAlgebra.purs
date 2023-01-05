@@ -2,22 +2,23 @@ module TypeCraft.Purescript.TypeChangeAlgebra where
 
 import Prelude
 import Prim hiding (Type)
+import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Grammar
-import Effect.Exception.Unsafe (unsafeThrow)
-import Data.Tuple.Nested (type (/\), (/\))
 import TypeCraft.Purescript.MD
+
+import Control.Alt ((<|>))
+import Control.Apply (lift2)
 import Data.List (unzip, (:), List(..), foldl, all)
-import Data.Tuple (fst, snd)
-import Data.Maybe (Maybe(..))
-import Control.Alt ( (<|>) )
 import Data.Map (Map, singleton, empty, unionWith, mapMaybe, insert, delete)
 import Data.Map as Map
-import Control.Apply (lift2)
-import Data.Traversable (sequence)
-import TypeCraft.Purescript.Substitution (Sub)
 import Data.Map.Internal (Map, insert, empty, lookup)
-import TypeCraft.Purescript.Context
-import TypeCraft.Purescript.Util (hole)
+import Data.Maybe (Maybe(..))
+import Data.Traversable (sequence)
+import Data.Tuple (fst, snd)
+import Data.Tuple.Nested (type (/\), (/\))
+import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.Substitution (Sub)
+import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
 
 --data Change = CArrow Change Change | CApp Change Change | CHole TypeHoleID
@@ -116,7 +117,7 @@ composeVarChange :: VarChange -> VarChange -> Maybe VarChange
 --composeVarChange (VarTypeChange pc) (VarDelete pt) = Just $ VarInsert (fst (pGetEndpoints pc))
 --composeVarChange (VarInsert t1) (VarDelete t2) | t1 == t2 = Nothing
 --composeVarChange (VarDelete t1) (VarInsert t2) | t1 == t2 = Just $ VarTypeChange (pTyInject t1)
-composeVarChange = hole
+composeVarChange _ _ = hole' "composeVarChange"
 
 invert :: Change -> Change
 invert (CArrow change1 change2) = CArrow (invert change1) (invert change2)
@@ -267,7 +268,7 @@ alterCtxVarChange ctx x (VarTypeChange pch) = insert x (snd (pGetEndpoints pch))
 
 alterCCtxVarChange :: ChangeCtx -> TermVarID -> VarChange -> ChangeCtx
 alterCCtxVarChange ctx x vch = case lookup x ctx of
-    Just vchStart -> hole -- insert x (composeVarChange vchStart vch) ctx
+    Just vchStart -> hole' "alterCCtxVarChange" -- insert x (composeVarChange vchStart vch) ctx
     Nothing -> case vch of
                VarInsert pty -> insert x (VarInsert pty) ctx
                _ -> unsafeThrow "Shouldn't happen"

@@ -9,9 +9,9 @@ import Data.Maybe (Maybe(..), fromMaybe')
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Grammar (Constructor, TermBind(..), Tooth(..), UpPath)
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, makeNodeData, setCalculatedNodeData, setNodeLabelMaybe)
-import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), initCursorMode, initState)
+import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, makeState)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, ListCtrRecValue, recTerm, recType)
-import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Util (hole')
 
 data AboveInfo
   = AICursor UpPath
@@ -95,7 +95,7 @@ termToNode aboveInfo term =
                     , termToNode (stepAI (Data4 md x.tyBind tbinds.tyBinds ctrs.ctrs bodyTy) aboveInfo) body
                     ]
                 }
-          , tlet: \md x tbinds def body bodyTy -> hole
+          , tlet: \md x tbinds def body bodyTy -> hole' "termToNode"
           , typeBoundary:
               \md c t ->
                 { tag: TypeBoundaryNodeTag
@@ -133,11 +133,11 @@ termToNode aboveInfo term =
       $ makeNode
           { dat: makeNodeData { tag: nodeInfo.tag }
           , kids: [ nodeInfo.kids <#>  setCalculatedNodeData nodeInfo.tag ]
-          , getCursor: Just \_ -> initState $ initCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
+          , getCursor: Just \_ -> makeState $ makeCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
           , getSelect:
               case aboveInfo of
                 AICursor _path -> Nothing -- TODO: impl select
-                AISelect top middle -> Just \_ -> initState $ SelectMode $ TermSelect term.ctxs hole term.ty middle top term.term
+                AISelect top middle -> Just \_ -> makeState $ SelectMode $ TermSelect term.ctxs (hole' "termToNode") term.ty middle top term.term
           }
 
 typeToNode :: AboveInfo -> TypeRecValue -> Node
@@ -170,18 +170,18 @@ typeToNode aboveInfo ty =
     makeNode
       { dat: makeNodeData { tag: nodeInfo.tag }
       , kids: [ nodeInfo.kids ]
-      , getCursor: Just \_ -> initState $ initCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
+      , getCursor: Just \_ -> makeState $ makeCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
       , getSelect:
           case aboveInfo of
             AICursor path -> Nothing -- TODO: impl select
-            AISelect top middle -> Just \_ -> initState $ SelectMode $ TypeSelect ty.ctxs false top middle ty.ty
+            AISelect top middle -> Just \_ -> makeState $ SelectMode $ TypeSelect ty.ctxs false top middle ty.ty
       }
 
 ctrListToNode :: AboveInfo -> ListCtrRecValue -> Node
-ctrListToNode aboveInfo ctrs = hole
+ctrListToNode aboveInfo ctrs = hole' "ctrListToNode"
 
 ctrToNode :: AboveInfo -> Constructor -> Node
-ctrToNode aboveInfo ctr = hole
+ctrToNode aboveInfo ctr = hole' "ctrToNode"
 
 --ctrParamToNode :: AllContext -> AboveInfo -> UpPath -> CtrParam -> Node
 --ctrParamToNode ctxs aboveInfo up (CtrParam md ty) = makeNode {
@@ -192,28 +192,28 @@ ctrToNode aboveInfo ctr = hole
 --    , style: makeNormalNodeStyle
 --}
 typeArgToNode :: AboveInfo -> TypeArgRecValue -> Node
-typeArgToNode aboveInfo tyArg = hole
+typeArgToNode aboveInfo tyArg = hole' "typeArgToNode"
 
 typeBindToNode :: AboveInfo -> TypeBindRecValue -> Node
-typeBindToNode aboveInfo tyBind = hole
+typeBindToNode aboveInfo tyBind = hole' "typeBindToNode"
 
 typeBindListToNode :: AboveInfo -> ListTypeBindRecValue -> Node
-typeBindListToNode = hole
+typeBindListToNode aboveInfo tyBinds = hole' "typeBindListToNode"
 
 termBindToNode :: AboveInfo -> TermBindRecValue -> Node
 termBindToNode aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
   makeNode
     { dat: makeNodeData { tag: TermBindNodeTag }
     , kids: []
-    , getCursor: Just \_ -> initState $ initCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tBind
+    , getCursor: Just \_ -> makeState $ makeCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tBind
     , getSelect: Nothing
     }
 
 ctrParamListToNode :: AboveInfo -> ListCtrParamRecValue -> Node
-ctrParamListToNode aboveInfo ctrParams = hole
+ctrParamListToNode aboveInfo ctrParams = hole' "ctrParamListToNode"
 
 typeArgListToNode :: AboveInfo -> ListTypeArgRecValue -> Node
-typeArgListToNode aboveInfo tyArgs = hole
+typeArgListToNode aboveInfo tyArgs = hole' "typeArgListToNode"
 
 constructorListToNode :: AboveInfo -> ListCtrRecValue -> Node
-constructorListToNode = hole
+constructorListToNode aboveInfo ctrs = hole' "constructorListToNode"

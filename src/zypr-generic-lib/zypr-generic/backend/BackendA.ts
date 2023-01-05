@@ -11,7 +11,7 @@ export const makeBackend = (state: State.State): Backend.Backend => {
   return {
     props: {
       language: language(),
-      format: (st: State.State) => stateToNode(st),
+      format: (st: State.State) => [stateToNode(st)],
       handleKeyboardEvent: (event) => (st) => {
         console.log("handleKeyboardEvent.event.key", event.key)
         switch (event.key) {

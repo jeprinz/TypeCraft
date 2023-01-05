@@ -2,21 +2,20 @@ module TypeCraft.Purescript.ChangeTerm where
 
 import Prelude
 import Prim hiding (Type)
-import Data.Tuple.Nested (type (/\), (/\))
-
+import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Grammar
+import TypeCraft.Purescript.MD
+import TypeCraft.Purescript.TypeChangeAlgebra
+
+import Data.List (List(..), (:))
 import Data.Map.Internal (empty, lookup, insert)
 import Data.Maybe (Maybe(..))
+import Data.Tuple (fst)
+import Data.Tuple (snd)
+import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
---import TypeCraft.Purescript.Substitution (Sub, combineSub, subChange, subChangeCtx, unify)
-import Data.Tuple (snd)
-import TypeCraft.Purescript.MD
-import Data.List (List(..), (:))
-import TypeCraft.Purescript.TypeChangeAlgebra
-import Data.Tuple (fst)
-import TypeCraft.Purescript.Context
-import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
 
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
@@ -154,11 +153,11 @@ chTypeArgs kctx _ _ = unsafeThrow "shouldn't get here: types didn't line up with
 
 -- The output Change is the change to the constructor itself
 chCtrList :: KindChangeCtx -> List Constructor ->  List (List ChangeParam) /\ List Constructor
-chCtrList = hole
+chCtrList = hole' "chCtrList"
 
 -- The output Change is the change to the constructor itself
 chCtr :: KindChangeCtx -> Constructor -> (List Change) /\ Constructor
-chCtr = hole
+chCtr = hole' "chCtr"
 
 chCtrParam :: KindChangeCtx -> CtrParam -> Change /\ CtrParam
 chCtrParam kctx (CtrParam md t) =
@@ -172,14 +171,14 @@ chParamList kctx (param : params) =
     (ch : chs) /\ param' : params'
 
 chTypeParamList :: KindChangeCtx -> List TypeArg -> List Change /\ List TypeArg
-chTypeParamList = hole
+chTypeParamList = hole' "chTypeParamList"
 
 ---- inputs PolyChange by which var type changed, outputs new args and TypeChange by which the whole neutral form changes
 chTypeArgsNeu :: PolyChange -> List TypeArg -> Change /\ List TypeArg
 chTypeArgsNeu (PChange ch) Nil = ch /\ Nil
-chTypeArgsNeu (CForall x ch) (arg : args) = hole
-chTypeArgsNeu (PMinus x ch) (arg : args) = hole
-chTypeArgsNeu (PPlus x ch) args = hole
+chTypeArgsNeu (CForall x ch) (arg : args) = hole' "chTypeArgsNeu"
+chTypeArgsNeu (PMinus x ch) (arg : args) = hole' "chTypeArgsNeu"
+chTypeArgsNeu (PPlus x ch) args = hole' "chTypeArgsNeu"
 chTypeArgsNeu _ _ = unsafeThrow "shouldn't happen"
 -- TODO: there is something nontrivial to think about here. It should track a context so it knows which arguments got deleted etc.
 -- also if a type argument gets affected by the KindChangeCtx, then that needs to be reflected as well...
