@@ -40,6 +40,9 @@ export default function makeFrontend(backend: Backend): JSX.Element {
     }
 
     function renderNode(node: Node): JSX.Element[] {
+      
+      // assumes that kids are always rendered in the order of the node's
+      // children
       var kid_i = -1
       function kid(): JSX.Element[] {
         kid_i++
