@@ -207,6 +207,7 @@ combineSubs s1 s2 = sequence (mapMap2 combine s1 s2)
 -- Given Change A and Type C, gets a substitution that when applied to C
 -- makes makes it so that there exists a change B such that
 -- A o B = sub C
+-- TODO: this needs to work with type variables rather than holes now!
 getSubstitution :: Change -> Type -> Maybe Sub
 getSubstitution (CArrow c1a c1b) (Arrow _ c2a c2b) =
     do a1 <- getSubstitution c1a c2a

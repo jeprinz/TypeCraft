@@ -39,7 +39,17 @@ subType equiv (THole md x) = THole md x
 subType equiv (TNeu md x args) = TNeu md (lookup' x equiv) (map (subTypeArg equiv) args)
 
 subChange :: TyVarEquiv -> Change -> Change
-subChange = hole unit
+subChange equiv (CArrow c1 c2) = CArrow (subChange equiv c1) (subChange equiv c2)
+subChange equiv (CHole x) = CHole x
+subChange equiv (Replace t1 t2) = Replace (subType equiv t1) (subType equiv t2)
+subChange equiv (Plus t c) = Plus (subType equiv t) (subChange equiv c)
+subChange equiv (Minus t c) = Minus (subType equiv t) (subChange equiv c)
+subChange equiv (CNeu x chParams) = CNeu (lookup' x equiv) (map (subChangeParam equiv) chParams)
+
+subChangeParam :: TyVarEquiv -> ChangeParam -> ChangeParam
+subChangeParam equiv (ChangeParam c) = ChangeParam (subChange equiv c)
+subChangeParam equiv (PlusParam t) = PlusParam (subType equiv t)
+subChangeParam equiv (MinusParam t) = MinusParam (subType equiv t)
 
 subTypeArg :: TyVarEquiv -> TypeArg -> TypeArg
 subTypeArg equiv (TypeArg md ty) = TypeArg md (subType equiv ty)
