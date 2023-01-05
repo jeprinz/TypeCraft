@@ -36,6 +36,10 @@ makeNode x =
 
 foreign import setNodeStyle :: NodeStyle -> Node -> Node
 
+foreign import setNodeIndentation :: NodeIndentation -> Node -> Node
+
+foreign import setNodeParenthesized :: Boolean -> Node -> Node
+
 -- NodeData
 foreign import data NodeData :: Type
 

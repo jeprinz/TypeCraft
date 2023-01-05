@@ -64,6 +64,14 @@ export const setNodeStyle = style => node => {
   node.style = style
 }
 
+export const setNodeIndentation = indentation => node => {
+  node.indentation = indentation
+}
+
+export const setNodeParenthesized = isParenthesized => node => {
+  node.isParenthesized = isParenthesized
+}
+
 // NodeData
 export function makeNodeData_(data) {
   console.log("makeNodeData_", data)
