@@ -20,12 +20,7 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Substitution (Sub)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
-
---data Change = CArrow Change Change | CApp Change Change | CHole TypeHoleID
---     | CVar TypeVarID -- TODO: why is there a distinction between CVar and CHole???
---     | Replace Type Type | Plus StrictTypeTooth Change | Minus StrictTypeTooth Change
-
---data StrictTypeTooth = ArrowS2 ArrowMD Type | TAppS1 TAppMD Type | TAppS2 TAppMD Type
+import TypeCraft.Purescript.Alpha
 
 getEndpoints :: Change -> Type /\ Type
 getEndpoints (CArrow a b) =
@@ -78,8 +73,8 @@ composeChange (Minus tooth a) b = Minus tooth (composeChange a b)
 composeChange a (Plus tooth b) = Plus tooth (composeChange a b)
 composeChange (Plus t1 a) (Minus t2 b) | t1 == t2 = composeChange a b
 composeChange (Minus t1 a) (Plus t2 b) | t1 == t2 = CArrow (tyInject t1) (composeChange a b)
---composeChange (CNeu x1 args1) (CNeu x2 args2) | x1 == x2 =
---    CNeu x1 (composeParamChanges args1 args2)
+composeChange (CNeu x1 args1) (CNeu x2 args2) | x1 == x2 =
+    CNeu x1 (composeParamChanges args1 args2)
 -- TODO: It should be possible to compose changes more generally. Come back to this!
 composeChange c1 c2 =
     let a /\ b = getEndpoints c1 in
@@ -87,37 +82,37 @@ composeChange c1 c2 =
     if b == b' then Replace a c else unsafeThrow "composeChange is only valid to call on changes which share a type endpoint"
 -- I'm not sure if this composeChange function captures all cases with Plus and Minus correctly
 
---composeParamChanges :: List ChangeParam -> List ChangeParam -> List ChangeParam
---composeParamChanges Nil Nil = Nil
---composeParamChanges (ChangeParam c1 : cs1) (ChangeParam c2 : cs2)
---    = ChangeParam (composeChange c1 c2) : composeParamChanges cs1 cs2
---composeParamChanges cs1 (PlusParam t : cs2) = PlusParam t : (composeParamChanges cs1 cs2)
---composeParamChanges (MinusParam t : cs1) cs2 = MinusParam t : (composeParamChanges cs1 cs2)
+composeParamChanges :: List ChangeParam -> List ChangeParam -> List ChangeParam
+composeParamChanges Nil Nil = Nil
+composeParamChanges (ChangeParam c1 : cs1) (ChangeParam c2 : cs2)
+    = ChangeParam (composeChange c1 c2) : composeParamChanges cs1 cs2
+composeParamChanges cs1 (PlusParam t : cs2) = PlusParam t : (composeParamChanges cs1 cs2)
+composeParamChanges (MinusParam t : cs1) cs2 = MinusParam t : (composeParamChanges cs1 cs2)
+composeParamChanges (PlusParam t : cs1) (ChangeParam c : cs2) | (t == fst (getEndpoints c))
+    = PlusParam (snd (getEndpoints c)) : composeParamChanges cs1 cs2
+composeParamChanges (ChangeParam c : cs1) (MinusParam t : cs2) | t == snd (getEndpoints c) = MinusParam (fst (getEndpoints c)) : composeParamChanges cs1 cs2
+composeParamChanges (PlusParam t1 : cs1) (MinusParam t2 : cs2) | t1 == t2 = composeParamChanges cs1 cs2
+composeParamChanges _ _ = unsafeThrow "input did not satisfy assumptions (Or I wrote a bug in this function)"
 
 composePolyChange :: PolyChange -> PolyChange -> PolyChange
-composePolyChange (PChange c1) (PChange c2) = PChange (composeChange c1 c2)
-composePolyChange (CForall x pc1) (CForall y pc2) =
-    CForall x (composePolyChange pc1 pc2)
-composePolyChange (PPlus x pc1) (PMinus y pc2) | x == y =
-    (composePolyChange pc1 pc2)
-composePolyChange (PMinus x pc1) (PPlus y pc2) | x == y =
-    CForall x (composePolyChange pc1 pc2)
-composePolyChange (CForall x pc1) (PMinus y pc2) | x == y =
-    PMinus x (composePolyChange pc1 pc2)
-composePolyChange (PPlus x pc1) (CForall y pc2) | x == y =
-    PPlus x (composePolyChange pc1 pc2)
-composePolyChange (PMinus x pc1) pc2 = PMinus x (composePolyChange pc1 pc2)
-composePolyChange pc1 (PPlus x pc2) = PPlus x (composePolyChange pc1 pc2)
-composePolyChange _ _ = unsafeThrow "shouldn't get here. Could be that an x != y above or another case that shouldn't happen"
--- TODO: should Replace be in PolyChange instead or in addition to in Change? Also, finish cases here!
+composePolyChange pc1 pc2 = composePolyChangeImpl empty pc1 pc2
 
-composeVarChange :: VarChange -> VarChange -> Maybe VarChange
---composeVarChange (VarTypeChange pc1) (VarTypeChange pc2) = Just $ VarTypeChange (composePolyChange pc1 pc2)
---composeVarChange (VarInsert pt) (VarTypeChange pc) = Just $ VarInsert (snd (pGetEndpoints pc))
---composeVarChange (VarTypeChange pc) (VarDelete pt) = Just $ VarInsert (fst (pGetEndpoints pc))
---composeVarChange (VarInsert t1) (VarDelete t2) | t1 == t2 = Nothing
---composeVarChange (VarDelete t1) (VarInsert t2) | t1 == t2 = Just $ VarTypeChange (pTyInject t1)
-composeVarChange _ _ = hole' "composeVarChange"
+composePolyChangeImpl :: TyVarEquiv -> PolyChange -> PolyChange -> PolyChange
+composePolyChangeImpl equiv (PChange c1) (PChange c2) = PChange (composeChange (subChange equiv c1) c2)
+composePolyChangeImpl equiv (CForall x pc1) (CForall y pc2) =
+    CForall x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
+composePolyChangeImpl equiv (PPlus x pc1) (PMinus y pc2) =
+    (composePolyChangeImpl (insert x y equiv) pc1 pc2)
+composePolyChangeImpl equiv (PMinus x pc1) (PPlus y pc2) =
+    CForall x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
+composePolyChangeImpl equiv (CForall x pc1) (PMinus y pc2) =
+    PMinus x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
+composePolyChangeImpl equiv (PPlus x pc1) (CForall y pc2) =
+    PPlus x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
+composePolyChangeImpl equiv (PMinus x pc1) pc2 = PMinus x (composePolyChangeImpl equiv pc1 pc2)
+composePolyChangeImpl equiv pc1 (PPlus x pc2) = PPlus x (composePolyChangeImpl equiv pc1 pc2)
+composePolyChangeImpl equiv _ _ = unsafeThrow "shouldn't get here. Could be that an x != y above or another case that shouldn't happen"
+-- TODO: should Replace be in PolyChange instead or in addition to in Change? Also, finish cases here!
 
 invert :: Change -> Change
 invert (CArrow change1 change2) = CArrow (invert change1) (invert change2)
@@ -260,6 +255,13 @@ tyBindsWrapChange ((TypeBind _ x) : tyBinds) ch = CForall x (tyBindsWrapChange t
 --------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------
 
+composeVarChange :: VarChange -> VarChange -> Maybe VarChange
+composeVarChange (VarTypeChange pc1) (VarTypeChange pc2) = Just $ VarTypeChange (composePolyChange pc1 pc2)
+composeVarChange (VarInsert pt) (VarTypeChange pc) = Just $ VarInsert (snd (pGetEndpoints pc))
+composeVarChange (VarTypeChange pc) (VarDelete pt) = Just $ VarInsert (fst (pGetEndpoints pc))
+composeVarChange (VarInsert t1) (VarDelete t2) | polyTypeEq t1 t2 = Nothing
+composeVarChange (VarDelete t1) (VarInsert t2) | polyTypeEq t1 t2 = Just $ VarTypeChange (pTyInject t1)
+composeVarChange _ _ = unsafeThrow "VarChanges composed in a way that doesn't make sense, or I wrote a bug into the function"
 
 alterCtxVarChange :: TermContext -> TermVarID -> VarChange -> TermContext
 alterCtxVarChange ctx x (VarInsert pty) = insert x pty ctx
@@ -268,7 +270,9 @@ alterCtxVarChange ctx x (VarTypeChange pch) = insert x (snd (pGetEndpoints pch))
 
 alterCCtxVarChange :: ChangeCtx -> TermVarID -> VarChange -> ChangeCtx
 alterCCtxVarChange ctx x vch = case lookup x ctx of
-    Just vchStart -> hole' "alterCCtxVarChange" -- insert x (composeVarChange vchStart vch) ctx
+    Just vchStart -> case composeVarChange vchStart vch of
+        Just newVarChange -> insert x newVarChange ctx
+        Nothing -> delete x ctx
     Nothing -> case vch of
                VarInsert pty -> insert x (VarInsert pty) ctx
                _ -> unsafeThrow "Shouldn't happen"
