@@ -75,9 +75,10 @@ termToNode aboveInfo term =
     in let partialNode = partialNode' term in
     -- pieces that are the same for every syntactic form are done here:
     makeNode {
---            dat: makeNodeData (partialNode.dat{indentation= if term.mdty.indented then makeIndentNodeIndentation else makeInlineNodeIndentation})
-            dat: makeNodeData {isParenthesized: partialNode.dat.isParenthesized, label: Nothing, tag: partialNode.dat.tag,
-               indentation: hole}
+            {- dat: makeNodeData (partialNode.dat{indentation= if term.mdty.indented then makeIndentNodeIndentation else makeInlineNodeIndentation}) -}
+            {- dat: makeNodeData {isParenthesized: partialNode.dat.isParenthesized, label: Nothing, tag: partialNode.dat.tag,
+               indentation: hole} -}
+            dat: makeNodeData {tag: partialNode.dat.tag }
             , kids : [partialNode.kids]
             , getCursor : Just \_ -> initState $ initCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
             , getSelect : case aboveInfo of
@@ -103,8 +104,9 @@ typeToNode aboveInfo ty
         }
     }) in let partialNode = partialNode' ty
     in makeNode {
-        dat: makeNodeData {isParenthesized: partialNode.dat.isParenthesized, label: Nothing, tag: partialNode.dat.tag,
-               indentation: hole}
+        {- dat: makeNodeData {isParenthesized: partialNode.dat.isParenthesized, label: Nothingtag: partialNode.dat.tag,
+                indentation: hole} -}
+        dat: makeNodeData {tag: partialNode.dat.tag }
         , kids : [partialNode.kids]
         , getCursor : Just \_ -> initState $ initCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
         , getSelect : case aboveInfo of
@@ -135,7 +137,7 @@ typeBindToNode aboveInfo tyBind = hole
 
 termBindToNode :: AboveInfo -> TermBindRecValue -> Node
 termBindToNode aboveInfo {ctxs, tBind: tBind@(TermBind md x)} = makeNode {
-    dat : makeNodeData {indentation: hole, isParenthesized: false, label: Nothing, tag: makeTermBindNodeTag}
+    dat : makeNodeData {tag: makeTermBindNodeTag}
     , kids: []
     , getCursor : Just \_ -> initState $ initCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tBind
     , getSelect: Nothing

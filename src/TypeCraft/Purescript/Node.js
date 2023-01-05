@@ -61,15 +61,19 @@ export const makeQueryReplaceOldNodeStyle = { case: 'query-replace-old' }
 export const makeQueryInvalidNodeStyle = (str) => ({ case: 'query-invalid', string: str })
 
 export const setNodeStyle = style => node => {
-  node.style = style
+  return {...node, style}
 }
 
 export const setNodeIndentation = indentation => node => {
-  node.indentation = indentation
+  return {...node, indentation}
 }
 
 export const setNodeParenthesized = isParenthesized => node => {
-  node.isParenthesized = isParenthesized
+  return {...node, isParenthesized}
+}
+
+export const setNodeLabel = label => node => {
+  return {...node, label}
 }
 
 // NodeData

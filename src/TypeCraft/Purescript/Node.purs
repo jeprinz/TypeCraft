@@ -1,7 +1,8 @@
 module TypeCraft.Purescript.Node where
 
 import Prelude
-import Data.Maybe (Maybe)
+
+import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Nullable (Nullable)
 import TypeCraft.Purescript.Nullable as Nullable
 import TypeCraft.Purescript.State (State)
@@ -40,6 +41,8 @@ foreign import setNodeIndentation :: NodeIndentation -> Node -> Node
 
 foreign import setNodeParenthesized :: Boolean -> Node -> Node
 
+foreign import setNodeLabel :: String -> Node -> Node
+
 -- NodeData
 foreign import data NodeData :: Type
 
@@ -60,17 +63,14 @@ foreign import makeNodeData_ ::
   NodeData
 
 makeNodeData ::
-  { indentation :: NodeIndentation
-  , isParenthesized :: Boolean
-  , label :: Maybe String -- only for variables, bindings, etc. that have string names
-  , tag :: NodeTag
+  { tag :: NodeTag
   } ->
   NodeData
-makeNodeData { indentation, isParenthesized, label, tag } =
+makeNodeData { tag } =
   makeNodeData_
-    { indentation
-    , isParenthesized
-    , label: Nullable.fromMaybe label
+    { indentation: makeInlineNodeIndentation
+    , isParenthesized: false
+    , label: Nullable.fromMaybe Nothing
     , tag
     }
 

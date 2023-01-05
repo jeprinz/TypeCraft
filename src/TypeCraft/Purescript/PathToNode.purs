@@ -46,7 +46,8 @@ termPathToNode belowInfo termPath innerNode =
     recTermPath ({
           let2 : \upRecVal md tBind tyBinds {-def-} ty body bodyTy ->
             let innerNode' = makeNode' {
-                dat : makeNodeData {indentation : hole, isParenthesized: hole, label: Nothing, tag: makeLetNodeTag}
+                {- dat : makeNodeData {indentation : hole, isParenthesized: hole, label: Nothing, tag: makeLetNodeTag} -}
+                dat: makeNodeData {tag: makeLetNodeTag}
                 , kids: [
                     termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds termPath.term ty.ty body.term bodyTy : upRecVal.termPath)) tBind
                     , innerNode
@@ -84,7 +85,8 @@ typePathToNode belowInfo typePath innerNode =
       lambda2: \termPath md tBind {-Type-} body bodyTy -> hole
       , let3: \termPath md tBind tyBinds def {-Type-} body bodyTy ->
             let innerNode' = makeNode' {
-                dat : makeNodeData {indentation : hole, isParenthesized: hole, label: Nothing, tag: makeLetNodeTag}
+                {- dat : makeNodeData {indentation : hole, isParenthesized: hole, label: Nothing, tag: makeLetNodeTag} -}
+                dat: makeNodeData {tag: makeLambdaNodeTag}
                 , kids: [
                     termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term typePath.ty body.term bodyTy : termPath.termPath)) tBind
                     , innerNode
