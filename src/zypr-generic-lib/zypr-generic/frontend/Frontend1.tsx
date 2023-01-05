@@ -43,6 +43,9 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       var kid_i = -1
       function kid(): JSX.Element[] {
         kid_i++
+        if (0 > kid_i || kid_i > node.kids.length - 1 ) {
+          throw new Error(`kid index ${kid_i} out of range for for node tag '${node.dat.tag.case}', which has ${node.kids.length} kids`)
+        }
         return renderNodes(node.kids[kid_i])
       }
       switch (node.dat.tag.case) {
@@ -54,7 +57,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'ty-arg': return go(node, ["ty-arg"], kid())
         case 'tm app': return go(node, ["tm_app"], [kid(), [Punc.application], kid()].flat())
         case 'tm lam': return go(node, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat())
-        case 'tm var': return go(node, ["tm_var"], [kid()].flat())
+        case 'tm var': return go(node, ["tm_var"], [<span>{node.dat.label}</span>].flat())
         case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.colon], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat())
         case 'tm dat': return go(node, ["tm_dat"], [[Punc.data], kid(), [Punc.data], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat())
         case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat())
@@ -62,8 +65,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat()) // TODO: render contextchange
         case 'tm hol': return go(node, ["tm_hol"], [Punc.interrogative].flat()) // TODO: render type; is it a node child?
         case 'tm buf': return go(node, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat())
-        case 'ty-bnd': return go(node, ["ty-bnd"], [kid()].flat())
-        case 'tm-bnd': return go(node, ["tm-bnd"], [kid()].flat())
+        case 'ty-bnd': return go(node, ["ty-bnd"], [<span>{node.dat.label}</span>])
+        case 'tm-bnd': return go(node, ["tm-bnd"], [<span>{node.dat.label}</span>])
         case 'ctr-prm': return go(node, ["ctr-prm"], [[/* TODO: name */], [Punc.colon], kid()].flat()) // TODO: label
         case 'ctr': return go(node, ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat())
         // ty-arg-list
@@ -86,8 +89,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
     }
 
     const nodes = backend.props.format(editor.state)
-    console.log("Frontend1.makeFrontend.editor.state", editor.state)
-    console.log("Frontend1.makeFrontend.render.nodes", nodes)
     return renderNodes(nodes)
   }
 

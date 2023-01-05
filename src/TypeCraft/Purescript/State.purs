@@ -2,10 +2,10 @@ module TypeCraft.Purescript.State where
 
 import Prelude
 import Prim hiding (Type)
-
 import Data.List (List(..))
 import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
-import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), TermBind, Type(..), TypeArg, TypeBind, UpPath)
+import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), TermBind(..), Type(..), TypeArg, TypeBind, UpPath)
+import TypeCraft.Purescript.MD (defaultArrowMD, defaultLambdaMD)
 
 {-
 This file will contain possible states for the editor
@@ -53,9 +53,22 @@ initState :: State
 initState =
   makeState
     $ CursorMode
-        { cursorLocation: TermCursor emptyAllContext (THole {} 0) Nil (Hole {})
+        { cursorLocation: TermCursor emptyAllContext ty Nil tm
         , query: emptyQuery
         }
+  where
+  ty = (Arrow defaultArrowMD) (THole {} 1) (THole {} 2)
+
+  -- TODO: this works!
+  -- tm = Hole {}
+
+  -- TODO: this doesn't work -- says "invalid type for a lambda probably"
+  tm =
+    (Lambda defaultLambdaMD)
+      (TermBind { varName: "x" } 0)
+      (THole {} 1)
+      (Hole {})
+      (THole {} 2)
 
 data Clipboard
   = EmptyClip -- add more later, not priority yet

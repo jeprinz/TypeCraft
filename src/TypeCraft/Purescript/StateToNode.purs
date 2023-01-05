@@ -3,7 +3,6 @@ module TypeCraft.Purescript.StateToNode where
 import Prelude
 import Prim hiding (Type)
 import Data.List (List(..))
-import Debug as Debug
 import TypeCraft.Purescript.Node (Node, makeCursorNodeStyle, makeSelectBotNodeStyle, makeSelectTopNodeStyle, setNodeStyle)
 import TypeCraft.Purescript.PathToNode (BelowInfo(..), termPathToNode, typePathToNode)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), State)
@@ -11,7 +10,7 @@ import TypeCraft.Purescript.TermToNode (AboveInfo(..), termToNode, typeToNode)
 import TypeCraft.Purescript.Util (hole')
 
 stateToNode :: State -> Node
-stateToNode st = Debug.trace st \_ -> case st.mode of
+stateToNode st = case st.mode of
   -- TODO: impl query
   CursorMode cursor -> case cursor.cursorLocation of
     TermCursor ctxs ty termPath term ->

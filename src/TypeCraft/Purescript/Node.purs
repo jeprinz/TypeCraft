@@ -1,10 +1,11 @@
 module TypeCraft.Purescript.Node where
 
-import Prelude
-import Control.Applicative
 import Control.Alternative
+import Control.Applicative
+import Prelude
+import Data.Array (find)
 import Data.Bounded.Generic (genericBottom, genericTop)
-import Data.Enum (class BoundedEnum, class Enum, cardinality)
+import Data.Enum (class BoundedEnum, class Enum, cardinality, enumFromTo)
 import Data.Enum.Generic (genericCardinality, genericFromEnum, genericPred, genericSucc, genericToEnum)
 import Data.Foldable (foldr)
 import Data.Generic.Rep (class Generic)
@@ -156,49 +157,10 @@ instance boundedEnumNodeTag :: BoundedEnum NodeTag where
 -- iterate through all of the NodeTags until find one that has matching label
 -- (produced by `fromNodeTag_`)
 readNodeTag :: String -> NodeTag
-readNodeTag str = case foldr
-    ( \tag ->
-        ( _
-            <|> if str == fromNodeTag_ (toNodeTag_ tag) then
-                Just tag
-              else
-                Nothing
-        )
-    )
-    Nothing
-    [] of
+readNodeTag str = case find (toNodeTag_ >>> fromNodeTag_ >>> (_ == str)) (enumFromTo bottom top) of
   Nothing -> unsafeThrow $ "invalid NodeTag: " <> str
   Just tag -> tag
 
--- | str == "ty arr" = ArrowNodeTag
--- | str == "ty hol" = THoleNodeTag
--- | str == "ty neu" = TNeuNodeTag
--- | str == "poly-ty forall" = ForallNodeTag
--- | str == "poly-ty ty" = PTypeNodeTag
--- | str == "ty-arg" = TypeArgNodeTag
--- | str == "tm app" = AppNodeTag
--- | str == "tm lam" = LambdaNodeTag
--- | str == "tm var" = VarNodeTag
--- | str == "tm let" = LetNodeTag
--- | str == "tm dat" = DataNodeTag
--- | str == "tm ty-let" = TLetNodeTag
--- | str == "tm ty-boundary" = TypeBoundaryNodeTag
--- | str == "tm cx-boundary" = ContextBoundaryNodeTag
--- | str == "tm hol" = HoleNodeTag
--- | str == "tm buf" = BufferNodeTag
--- | str == "ty-bnd" = TypeBindNodeTag
--- | str == "tm-bnd" = TermBindNodeTag
--- | str == "ctr-prm" = CtrParamNodeTag
--- | str == "ctr" = ConstructorNodeTag
--- | str == "ty-arg-list cons" = TypeArgListConsNodeTag
--- | str == "ty-arg-list nil" = TypeArgListNilNodeTag
--- | str == "ty-arg-list cons" = TypeBindListConsNodeTag
--- | str == "ty-arg-list nil" = TypeBindListNilNodeTag
--- | str == "ctr-list cons" = ConstructorListConsNodeTag
--- | str == "ctr-list nil" = ConstructorListNilNodeTag
--- | str == "ctr-prm-list cons" = CtrParamListConsNodeTag
--- | str == "ctr-prm-list nil" = CtrParamListNilNodeTag
--- | otherwise = unsafeThrow $ "invalid NodeTag: " <> str
 toNodeTag_ :: NodeTag -> NodeTag_
 toNodeTag_ = case _ of
   ArrowNodeTag -> makeNodeTag_ "ty arr"
