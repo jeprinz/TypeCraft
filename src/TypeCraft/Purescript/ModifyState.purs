@@ -1,9 +1,14 @@
 module TypeCraft.Purescript.ModifyState where
 
-import Prelude
-import TypeCraft.Purescript.State
 import Data.Maybe (Maybe)
+import TypeCraft.Purescript.State (CursorLocation, Mode, Select, State)
 import TypeCraft.Purescript.Util (hole)
+
+updateMode :: Mode -> State -> State 
+updateMode mode st = hole
+
+setCursor :: CursorLocation -> State -> Maybe State 
+setCursor cursorLocation st = hole
 
 moveCursorPrev :: State -> Maybe State
 moveCursorPrev = hole
@@ -16,6 +21,9 @@ moveSelectPrev = hole
 
 moveSelectNext :: State -> Maybe State
 moveSelectNext = hole
+
+setSelect :: Select -> State -> Maybe State
+setSelect = hole
 
 undo :: State -> Maybe State
 undo = hole

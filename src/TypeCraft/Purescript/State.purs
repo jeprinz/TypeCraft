@@ -1,20 +1,9 @@
 module TypeCraft.Purescript.State where
 
-import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.Grammar
-import Data.List (List(..), (:))
-import TypeCraft.Purescript.Context
-import TypeCraft.Purescript.Util (hole)
-import Data.Tuple.Nested (type (/\), (/\))
-import TypeCraft.Purescript.TermRec (TermRecValue)
-import TypeCraft.Purescript.TermRec (recTerm)
-import TypeCraft.Purescript.TermRec (TypeRecValue)
-import TypeCraft.Purescript.PathRec
-import Data.Maybe (Maybe)
-import Data.Maybe (Maybe(..))
-import Data.List (length)
-import Data.List (index)
+import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term, TermBind, Type, TypeArg, TypeBind, UpPath)
+import Data.List (List)
+import TypeCraft.Purescript.Context (AllContext)
 
 {-
 This file will contain possible states for the editor
@@ -22,7 +11,8 @@ This file will contain possible states for the editor
 
 -- state of the editor
 type State = {
-        mode :: Mode
+        mode :: Mode,
+        history :: Array Mode
     }
 
 data Mode 
@@ -54,6 +44,7 @@ initCursorMode cursorLocation = CursorMode
 initState :: Mode -> State
 initState mode = 
     { mode
+    , history: []
     }
 
 data Clipboard = EmptyClip -- add more later, not priority yet

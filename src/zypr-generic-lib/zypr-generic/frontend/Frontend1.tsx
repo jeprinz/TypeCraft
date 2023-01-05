@@ -3,6 +3,7 @@ import { Backend } from '../Backend';
 import Editor from "../Editor";
 import { Node } from "../Node";
 import * as Punc from './Punctuation';
+import { setCursor } from '../../../TypeCraft/Typescript/ModifyState';
 
 export default function makeFrontend(backend: Backend): JSX.Element {
   function render(editor: Editor): JSX.Element[] {
@@ -19,13 +20,14 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         classNames.push("cursorable")
 
       function onClick(event: React.MouseEvent) {
-        // TODO: do selection
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
-          let state = (() => { throw new Error("TODO: write some purescript functions that can can set a cursor location") })
+          let cursorLoc = getCursor()
+          let state = setCursor(cursorLoc, editor.state)
           editor.setState(state)
           event.stopPropagation()
         }
+        // TODO: do selection
       }
 
       return [

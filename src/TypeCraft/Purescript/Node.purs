@@ -186,7 +186,6 @@ foreign import makeQueryReplaceOldNodeStyle :: NodeStyle
 foreign import makeQueryInvalidNodeStyle :: String -> NodeStyle
 
 -- utilities
-
 setIndentNodeIndentationIf :: Boolean -> Node -> Node
 setIndentNodeIndentationIf =
   if _ then
@@ -197,8 +196,21 @@ setIndentNodeIndentationIf =
 calculateNodeIndentation :: NodeTag -> NodeTag -> NodeIndentation
 calculateNodeIndentation parentTag childTag = makeInlineNodeIndentation
 
-setCalculatedNodeIndentation :: NodeTag -> Node -> Node
-setCalculatedNodeIndentation parentTag childNode = setNodeIndentation (calculateNodeIndentation parentTag (getNodeDataTag childNode)) childNode
+calculateNodeIsParenthesized :: NodeTag -> NodeTag -> Boolean
+calculateNodeIsParenthesized parentTag childTag = false
+
+setCalculatedNodeData :: NodeTag -> Node -> Node
+setCalculatedNodeData parentTag childNode =
+  let
+    childTag = getNodeDataTag childNode
+
+    indentation = calculateNodeIndentation parentTag childTag
+
+    isParenthesized = calculateNodeIsParenthesized parentTag childTag
+  in
+    childNode
+      # setNodeParenthesized isParenthesized
+      >>> setNodeIndentation indentation
 
 setNodeLabelMaybe :: Maybe String -> Node -> Node
 setNodeLabelMaybe (Just label) = setNodeLabel label

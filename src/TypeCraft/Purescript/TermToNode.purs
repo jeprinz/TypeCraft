@@ -2,12 +2,13 @@ module TypeCraft.Purescript.TermToNode where
 
 import Prelude
 import Prim hiding (Type)
+
 import Data.List ((:))
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe')
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Grammar (Constructor, TermBind(..), Tooth(..), UpPath)
-import TypeCraft.Purescript.Node (Node, NodeIndentation, NodeTag(..), getNodeDataTag, makeIndentNodeIndentation, makeNode, makeNodeData, setNodeIndentation, setNodeLabel, setCalculatedNodeIndentation, setNodeLabelMaybe)
+import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, makeNodeData, setCalculatedNodeData, setNodeLabelMaybe)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), initCursorMode, initState)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, ListCtrRecValue, recTerm, recType)
 import TypeCraft.Purescript.Util (hole)
@@ -131,7 +132,7 @@ termToNode aboveInfo term =
     setNodeLabelMaybe nodeInfo.label
       $ makeNode
           { dat: makeNodeData { tag: nodeInfo.tag }
-          , kids: [ nodeInfo.kids <#> setCalculatedNodeIndentation nodeInfo.tag ]
+          , kids: [ nodeInfo.kids <#>  setCalculatedNodeData nodeInfo.tag ]
           , getCursor: Just \_ -> initState $ initCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
           , getSelect:
               case aboveInfo of

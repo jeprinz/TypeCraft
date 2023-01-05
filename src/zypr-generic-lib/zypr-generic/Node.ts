@@ -1,4 +1,5 @@
-import { Cursor, Exp, Orient, Select } from "./Language"
+export type Cursor = any // Purescript
+export type Select = any // Purescript
 
 export type Node = {
     dat: NodeData,

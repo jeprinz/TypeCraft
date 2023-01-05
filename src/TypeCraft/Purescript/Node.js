@@ -9,6 +9,10 @@ export function getNodeData(node) {
   return node.dat
 }
 
+export function getNodeTag_(data) {
+  return data.tag
+}
+
 // NodeTag
 
 export const makeNodeTag_ = (case_) => ({ case: case_ })

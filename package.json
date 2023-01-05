@@ -21,7 +21,9 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "build-spago": "spago build --purs-args \"-o src/TypeCraft/Purescript/output\""
+    "build-spago": "spago build --purs-args \"-o src/TypeCraft/Purescript/output\"",
+    "serve": "serve -s build",
+    "launch": "npm run build-spago && npm run build && npm run serve"
   },
   "eslintConfig": {
     "extends": [

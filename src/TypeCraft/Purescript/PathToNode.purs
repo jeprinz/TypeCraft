@@ -2,16 +2,15 @@ module TypeCraft.Purescript.PathToNode where
 
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.Context
-import TypeCraft.Purescript.Grammar
-import TypeCraft.Purescript.Node
-import TypeCraft.Purescript.State
-import TypeCraft.Purescript.TermRec
+import TypeCraft.Purescript.Context (AllContext)
+import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, TermBind, Tooth(..), Type, TypeArg, TypeBind, UpPath)
+import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, makeNodeData, setCalculatedNodeData)
+import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), initCursorMode, initState)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Util (hole)
-import TypeCraft.Purescript.TermToNode
-import TypeCraft.Purescript.PathRec
+import TypeCraft.Purescript.TermToNode (AboveInfo(..), termBindToNode, termToNode, typeToNode)
+import TypeCraft.Purescript.PathRec (TermPathRecValue, TypePathRecValue, recTermPath, recTypePath)
 
 data BelowInfo term ty
   = BITerm
@@ -34,10 +33,10 @@ termPathToNode _ { termPath: Nil } node = node
 
 termPathToNode belowInfo termPath innerNode =
   let
-    makeNode' partialNode =
+    makeNode' nodeInfo =
       makeNode
-        { dat: partialNode.dat -- specialize a version of makeNode with the pieces that will be the same for each case 
-        , kids: [ partialNode.kids ]
+        { dat: makeNodeData { tag: nodeInfo.tag }
+        , kids: [ setCalculatedNodeData nodeInfo.tag <$> nodeInfo.kids ]
         , getCursor:
             Just \_ -> initState $ initCursorMode $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term
         , getSelect:
@@ -49,10 +48,9 @@ termPathToNode belowInfo termPath innerNode =
     recTermPath
       ( { let2:
             \upRecVal md tBind tyBinds {-def-} ty body bodyTy ->
-              let
-                innerNode' =
-                  makeNode'
-                    { {- dat : makeNodeData {indentation : hole, isParenthesized: hole, label: Nothing, tag: makeLetNodeTag} -} dat: makeNodeData { tag: LetNodeTag }
+              termPathToNode (stepBI hole belowInfo) upRecVal
+                $ makeNode'
+                    { tag: LetNodeTag
                     , kids:
                         [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds termPath.term ty.ty body.term bodyTy : upRecVal.termPath)) tBind
                         , innerNode
@@ -60,8 +58,6 @@ termPathToNode belowInfo termPath innerNode =
                         , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds termPath.term ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
                         ]
                     }
-              in
-                termPathToNode (stepBI hole belowInfo) upRecVal innerNode'
         , app1: \upRecVal md {-Term-} t2 argTy bodyTy -> hole
         , app2: \upRecVal md t1 {-Term-} argTy bodyTy -> hole
         , lambda3: \upRecVal md tbind argTy {-body-} bodyTy -> hole

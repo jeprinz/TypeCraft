@@ -10,6 +10,12 @@ export function moveCursorNext(st: State): State | undefined {
   return Nullable.fromMaybe(ModifyState.moveCursorNext(st))
 }
 
+type CursorLocation = any
+
+export function setCursor(cursorLoc: CursorLocation, st: State): State | undefined {
+  return Nullable.fromMaybe(ModifyState.setCursor(cursorLoc))
+}
+
 export function moveSelectPrev(st: State): State | undefined {
   return Nullable.fromMaybe(ModifyState.moveSelectPrev(st))
 }
