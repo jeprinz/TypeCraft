@@ -7,7 +7,6 @@ import { setCursor } from '../../../TypeCraft/Typescript/ModifyState';
 
 export default function makeFrontend(backend: Backend): JSX.Element {
   function render(editor: Editor): JSX.Element[] {
-    console.log("render.editor.state", editor.state) // TODO: somehow the state is getting set to be a function
     function go(
       node: Node,
       classNames: string[],
@@ -83,11 +82,12 @@ export default function makeFrontend(backend: Backend): JSX.Element {
     }
 
     function renderNodes(nodes: Node[]): JSX.Element[] {
-      console.log("renderNodes.nodes", nodes)
       return nodes.flatMap((node) => renderNode(node))
     }
 
     const nodes = backend.props.format(editor.state)
+    console.log("Frontend1.makeFrontend.editor.state", editor.state)
+    console.log("Frontend1.makeFrontend.render.nodes", nodes)
     return renderNodes(nodes)
   }
 
@@ -102,10 +102,11 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
   const initState = backend.state
 
-  return <Editor
-    backend={backend.props}
-    render={render}
-    handleKeyboardEvent={handleKeyboardEvent}
-    initState={initState}
-  />
+  return (
+    <Editor
+      backend={backend.props}
+      render={render}
+      handleKeyboardEvent={handleKeyboardEvent}
+      initState={initState}
+    />)
 }

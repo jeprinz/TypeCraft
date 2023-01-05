@@ -1,7 +1,6 @@
 // Node
 
 export function makeNode_(node) {
-  console.log("makeNode", node)
   return node
 }
 
@@ -116,7 +115,6 @@ export const setNodeLabel = label => node => {
 
 // NodeData
 export function makeNodeData_(data) {
-  console.log("makeNodeData_", data)
   return data
 }
 
