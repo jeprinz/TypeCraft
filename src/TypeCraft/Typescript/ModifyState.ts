@@ -7,7 +7,7 @@ type CursorLocation = any
 type Select = any
 
 export function moveCursorPrev(st: State): State | undefined {
-  return Nullable.fromMaybe(ModifyState.moveCursorNext(st))
+  return Nullable.fromMaybe(ModifyState.moveCursorPrev(st))
 }
 
 export function moveCursorNext(st: State): State | undefined {

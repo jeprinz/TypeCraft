@@ -46,10 +46,11 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       var kid_i = -1
       function kid(): JSX.Element[] {
         kid_i++
-        if (0 > kid_i || kid_i > node.kids.length - 1 ) {
-          throw new Error(`kid index ${kid_i} out of range for for node tag '${node.dat.tag.case}', which has ${node.kids.length} kids`)
+        if (0 > kid_i || kid_i > node.kids[0].length - 1 ) {
+          console.log(`node.kids[0].length = ${node.kids[0].length}`)
+          throw new Error(`kid index ${kid_i} out of range for for node tag '${node.dat.tag.case}', which has ${node.kids[0].length} kids`)
         }
-        return renderNodes(node.kids[kid_i])
+        return renderNode(node.kids[0][kid_i])
       }
       switch (node.dat.tag.case) {
         case 'ty arr': return go(node, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat())
