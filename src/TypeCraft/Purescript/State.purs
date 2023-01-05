@@ -62,7 +62,7 @@ initState =
   -- TODO: this works!
   -- tm = Hole {}
 
-  -- TODO: this doesn't work -- says "invalid type for a lambda probably"
+  -- TODO: this doesn't work
   tm =
     (Lambda defaultLambdaMD)
       (TermBind { varName: "x" } 0)
