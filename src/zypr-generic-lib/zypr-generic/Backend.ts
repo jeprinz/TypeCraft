@@ -1,8 +1,6 @@
-import { List, Record, RecordOf } from 'immutable'
-import { debug } from '../Debug'
 import { EndoPart } from '../Endo'
 import * as State from '../../TypeCraft/Typescript/State'
-import { Language, Pre, Zip } from './Language'
+import { Language } from './Language'
 import { Node } from './Node'
 
 export type Backend = {

@@ -6,14 +6,17 @@ import * as Punc from './Punctuation';
 
 export default function makeFrontend(backend: Backend): JSX.Element {
   function render(editor: Editor): JSX.Element[] {
+
     function go(
       node: Node,
       classNames: string[],
       kids: JSX.Element[],
     ): JSX.Element[] {
-
       if (node.dat.isParenthesized)
         kids = ([] as JSX.Element[]).concat([Punc.parenL], kids, [Punc.parenR])
+
+      if (node.getCursor !== undefined)
+        classNames.push("cursorable")
 
       function onClick(event: React.MouseEvent) {
         // TODO: do selection
@@ -85,15 +88,13 @@ export default function makeFrontend(backend: Backend): JSX.Element {
     return renderNodes(nodes)
   }
 
-  // TODO: use ModifyState
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
-    switch (event.key) {
-      case 'x': {
-        console.log("pressed 'x'")
-        break
-      }
-      default: break
+    const state = editor.props.backend.handleKeyboardEvent(event)(editor.state)
+    if (state === undefined) {
+      console.log("[!] handleKeyboardEvent failed")
+      return
     }
+    editor.setState(state)
   }
 
   const initState = backend.state
