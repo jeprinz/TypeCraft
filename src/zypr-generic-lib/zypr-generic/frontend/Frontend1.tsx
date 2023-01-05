@@ -69,8 +69,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat()) // TODO: render contextchange
         case 'tm hol': return go(node, ["tm_hol"], [Punc.interrogative].flat()) // TODO: render type; is it a node child?
         case 'tm buf': return go(node, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat())
-        case 'ty-bnd': return go(node, ["ty-bnd"], [<span>{node.dat.label}</span>])
-        case 'tm-bnd': return go(node, ["tm-bnd"], [<span>{node.dat.label}</span>])
+        case 'ty-bnd': return go(node, ["ty-bnd"], [<span>{node.dat.label ?? "undefined"}</span>])
+        case 'tm-bnd': return go(node, ["tm-bnd"], [<span>{node.dat.label ?? "undefined"}</span>])
         case 'ctr-prm': return go(node, ["ctr-prm"], [[/* TODO: name */], [Punc.colon], kid()].flat()) // TODO: label
         case 'ctr': return go(node, ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat())
         // ty-arg-list
