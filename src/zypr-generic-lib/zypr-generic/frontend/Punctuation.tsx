@@ -1,5 +1,5 @@
 function makePunc(classnames: string[], label: string) {
-  return <div className={classnames.join(" ")}>{label}</div>
+  return <div className={["punctuation" , ...classnames].join(" ")}>{label}</div>
 }
 
 export const [parenL, parenR] = [makePunc(["parenL"], "("), makePunc(["parenR"], ")")]
