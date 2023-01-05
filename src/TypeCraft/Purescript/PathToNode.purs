@@ -52,7 +52,7 @@ termPathToNode belowInfo termPath innerNode =
               let
                 innerNode' =
                   makeNode'
-                    { {- dat : makeNodeData {indentation : hole, isParenthesized: hole, label: Nothing, tag: makeLetNodeTag} -} dat: makeNodeData { tag: makeLetNodeTag }
+                    { {- dat : makeNodeData {indentation : hole, isParenthesized: hole, label: Nothing, tag: makeLetNodeTag} -} dat: makeNodeData { tag: LetNodeTag }
                     , kids:
                         [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds termPath.term ty.ty body.term bodyTy : upRecVal.termPath)) tBind
                         , innerNode
@@ -105,7 +105,7 @@ typePathToNode belowInfo typePath innerNode =
                 let
                   innerNode' =
                     makeNode'
-                      { {- dat : makeNodeData {indentation : hole, isParenthesized: hole, label: Nothing, tag: makeLetNodeTag} -} dat: makeNodeData { tag: makeLambdaNodeTag }
+                      { {- dat : makeNodeData {indentation : hole, isParenthesized: hole, label: Nothing, tag: makeLetNodeTag} -} dat: makeNodeData { tag: LambdaNodeTag }
                       , kids:
                           [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term typePath.ty body.term bodyTy : termPath.termPath)) tBind
                           , innerNode
