@@ -2,11 +2,9 @@ module TypeCraft.Purescript.StateToNode where
 
 import Prelude
 import Prim hiding (Type)
-import Data.List (List(..))
-import Debug (trace)
 import TypeCraft.Purescript.Node (Node, makeCursorNodeStyle, makeSelectBotNodeStyle, makeSelectTopNodeStyle, setNodeStyle)
 import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeArgListPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode)
-import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), State, makeCursorMode)
+import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), State)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeArgListToNode, typeBindListToNode, typeBindToNode, typeToNode)
 import TypeCraft.Purescript.Util (hole')
 
