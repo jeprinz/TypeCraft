@@ -1,16 +1,8 @@
 // Node
 
-export function makeNode_(node) {
-  return node
-}
+export const makeNode_ = (node) => node
 
-export function getNodeData(node) {
-  return node.dat
-}
-
-export function getNodeTag_(data) {
-  return data.tag
-}
+export const getNodeTag_ = (data) => data.tag
 
 // NodeTag
 
@@ -97,25 +89,19 @@ export const makeQueryReplaceNewNodeStyle = { case: 'query-replace-new' }
 export const makeQueryReplaceOldNodeStyle = { case: 'query-replace-old' }
 export const makeQueryInvalidNodeStyle = (str) => ({ case: 'query-invalid', string: str })
 
-export const setNodeStyle = style => node => {
-  return { ...node, style }
-}
+export const setNodeStyle = style => node => ({ ...node, style })
 
-export const setNodeIndentation = indentation => node => {
-  return { ...node, indentation }
-}
+export const setNodeIndentation = indentation => node => ({ ...node, indentation })
 
-export const setNodeParenthesized = isParenthesized => node => {
-  return { ...node, isParenthesized }
-}
+export const setNodeParenthesized = isParenthesized => node => ({ ...node, isParenthesized })
 
 export const setNodeLabel = label => node => {
-  return { ...node, label }
-}
-
-// NodeData
-export function makeNodeData_(data) {
-  return data
+  console.log("setNodeLabel.label", label)
+  console.log("setNodeLabel.node", node)
+  let node_ = ({ ...node, label })
+  console.log("setNodeLabel.node_", node_)
+  return node_
+  // return ({ ...node, label })
 }
 
 // NodeIndentation

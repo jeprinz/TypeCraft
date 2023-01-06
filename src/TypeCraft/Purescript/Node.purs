@@ -20,28 +20,34 @@ import TypeCraft.Purescript.Util (hole)
 foreign import data Node :: Type
 
 foreign import makeNode_ ::
-  { dat :: NodeData
-  , kids :: Array (Array Node)
+  { kids :: Array (Array Node)
   , getCursor :: Nullable (Unit -> State)
   , getSelect :: Nullable (Unit -> State)
   , style :: NodeStyle
+  , indentation :: NodeIndentation
+  , isParenthesized :: Boolean
+  , label :: Nullable String
+  , tag :: NodeTag_
   } ->
   Node
 
 makeNode ::
-  { dat :: NodeData
-  , kids :: Array (Array Node)
+  { kids :: Array (Array Node)
   , getCursor :: Maybe (Unit -> State)
   , getSelect :: Maybe (Unit -> State)
+  , tag :: NodeTag
   } ->
   Node
 makeNode x =
   makeNode_
-    { dat: x.dat
-    , kids: x.kids
+    { kids: x.kids
     , getCursor: Nullable.fromMaybe x.getCursor
     , getSelect: Nullable.fromMaybe x.getSelect
     , style: makeNormalNodeStyle
+    , indentation: makeInlineNodeIndentation
+    , isParenthesized: false
+    , label: Nullable.fromMaybe Nothing
+    , tag: toNodeTag_ x.tag
     }
 
 foreign import setNodeStyle :: NodeStyle -> Node -> Node
@@ -52,9 +58,7 @@ foreign import setNodeParenthesized :: Boolean -> Node -> Node
 
 foreign import setNodeLabel :: String -> Node -> Node
 
--- NodeData
-foreign import data NodeData :: Type
-
+-- NodeIndentation
 foreign import data NodeIndentation :: Type
 
 foreign import makeInlineNodeIndentation :: NodeIndentation
@@ -63,35 +67,12 @@ foreign import makeNewlineNodeIndentation :: NodeIndentation -- doesn't indent
 
 foreign import makeIndentNodeIndentation :: NodeIndentation
 
-foreign import makeNodeData_ ::
-  { indentation :: NodeIndentation
-  , isParenthesized :: Boolean
-  , label :: Nullable String
-  , tag :: NodeTag_
-  } ->
-  NodeData
-
-makeNodeData ::
-  { tag :: NodeTag
-  } ->
-  NodeData
-makeNodeData dat =
-  makeNodeData_
-    { indentation: makeInlineNodeIndentation
-    , isParenthesized: false
-    , label: Nullable.fromMaybe Nothing
-    , tag: toNodeTag_ dat.tag
-    }
-
-foreign import getNodeData :: Node -> NodeData
-
+-- NodeTag & NodeTag_
 foreign import data NodeTag_ :: Type
 
 foreign import makeNodeTag_ :: String -> NodeTag_
 
 foreign import fromNodeTag_ :: NodeTag_ -> String
-
-foreign import getNodeTag_ :: NodeData -> NodeTag_
 
 data NodeTag
   -- NodeTag: Type
@@ -192,11 +173,10 @@ toNodeTag_ = case _ of
   CtrParamListConsNodeTag -> makeNodeTag_ "ctr-prm-list cons"
   CtrParamListNilNodeTag -> makeNodeTag_ "ctr-prm-list nil"
 
-getNodeTag :: NodeData -> NodeTag
-getNodeTag = getNodeTag_ >>> fromNodeTag_ >>> readNodeTag
+foreign import getNodeTag_ :: Node -> NodeTag_ 
 
-getNodeDataTag :: Node -> NodeTag
-getNodeDataTag = getNodeData >>> getNodeTag
+getNodeTag :: Node -> NodeTag
+getNodeTag = getNodeTag_ >>> fromNodeTag_ >>> readNodeTag
 
 -- NodeStyle
 foreign import data NodeStyle :: Type
@@ -236,7 +216,7 @@ calculateNodeIsParenthesized parentTag childTag = false
 setCalculatedNodeData :: NodeTag -> Node -> Node
 setCalculatedNodeData parentTag childNode =
   let
-    childTag = getNodeDataTag childNode
+    childTag = getNodeTag childNode
 
     indentation = calculateNodeIndentation parentTag childTag
 

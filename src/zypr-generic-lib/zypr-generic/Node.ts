@@ -2,14 +2,10 @@ export type Cursor = any // Purescript
 export type Select = any // Purescript
 
 export type Node = {
-    dat: NodeData,
     kids: Node[][],
     getCursor: (() => Cursor) | undefined,
     getSelect: (() => Select) | undefined,
-    style: NodeStyle
-}
-
-export type NodeData = {
+    style: NodeStyle,
     indentation: NodeIndentation,
     isParenthesized: boolean,
     label?: string,

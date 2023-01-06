@@ -7,7 +7,7 @@ import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, TermBind, Tooth(..), Type, TypeArg, TypeBind, UpPath)
-import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, makeNodeData, setCalculatedNodeData)
+import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, setCalculatedNodeData)
 import TypeCraft.Purescript.PathRec (TermPathRecValue, TypePathRecValue, recTermPath, recTypePath)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, makeState)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), termBindToNode, termToNode, typeToNode)
@@ -36,14 +36,14 @@ termPathToNode belowInfo termPath innerNode =
   let
     makeNode' nodeInfo =
       makeNode
-        { dat: makeNodeData { tag: nodeInfo.tag }
-        , kids: [ setCalculatedNodeData nodeInfo.tag <$> nodeInfo.kids ]
+        { kids: [ setCalculatedNodeData nodeInfo.tag <$> nodeInfo.kids ]
         , getCursor:
             Just \_ -> makeState $ makeCursorMode $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term
         , getSelect:
             case belowInfo of
               BITerm -> Nothing
               BISelect middlePath term ty -> Just \_ -> makeState $ SelectMode $ TermSelect termPath.ctxs true ty termPath.termPath middlePath term
+        , tag: nodeInfo.tag
         }
   in
     recTermPath
@@ -83,8 +83,7 @@ typePathToNode belowInfo typePath innerNode =
     let
       makeNode' partialNode =
         makeNode
-          { dat: partialNode.dat -- specialize a version of makeNode with the pieces that will be the same for each case 
-          , kids: [ partialNode.kids ]
+          { kids: [ partialNode.kids ]
           , getCursor:
               let
                 belowTerm = case belowInfo of
@@ -93,6 +92,7 @@ typePathToNode belowInfo typePath innerNode =
               in
                 Just \_ -> makeState $ makeCursorMode $ TypeCursor typePath.ctxs typePath.typePath belowTerm
           , getSelect: (hole' "termPathToNode" )
+          , tag: partialNode.tag
           }
     in
       recTypePath
@@ -102,13 +102,13 @@ typePathToNode belowInfo typePath innerNode =
                 let
                   innerNode' =
                     makeNode'
-                      { {- dat : makeNodeData {indentation : hole, isParenthesized: hole, label: Nothing, tag: makeLetNodeTag} -} dat: makeNodeData { tag: LambdaNodeTag }
-                      , kids:
+                      { kids:
                           [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term typePath.ty body.term bodyTy : termPath.termPath)) tBind
                           , innerNode
                           , termToNode (AICursor (Let2 md tBind.tBind tyBinds.tyBinds {-Term-} typePath.ty body.term bodyTy : termPath.termPath)) def
                           , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds def.term typePath.ty {-Term-} bodyTy : termPath.termPath)) body
                           ]
+                      , tag: LambdaNodeTag
                       }
                 in
                   termPathToNode (hole' "termPathToNode") termPath innerNode'
