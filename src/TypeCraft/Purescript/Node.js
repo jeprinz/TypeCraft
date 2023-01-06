@@ -95,14 +95,7 @@ export const setNodeIndentation = indentation => node => ({ ...node, indentation
 
 export const setNodeParenthesized = isParenthesized => node => ({ ...node, isParenthesized })
 
-export const setNodeLabel = label => node => {
-  console.log("setNodeLabel.label", label)
-  console.log("setNodeLabel.node", node)
-  let node_ = ({ ...node, label })
-  console.log("setNodeLabel.node_", node_)
-  return node_
-  // return ({ ...node, label })
-}
+export const setNodeLabel = label => node => ({ ...node, label })
 
 // NodeIndentation
 export const makeInlineNodeIndentation = { case: 'inline' }

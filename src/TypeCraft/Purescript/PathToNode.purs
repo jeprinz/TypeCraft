@@ -2,13 +2,12 @@ module TypeCraft.Purescript.PathToNode where
 
 import Prelude
 import Prim hiding (Type)
-
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, TermBind, Tooth(..), Type, TypeArg, TypeBind, UpPath)
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, setCalculatedNodeData)
-import TypeCraft.Purescript.PathRec (TermPathRecValue, TypePathRecValue, recTermPath, recTypePath)
+import TypeCraft.Purescript.PathRec (TermPathRecValue, TypePathRecValue, TermBindPathRecValue, recTermBindPath, recTermPath, recTypePath)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, makeState)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), termBindToNode, termToNode, typeToNode)
 import TypeCraft.Purescript.Util (hole')
@@ -34,9 +33,11 @@ termPathToNode _ { termPath: Nil } node = node
 
 termPathToNode belowInfo termPath innerNode =
   let
+    term = termPath.term
+
     makeNode' nodeInfo =
       makeNode
-        { kids: [ setCalculatedNodeData nodeInfo.tag <$> nodeInfo.kids ]
+        { kids: nodeInfo.kids <#> setCalculatedNodeData nodeInfo.tag >>> pure
         , getCursor:
             Just \_ -> makeState $ makeCursorMode $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term
         , getSelect:
@@ -49,19 +50,29 @@ termPathToNode belowInfo termPath innerNode =
     recTermPath
       ( { let2:
             \upRecVal md tBind tyBinds {-def-} ty body bodyTy ->
-              termPathToNode (stepBI (hole' "termPathToNode") belowInfo) upRecVal
+              termPathToNode (stepBI (Let2 md tBind.tBind tyBinds.tyBinds ty.ty body.term bodyTy) belowInfo) upRecVal
                 $ makeNode'
                     { tag: LetNodeTag
                     , kids:
-                        [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds termPath.term ty.ty body.term bodyTy : upRecVal.termPath)) tBind
+                        [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds term ty.ty body.term bodyTy : upRecVal.termPath)) tBind
                         , innerNode
-                        , typeToNode (AICursor (Let3 md tBind.tBind tyBinds.tyBinds termPath.term {-Type-} body.term bodyTy : upRecVal.termPath)) ty
-                        , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds termPath.term ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
+                        , typeToNode (AICursor (Let3 md tBind.tBind tyBinds.tyBinds term {-Type-} body.term bodyTy : upRecVal.termPath)) ty
+                        , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds term ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
                         ]
                     }
         , app1: \upRecVal md {-Term-} t2 argTy bodyTy -> hole' "termPathToNode"
         , app2: \upRecVal md t1 {-Term-} argTy bodyTy -> hole' "termPathToNode"
-        , lambda3: \upRecVal md tbind argTy {-body-} bodyTy -> hole' "termPathToNode"
+        , lambda3:
+            \upRecVal md tBind argTy {-body-} bodyTy ->
+              termPathToNode (stepBI (Lambda3 md tBind argTy.ty bodyTy) belowInfo) upRecVal
+                $ makeNode'
+                    { tag: LambdaNodeTag
+                    , kids:
+                        [ termBindToNode (AICursor (Lambda1 md argTy.ty term bodyTy : upRecVal.termPath)) { ctxs: upRecVal.ctxs, tBind }
+                        , typeToNode (AICursor (Lambda2 md tBind term bodyTy : upRecVal.termPath)) argTy
+                        , innerNode
+                        ]
+                    }
         , buffer1: \upRecVal md {-Term-} bufTy body bodyTy -> hole' "termPathToNode"
         , buffer3: \upRecVal md buf bufTy {-Term-} bodyTy -> hole' "termPathToNode"
         , typeBoundary1: \upRecVal md change {-Term-} -> hole' "termPathToNode"
@@ -79,48 +90,54 @@ typePathToNode _ { typePath: Nil } node = node
 typePathToNode belowInfo typePath innerNode =
   let
     ty = typePath.ty
+
+    makeNode' partialNode =
+      makeNode
+        { kids: partialNode.kids <#> pure
+        , getCursor:
+            let
+              belowType = case belowInfo of
+                BITerm -> typePath.ty
+                BISelect middlePath term _ -> typePath.ty -- TODO: combineDownPathTerm middlePath term
+            in
+              Just \_ -> makeState $ makeCursorMode $ TypeCursor typePath.ctxs typePath.typePath belowType
+        , getSelect: Nothing
+        , tag: partialNode.tag
+        }
   in
-    let
-      makeNode' partialNode =
-        makeNode
-          { kids: [ partialNode.kids ]
-          , getCursor:
-              let
-                belowTerm = case belowInfo of
-                  BITerm -> typePath.ty
-                  BISelect middlePath term _ -> (hole' "termPathToNode" ) -- combineDownPathTerm middlePath term
-              in
-                Just \_ -> makeState $ makeCursorMode $ TypeCursor typePath.ctxs typePath.typePath belowTerm
-          , getSelect: (hole' "termPathToNode" )
-          , tag: partialNode.tag
-          }
-    in
-      recTypePath
-        ( { lambda2: \termPath md tBind {-Type-} body bodyTy -> (hole' "termPathToNode")
-          , let3:
-              \termPath md tBind tyBinds def {-Type-} body bodyTy ->
-                let
-                  innerNode' =
-                    makeNode'
-                      { kids:
-                          [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term typePath.ty body.term bodyTy : termPath.termPath)) tBind
-                          , innerNode
-                          , termToNode (AICursor (Let2 md tBind.tBind tyBinds.tyBinds {-Term-} typePath.ty body.term bodyTy : termPath.termPath)) def
-                          , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds def.term typePath.ty {-Term-} bodyTy : termPath.termPath)) body
-                          ]
-                      , tag: LambdaNodeTag
-                      }
-                in
-                  termPathToNode (hole' "termPathToNode") termPath innerNode'
-          , buffer2: \termPath md def {-Type-} body bodyTy -> (hole' "termPathToNode")
-          , tLet3: \termPath md tyBind tyBinds {-Type-} body bodyTy -> (hole' "termPathToNode")
-          , ctrParam1: \ctrParamPath md {-Type-} -> (hole' "termPathToNode")
-          , typeArg1: \typeArgPath md {-Type-} -> (hole' "termPathToNode")
-          , arrow1: \typePath md tyIn {-Type-} -> (hole' "termPathToNode")
-          , arrow2: \typePath md {-Type-} tyOut -> (hole' "termPathToNode")
-          }
-        )
-        typePath
+    recTypePath
+      ( { lambda2:
+            \termPath md tBind {-Type-} body bodyTy ->
+              termPathToNode (stepBI (Lambda2 md tBind.tBind body.term bodyTy) BITerm) termPath
+                $ makeNode'
+                    { kids:
+                        [ termBindToNode (AICursor (Lambda2 md tBind.tBind body.term bodyTy : termPath.termPath)) tBind
+                        , innerNode
+                        , termToNode (AICursor (Lambda3 md tBind.tBind ty bodyTy : termPath.termPath)) body
+                        ]
+                    , tag: LambdaNodeTag
+                    }
+        , let3:
+            \termPath md tBind tyBinds def {-Type-} body bodyTy ->
+              termPathToNode (stepBI (Let3 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) BITerm) termPath
+                $ makeNode'
+                    { kids:
+                        [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term typePath.ty body.term bodyTy : termPath.termPath)) tBind
+                        , innerNode
+                        , termToNode (AICursor (Let2 md tBind.tBind tyBinds.tyBinds {-Term-} typePath.ty body.term bodyTy : termPath.termPath)) def
+                        , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds def.term typePath.ty {-Term-} bodyTy : termPath.termPath)) body
+                        ]
+                    , tag: LambdaNodeTag
+                    }
+        , buffer2: \termPath md def {-Type-} body bodyTy -> (hole' "typePathToNode")
+        , tLet3: \termPath md tyBind tyBinds {-Type-} body bodyTy -> (hole' "typePathToNode")
+        , ctrParam1: \ctrParamPath md {-Type-} -> (hole' "typePathToNode")
+        , typeArg1: \typeArgPath md {-Type-} -> (hole' "typePathToNode")
+        , arrow1: \typePath md tyIn {-Type-} -> (hole' "typePathToNode")
+        , arrow2: \typePath md {-Type-} tyOut -> (hole' "typePathToNode")
+        }
+      )
+      typePath
 
 --typePathToNode belowInfo path@(tooth : teeth) innerNode = hole
 --    case tooth of
@@ -150,20 +167,57 @@ typeArgPathToNode ctxs belowInfo up innerNode = (hole' "typeArgPathToNode")
 typeBindPathToNode :: AllContext -> BelowInfo TypeBind Unit -> UpPath -> Node -> Node
 typeBindPathToNode ctxs belowInfo up innerNode = (hole' "typeBindPathToNode")
 
-termBindPathToNode :: AllContext -> BelowInfo TermBind Unit -> UpPath -> Node -> Node
-termBindPathToNode ctxs belowInfo up innerNode = (hole' "termBindPathToNode")
+-- TODO: I'm not sure if I'm using BITerm correctly, but since a `BelowInfo _ _`
+-- is not provided to `termBindPathToNode` then I need to use something as the
+-- bottom when I do `stepBI ...`
+termBindPathToNode :: TermBindPathRecValue -> Node -> Node
+termBindPathToNode { termBindPath: Nil } innerNode = innerNode
 
+termBindPathToNode termBindPath innerNode =
+  let
+    tBind = termBindPath.tBind
+
+    makeNode' nodeInfo =
+      makeNode
+        { tag: TermBindNodeTag
+        , kids: []
+        , getCursor:
+            Just \_ ->
+              makeState $ makeCursorMode
+                $ TermBindCursor termBindPath.ctxs termBindPath.termBindPath termBindPath.tBind
+        , getSelect: Nothing -- TODO
+        }
+  in
+    recTermBindPath
+      { lambda1:
+          \termPath md argTy body bodyTy ->
+            termPathToNode (stepBI (Lambda1 md argTy.ty body.term bodyTy) BITerm) termPath
+              $ makeNode' {}
+      , let1:
+          \termPath md tyBinds def defTy body bodyTy ->
+            termPathToNode (stepBI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) BITerm) termPath
+              $ makeNode' {}
+      , constructor1:
+          \ctrPath md ctrParams ->
+            constructorPathToNode ctrPath.ctxs (stepBI (Constructor1 md ctrParams.ctrParams) BITerm) ctrPath.ctrPath
+              $ makeNode' {}
+      }
+      termBindPath
+
+-- recTermBindPath
+--   ?a
+--   {ctxs, tBind: ?a, termBindPath: up}
 ctrListPathToNode :: AllContext -> BelowInfo (List Constructor) Unit -> UpPath -> Node -> Node
 ctrListPathToNode ctxs belowInfo up innerNode = (hole' "ctrListPathToNode")
 
 ctrParamListPathToNode :: AllContext -> BelowInfo (List CtrParam) Unit -> UpPath -> Node -> Node
 ctrParamListPathToNode ctxs belowInfo up innerNode = (hole' "ctrParamListPathToNode")
 
-typeArgListToNode :: AllContext -> BelowInfo (List TypeArg) Unit -> UpPath -> Node -> Node
-typeArgListToNode ctxs belowInfo up innerNode = (hole' "typeArgListToNode")
+typeArgListPathToNode :: AllContext -> BelowInfo (List TypeArg) Unit -> UpPath -> Node -> Node
+typeArgListPathToNode ctxs belowInfo up innerNode = (hole' "typeArgListPathToNode")
 
-typeBindListToNode :: AllContext -> BelowInfo (List TypeBind) Unit -> UpPath -> Node -> Node
-typeBindListToNode ctxs belowInfo up innerNode = (hole' "typeBindListToNode")
+typeBindListPathToNode :: AllContext -> BelowInfo (List TypeBind) Unit -> UpPath -> Node -> Node
+typeBindListPathToNode ctxs belowInfo up innerNode = (hole' "typeBindListPathToNode")
 
 {-
 Problems currently:

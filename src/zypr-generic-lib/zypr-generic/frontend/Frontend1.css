@@ -1,7 +1,36 @@
+/* node */
+
 .node {
   display: inline;
 }
 
+.node.cursorable {
+
+}
+
+.node.selectable {
+
+}
+
+.node.cursor {
+  box-shadow: 0 0 0 1px black;
+}
+
+/* punctuation */
+
 .punctuation {
   display: inline;
 }
+
+.punctuation.lambda {
+  margin: 0 1rem 0 0;
+}
+
+.punctuation.colon {
+  margin: 0 1rem;
+}
+
+.punctuation.mapsto {
+  margin: 0 1rem;
+}
+

@@ -1,19 +1,20 @@
 module TypeCraft.Purescript.Grammar where
 
-import Data.Generic.Rep (class Generic)
-import Data.Eq (class Eq)
-
-import TypeCraft.Purescript.MD (LambdaMD)
+import Data.Tuple.Nested
 import Prelude
 import Prim hiding (Type)
-import Data.Tuple.Nested
 import TypeCraft.Purescript.MD
+
+import Data.Eq (class Eq)
+import Data.Generic.Rep (class Generic)
 import Data.List (List)
+import Data.Maybe (Maybe(..))
+import Data.Show.Generic (genericShow)
 import Data.Unit (Unit)
 import Effect.Exception.Unsafe (unsafeThrow)
-import Data.Maybe (Maybe(..))
 import Effect.Ref (Ref, new, read, write)
 import Effect.Unsafe (unsafePerformEffect)
+import TypeCraft.Purescript.MD (LambdaMD)
 
 type TypeHoleID = Int -- figure out unique Ids later!
 type TermVarID = Int
@@ -123,9 +124,6 @@ data Tooth =
 
 type UpPath = List Tooth
 type DownPath = List Tooth
-
-
-
 
 -- TODO: move the below stuff into a separate file
 

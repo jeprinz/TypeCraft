@@ -130,7 +130,7 @@ termToNode aboveInfo term =
     -- pieces that are the same for every syntactic form are done here:
     setNodeLabelMaybe nodeInfo.label
       $ makeNode
-          { kids: [ nodeInfo.kids <#> setCalculatedNodeData nodeInfo.tag ]
+          { kids: nodeInfo.kids <#> setCalculatedNodeData nodeInfo.tag >>> pure
           , getCursor: Just \_ -> makeState $ makeCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
           , getSelect:
               case aboveInfo of
@@ -167,7 +167,7 @@ typeToNode aboveInfo ty =
         ty
   in
     makeNode
-      { kids: [ nodeInfo.kids ]
+      { kids: nodeInfo.kids <#> pure
       , getCursor: Just \_ -> makeState $ makeCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
       , getSelect:
           case aboveInfo of

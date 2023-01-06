@@ -217,7 +217,7 @@ recTermBindPath args {ctxs, tBind: tBind@(TermBind xmd x), termBindPath: (Let1 m
 recTermBindPath args {ctxs, tBind, termBindPath: (Constructor1 md {-TermBind-} ctrParams) : ctrPath} =
     args.constructor1 {ctxs, ctr: Constructor md tBind ctrParams, ctrPath}
         md {ctxs, ctrParams}
-recTermBindPath _ _ = unsafeThrow "Either wasn't a TermBindPath or I forgot a case"
+recTermBindPath args {ctxs, tBind, termBindPath}= unsafeThrow $ "Either wasn't a TermBindPath or I forgot a case; termBindPath = " <> "TODO" -- show termBindPath
 
 type ListCtrPathRec a = {
     data3 :: TermPathRecValue -> GADTMD -> TypeBindRecValue -> ListTypeBindRecValue -> TermRecValue -> Type -> a

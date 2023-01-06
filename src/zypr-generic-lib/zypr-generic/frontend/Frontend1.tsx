@@ -15,15 +15,26 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       if (node.isParenthesized)
         kids = ([] as JSX.Element[]).concat([Punc.parenL], kids, [Punc.parenR])
 
-      if (node.getCursor !== undefined)
-        classNames.push("cursorable")
+      if (node.getCursor !== undefined) classNames.push("cursorable")
+
+      if (node.getSelect !== undefined) classNames.push("selectable")
+
+      switch (node.style.case) {
+        case 'normal': break
+        case 'cursor': classNames.push("cursor"); break
+        case 'query-insert-bot': break // TODO
+        case 'query-insert-top': break // TODO
+        case 'query-invalid': break // TODO
+        case 'query-replace-new': break // TODO
+        case 'query-replace-old': break // TODO
+        case 'select-bot': break // TODO
+        case 'select-top': break // TODO
+      }
 
       function onClick(event: React.MouseEvent) {
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
-          let cursorLoc = getCursor()
-          let state = setCursor(cursorLoc, editor.state)
-          editor.setState(state)
+          editor.setState(getCursor())
           event.stopPropagation()
         }
         // TODO: do selection
@@ -40,17 +51,15 @@ export default function makeFrontend(backend: Backend): JSX.Element {
     }
 
     function renderNode(node: Node): JSX.Element[] {
-      
+
       // assumes that kids are always rendered in the order of the node's
       // children
       var kid_i = -1
       function kid(): JSX.Element[] {
         kid_i++
-        if (0 > kid_i || kid_i > node.kids[0].length - 1 ) {
-          console.log(`node.kids[0].length = ${node.kids[0].length}`)
-          throw new Error(`kid index ${kid_i} out of range for for node tag '${node.tag.case}', which has ${node.kids[0].length} kids`)
-        }
-        return renderNode(node.kids[0][kid_i])
+        if (!(0 <= kid_i && kid_i < node.kids.length))
+          throw new Error(`kid index ${kid_i} out of range for node tag '${node.tag.case}', which has ${node.kids.length} kids`);
+        return renderNodes(node.kids[kid_i])
       }
       switch (node.tag.case) {
         case 'ty arr': return go(node, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat())
