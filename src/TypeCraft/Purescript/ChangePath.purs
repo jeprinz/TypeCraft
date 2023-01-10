@@ -44,14 +44,14 @@ chTermPath kctx ctx (Minus t c) (App1 md {-here-} arg argTy outTy : up) =
     Buffer3 defaultBufferMD arg argTy {-Term-} outTy : up'
 -- TODO: App2 case, other App1 cases with other TypeChanges
 --    App2 AppMD Term {-Term-} Type Type -- TODO: this case goes along with the polymorphism change stuff
-chTermPath kctx ctx c  (Let2 md x tbinds {-Term = here-} ty body tybody : up) =
+chTermPath kctx ctx c  (Let3 md x tbinds {-Term = here-} ty body tybody : up) =
     hole' "chTermPath"
-chTermPath kctx ctx c (Let4 md tBind@(TermBind _ x) tbinds def ty {-body = here-} tybody : up) =
+chTermPath kctx ctx c (Let5 md tBind@(TermBind _ x) tbinds def ty {-body = here-} tybody : up) =
     if not (fst (getEndpoints c) == tybody) then unsafeThrow "shouldn't happen" else
     let ctx' = delete x ctx in
     let def' = chTermBoundary kctx ctx (tyInject ty) def in -- TODO: why would the def of the let ever change anyway?
     let up' = chTermPath kctx ctx' c up in
-    Let4 md tBind tbinds def' ty (snd (getEndpoints c)) : up'
+    Let5 md tBind tbinds def' ty (snd (getEndpoints c)) : up'
 chTermPath kctx ctx c (Data4 md x tbinds ctrs {-body = here-} bodyTy : up) =
     if not (fst (getEndpoints c) == bodyTy) then unsafeThrow "shouldn't happen" else
     -- TODO: update ctrs using kctx and chCtrList
@@ -84,20 +84,20 @@ chTermPath kctx ctx c (TLet4 md tyBind@(TypeBind _ x) tyBinds def {-Term-} bodyT
 chTermPath _ _ _ _ = unsafeThrow "finish implementing all cases"
 
 chTypePath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
-chTypePath kctx ctx ch (Let3 md tBind@(TermBind _ x) tyBinds def {-Type-} body bodyTy : termPath) =
+chTypePath kctx ctx ch (Let4 md tBind@(TermBind _ x) tyBinds def {-Type-} body bodyTy : termPath) =
     let ctx' = insert x (VarTypeChange (tyBindsWrapChange tyBinds ch)) ctx in
     let c1 /\ def' = chTerm kctx ctx' ch def in
     let c2 /\ body' = chTerm kctx ctx' (tyInject bodyTy) body in
     let def'' = if chIsId c1 then def' else TypeBoundary defaultTypeBoundaryMD c1 def' in
     let termPath' = chTermPath kctx ctx c2 termPath in
-    Let3 md tBind tyBinds def'' body' (snd (getEndpoints c2)) : termPath'
+    Let4 md tBind tyBinds def'' body' (snd (getEndpoints c2)) : termPath'
 --    Lambda2 LambdaMD TermBind {-Type-} Term Type
 chTypePath kctx ctx ch (Lambda2 md tBind@(TermBind _ x) {-Type-} body bodyTy : termPath) =
     let ctx' = insert x (VarTypeChange (PChange ch)) ctx in
     let c /\ body' = chTerm kctx ctx' (tyInject bodyTy) body in
     let termPath' = chTermPath kctx ctx c termPath in
     Lambda2 md tBind {-Type-} body' (snd (getEndpoints c)) : termPath'
---    Let3 LetMD TermBind (List TypeBind) Term {-Type-} Term Type
+--    Let4 LetMD TermBind (List TypeBind) Term {-Type-} Term Type
 --    Buffer2 BufferMD Term {-Type-} Term Type
 chTypePath kctx ctx ch (Arrow1 md {-Type-} ty2 : typePath) =
     let typePath' = chTypePath kctx ctx (CArrow ch (tyInject ty2)) typePath in

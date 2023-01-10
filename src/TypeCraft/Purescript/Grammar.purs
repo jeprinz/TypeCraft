@@ -116,9 +116,10 @@ data Tooth
   | Lambda2 LambdaMD TermBind {-Type-} Term Type
   | Lambda3 LambdaMD TermBind Type {-Term-} Type
   | Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term Type
-  | Let2 LetMD TermBind (List TypeBind) {-Term-} Type Term Type
-  | Let3 LetMD TermBind (List TypeBind) Term {-Type-} Term Type
-  | Let4 LetMD TermBind (List TypeBind) Term Type {-Term-} Type
+  | Let2 LetMD TermBind {-List TypeBind-} Term Type Term Type
+  | Let3 LetMD TermBind (List TypeBind) {-Term-} Type Term Type
+  | Let4 LetMD TermBind (List TypeBind) Term {-Type-} Term Type
+  | Let5 LetMD TermBind (List TypeBind) Term Type {-Term-} Type
   | Buffer1 BufferMD {-Term-} Type Term Type
   | Buffer2 BufferMD Term {-Type-} Term Type
   | Buffer3 BufferMD Term Type {-Term-} Type

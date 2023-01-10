@@ -30,9 +30,9 @@ termToothChange ty kctx ctx tooth =
         Arrow _ ty1 ty2 /\ App1 md {-Term-} t2 argTy outTy -> Minus ty1 (tyInject ty2) /\ kCtxInject kctx /\ ctxInject ctx
         ty /\ App2 md t1 {-Term-} argTy outTy -> Replace ty outTy /\ kCtxInject kctx /\ ctxInject ctx
         ty /\ Lambda3 md tBind@(TermBind _ x) argTy {-Term-} bodyTy -> Plus argTy (tyInject ty) /\ kCtxInject kctx /\ insert x (VarDelete (PType argTy)) (ctxInject ctx)
-        ty /\ Let2 md tBind@(TermBind _ x) tyBinds {-Term-} defTy body bodyTy
+        ty /\ Let3 md tBind@(TermBind _ x) tyBinds {-Term-} defTy body bodyTy
             -> Replace defTy bodyTy /\ kCtxInject kctx /\ insert x (VarDelete (tyBindsWrapType tyBinds defTy)) (ctxInject ctx)
-        ty /\ Let4 md tBind@(TermBind _ x) tyBinds def defTy {-Term-} bodyTy
+        ty /\ Let5 md tBind@(TermBind _ x) tyBinds def defTy {-Term-} bodyTy
             -> tyInject bodyTy /\ kCtxInject kctx /\ insert x (VarDelete (tyBindsWrapType tyBinds defTy)) (ctxInject ctx)
         ty /\ Buffer1 md {-Term-} defTy body bodyTy -> Replace defTy bodyTy /\ kCtxInject kctx /\ ctxInject ctx
         ty /\ Buffer3 md def defTy {-Term-} bodyTy -> tyInject bodyTy /\ kCtxInject kctx /\ ctxInject ctx

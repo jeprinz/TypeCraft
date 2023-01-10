@@ -58,17 +58,17 @@ termPathToNode belowInfo termPath innerNode =
     term = termPath.term
   in
     recTermPath
-      ( { let2:
+      ( { let3:
             \upRecVal md tBind tyBinds {-def-} ty body bodyTy ->
-              let newBI = (stepBI (Let2 md tBind.tBind tyBinds.tyBinds ty.ty body.term bodyTy) belowInfo) in
+              let newBI = (stepBI (Let3 md tBind.tBind tyBinds.tyBinds ty.ty body.term bodyTy) belowInfo) in
               termPathToNode newBI upRecVal
                 $ makeTermNode newBI upRecVal
                     { tag: LetNodeTag
                     , kids:
                         [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds term ty.ty body.term bodyTy : upRecVal.termPath)) tBind
                         , innerNode
-                        , typeToNode (AICursor (Let3 md tBind.tBind tyBinds.tyBinds term {-Type-} body.term bodyTy : upRecVal.termPath)) ty
-                        , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds term ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
+                        , typeToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds term {-Type-} body.term bodyTy : upRecVal.termPath)) ty
+                        , termToNode (AICursor (Let5 md tBind.tBind tyBinds.tyBinds term ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
                         ]
                     }
         , app1: \upRecVal md {-Term-} t2 argTy bodyTy -> hole' "termPathToNode"
@@ -90,7 +90,7 @@ termPathToNode belowInfo termPath innerNode =
         , typeBoundary1: \upRecVal md change {-Term-} -> hole' "termPathToNode"
         , contextBoundary1: \upRecVal md x change {-Term-} -> hole' "termPathToNode"
         , tLet4: \upRecVal md tyBind tyBinds def {-Term-} bodyTy -> hole' "termPathToNode"
-        , let4: \upRecVal md tbind tbinds def defTy {-body-} bodyTy -> hole' "termPathToNode"
+        , let5: \upRecVal md tbind tbinds def defTy {-body-} bodyTy -> hole' "termPathToNode"
         , data4: \upRecVal md tbind tbinds ctrs {-body-} bodyTy -> hole' "termPathToNode"
         }
       )
@@ -132,16 +132,16 @@ typePathToNode belowInfo typePath innerNode =
                         ]
                     , tag: LambdaNodeTag
                     }
-        , let3:
+        , let4:
             \termPath md tBind tyBinds def {-Type-} body bodyTy ->
-              let newBI = (stepBI (Let3 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) BITerm) in
+              let newBI = (stepBI (Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) BITerm) in
               termPathToNode newBI termPath
                 $ makeTermNode newBI termPath
                     { kids:
                         [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term typePath.ty body.term bodyTy : termPath.termPath)) tBind
                         , innerNode
-                        , termToNode (AICursor (Let2 md tBind.tBind tyBinds.tyBinds {-Term-} typePath.ty body.term bodyTy : termPath.termPath)) def
-                        , termToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds def.term typePath.ty {-Term-} bodyTy : termPath.termPath)) body
+                        , termToNode (AICursor (Let3 md tBind.tBind tyBinds.tyBinds {-Term-} typePath.ty body.term bodyTy : termPath.termPath)) def
+                        , termToNode (AICursor (Let5 md tBind.tBind tyBinds.tyBinds def.term typePath.ty {-Term-} bodyTy : termPath.termPath)) body
                         ]
                     , tag: LambdaNodeTag
                     }
@@ -157,16 +157,16 @@ typePathToNode belowInfo typePath innerNode =
 
 --typePathToNode belowInfo path@(tooth : teeth) innerNode = hole
 --    case tooth of
---        Let3 md tbind tbinds def {-type-} body bodyTy ->
+--        Let4 md tbind tbinds def {-type-} body bodyTy ->
 --            let mdctx' = hole in
 --            let innerNode' = makeTypeNode {
 --                dat : hole
 --                , kids : [
 --                    termBindToNode (AICursor (Let1 md {-tbind-} tbinds def ty body bodyTy : teeth)) tbind
---                    , termToNode (AICursor (Let2 md tbind tbinds (bIGetTerm belowInfo) body bodyTy : teeth))
+--                    , termToNode (AICursor (Let3 md tbind tbinds (bIGetTerm belowInfo) body bodyTy : teeth))
 --                        {ctxs, mdty: defaultMDType, ty: ty, term: def}
 --                    , innerNode
---                    , termToNode (AICursor (Let4 md tbind tbinds def (bIGetTerm belowInfo) bodyTy : teeth))
+--                    , termToNode (AICursor (Let5 md tbind tbinds def (bIGetTerm belowInfo) bodyTy : teeth))
 --                        {ctxs, mdty: defaultMDType, ty: bodyTy, term: body}
 --                ]
 --            } in termPathToNode (BITerm (Let md tbind tbinds def (bIGetTerm belowInfo) body bodyTy)) {ctxs, mdty: getParentMDType teeth, ty : ty, termPath: teeth} innerNode'
@@ -209,11 +209,17 @@ termBindPathToNode termBindPath innerNode =
               }
       , let1:
           \termPath md tyBinds def defTy body bodyTy ->
-            termPathToNode (stepBI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) BITerm) termPath
+            let newBI = (stepBI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) BITerm) in
+            termPathToNode newBI termPath
                 $ hole' "termPathBindToNode"
---              $ makeTermNode newBI termPath {
---
---              }
+              $ makeTermNode newBI termPath {
+                    kids: [ innerNode
+                    , termToNode (AICursor ((Let3 md tBind tyBinds.tyBinds defTy.ty body.term bodyTy) : termPath.termPath)) def
+                    , typeToNode (AICursor ((Let4 md tBind tyBinds.tyBinds def.term body.term bodyTy) : termPath.termPath)) defTy
+                    , termToNode (AICursor ((Let5 md tBind tyBinds.tyBinds def.term defTy.ty bodyTy) : termPath.termPath)) body
+                    ]
+                    , tag: LetNodeTag
+              }
       , constructor1:
           \ctrPath md ctrParams ->
             constructorPathToNode ctrPath.ctxs (stepBI (Constructor1 md ctrParams.ctrParams) BITerm) ctrPath.ctrPath

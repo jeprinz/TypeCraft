@@ -80,9 +80,10 @@ termToNode aboveInfo term =
                 , label: Nothing
                 , kids:
                     [ termBindToNode (stepAI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) aboveInfo) tBind
-                    , termToNode (stepAI (Let2 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
-                    , typeToNode (stepAI (Let3 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
-                    , termToNode (stepAI (Let4 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy) aboveInfo) body
+--                    , typeBindListToNode (stepAI (Let))
+                    , termToNode (stepAI (Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
+                    , typeToNode (stepAI (Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
+                    , termToNode (stepAI (Let5 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy) aboveInfo) body
                     ]
                 }
           , dataa:
@@ -203,7 +204,13 @@ typeBindToNode :: AboveInfo -> TypeBindRecValue -> Node
 typeBindToNode aboveInfo tyBind = hole' "typeBindToNode"
 
 typeBindListToNode :: AboveInfo -> ListTypeBindRecValue -> Node
-typeBindListToNode aboveInfo tyBinds = hole' "typeBindListToNode"
+typeBindListToNode aboveInfo tyBinds = -- TODO: write actual implementation
+     makeNode {
+        tag: TypeBindListNilNodeTag
+        , kids: [[]]
+        , getCursor: Nothing
+        , getSelect: Nothing
+    }
 
 termBindToNode :: AboveInfo -> TermBindRecValue -> Node
 termBindToNode aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =

@@ -61,6 +61,9 @@ defaultVarMD :: VarMD
 defaultVarMD = {}
 defaultLambdaMD :: LambdaMD
 defaultLambdaMD = {bodyIndented : false}
+defaultLetMD :: LetMD
+defaultLetMD = {varIndented : false, typeIndented : false,
+    defIndented : true, bodyIndented : true}
 
 ---- termbind
 --defaultTermBindMD :: TermBindMD
