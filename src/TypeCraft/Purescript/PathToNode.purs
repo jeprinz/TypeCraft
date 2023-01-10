@@ -100,7 +100,7 @@ termPathToNode belowInfo termPath innerNode =
                         , kids:
                             [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds term ty.ty def.term bodyTy : upRecVal.termPath)) tBind
                             , typeBindListToNode (AICursor (Let2 md tBind.tBind {-List TypeBind-} def.term ty.ty term bodyTy : termPath.termPath)) tyBinds
-                            , termToNode (AICursor ((Let3 md tBind.tBind tyBinds.tyBinds {-def-} ty.ty def.term bodyTy) : upRecVal.termPath)) def
+                            , termToNode (AICursor ((Let3 md tBind.tBind tyBinds.tyBinds {-def-} ty.ty term bodyTy) : upRecVal.termPath)) def
                             , typeToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds def.term {-Type-} term bodyTy : upRecVal.termPath)) ty
                             , innerNode
                             ]
