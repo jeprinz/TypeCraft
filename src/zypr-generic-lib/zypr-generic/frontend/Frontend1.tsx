@@ -3,7 +3,6 @@ import { Backend } from '../Backend';
 import Editor from "../Editor";
 import { Node } from "../Node";
 import * as Punc from './Punctuation';
-import { setCursor } from '../../../TypeCraft/Typescript/ModifyState';
 
 export default function makeFrontend(backend: Backend): JSX.Element {
   function render(editor: Editor): JSX.Element[] {
@@ -32,9 +31,14 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       }
 
       function onClick(event: React.MouseEvent) {
+        console.log("onClick")
+
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
-          editor.setState(getCursor())
+          // editor.setState(getCursor())
+          let state = getCursor()
+          editor.setState(state)
+
           event.stopPropagation()
         }
         // TODO: do selection

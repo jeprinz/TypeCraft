@@ -2,10 +2,12 @@ module TypeCraft.Purescript.State where
 
 import Prelude
 import Prim hiding (Type)
+import Data.Generic.Rep (class Generic)
 import Data.List (List(..))
+import Data.Show.Generic (genericShow)
 import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
 import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), TermBind(..), Type(..), TypeArg, TypeBind, UpPath)
-import TypeCraft.Purescript.MD (defaultArrowMD, defaultLambdaMD)
+import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
 
 {-
 This file will contain possible states for the editor
@@ -22,6 +24,11 @@ data Mode
     , query :: Query
     }
   | SelectMode Select
+
+derive instance genericMode :: Generic Mode _
+
+instance showMode :: Show Mode where
+  show x = genericShow x
 
 type Query
   = { string :: String
@@ -57,18 +64,19 @@ initState =
         , query: emptyQuery
         }
   where
-  ty = (Arrow defaultArrowMD) (THole {} 1) (THole {} 2)
+  ty = (Arrow defaultArrowMD) (THole {} 1) ((Arrow defaultArrowMD) (THole {} 2) (THole {} 3))
 
-  -- TODO: this works!
-  -- tm = Hole {}
-
-  -- TODO: this doesn't work
   tm =
     (Lambda defaultLambdaMD)
       (TermBind { varName: "x" } 0)
       (THole {} 1)
-      (Hole {})
-      (THole {} 2)
+      ( (Lambda defaultLambdaMD)
+          (TermBind { varName: "y" } 1)
+          (THole {} 2)
+          (Hole {})
+          (THole {} 3)
+      )
+      ((Arrow defaultArrowMD) (THole {} 2) (THole {} 3))
 
 data Clipboard
   = EmptyClip -- add more later, not priority yet
@@ -87,6 +95,11 @@ data CursorLocation
   | TypeArgListCursor AllContext UpPath (List TypeArg)
   | TypeBindListCursor AllContext UpPath (List TypeBind)
 
+derive instance genericCursorLocation :: Generic CursorLocation _
+
+instance showCursorLocation :: Show CursorLocation where
+  show x = genericShow x
+
 {-
 The TypeContext, TermContext, and Type are understood as being inside the second path.
 e.g. if the term selection is  path1[path2[term]], then the contexts and type given are for inside path2 and outside term.
@@ -100,3 +113,8 @@ data Select
   | CtrParamListSelect AllContext Boolean UpPath UpPath (List CtrParam)
   | TypeArgListSelect AllContext Boolean UpPath UpPath (List TypeArg)
   | TypeBindListSelect AllContext Boolean UpPath UpPath (List TypeBind)
+
+derive instance genericSelect :: Generic Select _
+
+instance showSelect :: Show Select where
+  show x = genericShow x

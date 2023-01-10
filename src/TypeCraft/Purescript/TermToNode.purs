@@ -2,9 +2,11 @@ module TypeCraft.Purescript.TermToNode where
 
 import Prelude
 import Prim hiding (Type)
+
 import Data.List ((:))
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe', maybe')
+import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Grammar (Constructor, TermBind(..), Tooth(..), UpPath)
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, setCalculatedNodeData, setNodeLabel, setNodeLabelMaybe)
@@ -131,7 +133,9 @@ termToNode aboveInfo term =
     setNodeLabelMaybe nodeInfo.label
       $ makeNode
           { kids: nodeInfo.kids <#> setCalculatedNodeData nodeInfo.tag >>> pure
-          , getCursor: Just \_ -> makeState $ makeCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
+          , getCursor: Just \_ -> 
+              trace ("termToNode.aIGetPath aboveInfo = " <> show (aIGetPath aboveInfo)) \_ ->
+              makeState $ makeCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
           , getSelect:
               case aboveInfo of
                 AICursor _path -> Nothing -- TODO: impl select
@@ -168,7 +172,9 @@ typeToNode aboveInfo ty =
   in
     makeNode
       { kids: nodeInfo.kids <#> pure
-      , getCursor: Just \_ -> makeState $ makeCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
+      , getCursor: Just \_ -> 
+          trace ("typeToNode.aIGetPath aboveInfo = " <> show (aIGetPath aboveInfo)) \_ ->
+          makeState $ makeCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
       , getSelect:
           case aboveInfo of
             AICursor path -> Nothing -- TODO: impl select
@@ -204,7 +210,9 @@ termBindToNode aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
   setNodeLabel md.varName
     $ makeNode
         { kids: []
-        , getCursor: Just \_ -> makeState $ makeCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tBind
+        , getCursor: Just \_ -> 
+              trace ("termBindToNode.aIGetPath aboveInfo = " <> show (aIGetPath aboveInfo)) \_ ->
+              makeState $ makeCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tBind
         , getSelect: Nothing
         , tag: TermBindNodeTag
         }
