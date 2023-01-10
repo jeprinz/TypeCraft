@@ -20,12 +20,24 @@ import TypeCraft.Purescript.Util (hole)
 
 -- For now, I won't do anything with upwards ChangeCtx. But I can implement that in the future.
 
+{-
+TODO: seemingly, chTermPath should never recieve an input change of the form (Plus ...)
+Dually, chTerm should never output an input change of the form (Plus ...)
+....
+-}
+
 chTermPath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
 chTermPath kctx ctx (CArrow c1 c2) (App1 md {-here-} t argTy outTy : up) =
     if not (argTy == fst (getEndpoints c1) && outTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen" else
     let t' = chTermBoundary kctx ctx c1 t in
     let up' = chTermPath kctx ctx c2 up in
     App1 md t' (snd (getEndpoints c1)) (snd (getEndpoints c2)) : up'
+chTermPath kctx ctx (Minus t1 (Plus t2 c)) (App1 md1 {-here-} arg1 argTy1 outTy1 -- Swap case!
+        : App1 md2 {-Term-} arg2 argTy2 outTy2 : up)
+        | t1 == t2 =
+    if not (outTy1 == Arrow defaultArrowMD argTy2 outTy2) then unsafeThrow "shouldn't happen" else
+    let up' = chTermPath kctx ctx c up in
+    App1 md1 {-Term-} arg2 argTy2 (Arrow defaultArrowMD argTy2 (Arrow defaultArrowMD argTy1 outTy2)) : App1 md2 {-Term-} arg2 argTy2 outTy2 : up'
 chTermPath kctx ctx (Minus t c) (App1 md {-here-} arg argTy outTy : up) =
     if not (t == argTy && fst (getEndpoints c) == outTy) then unsafeThrow "shouldn't happen" else
     let up' = chTermPath kctx ctx c up in

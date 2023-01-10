@@ -5,8 +5,8 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import Data.Map (Map, lookup)
 import Data.Maybe (Maybe(..))
 
-hole :: forall a. Unit -> a
-hole _ = unsafeThrow "hole"
+hole :: forall a. a
+hole = unsafeThrow "hole"
 
 hole' :: forall a. String -> a
 hole' label = unsafeThrow $ "hole: " <> label
