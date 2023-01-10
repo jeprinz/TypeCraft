@@ -13,6 +13,8 @@ import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, setCalculatedNode
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, makeState)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, ListCtrRecValue, recTerm, recType)
 import TypeCraft.Purescript.Util (hole')
+import TypeCraft.Purescript.Node (setNodeIndentation)
+import TypeCraft.Purescript.Node (makeIndentNodeIndentation)
 
 data AboveInfo
   = AICursor UpPath
@@ -32,6 +34,10 @@ aIGetPath :: AboveInfo -> UpPath
 aIGetPath (AICursor path) = path
 
 aIGetPath (AISelect top middle) = middle <> top
+
+indentIf :: Boolean -> Node -> Node
+indentIf false n = n
+indentIf true n = setNodeIndentation makeIndentNodeIndentation n
 
 -- need to track a path for the cursor, and two paths for the selction.
 -- also, might consider deriving the cursor path from those two in that case?
@@ -80,10 +86,10 @@ termToNode aboveInfo term =
                 , label: Nothing
                 , kids:
                     [ termBindToNode (stepAI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) aboveInfo) tBind
---                    , typeBindListToNode (stepAI (Let))
+                    , typeBindListToNode (stepAI (Let2 md tBind.tBind {-List TypeBind-} def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tyBinds
                     , termToNode (stepAI (Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
                     , typeToNode (stepAI (Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
-                    , termToNode (stepAI (Let5 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy) aboveInfo) body
+                    , indentIf md.bodyIndented $ termToNode (stepAI (Let5 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy) aboveInfo) body
                     ]
                 }
           , dataa:

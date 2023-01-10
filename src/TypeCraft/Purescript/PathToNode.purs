@@ -14,6 +14,7 @@ import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), mak
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), termBindToNode, termToNode, typeToNode)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.TermToNode (typeBindListToNode)
 
 data BelowInfo term ty
   = BITerm
@@ -66,6 +67,7 @@ termPathToNode belowInfo termPath innerNode =
                     { tag: LetNodeTag
                     , kids:
                         [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds term ty.ty body.term bodyTy : upRecVal.termPath)) tBind
+                        , typeBindListToNode (AICursor (Let2 md tBind.tBind {-List TypeBind-} term ty.ty body.term bodyTy : termPath.termPath)) tyBinds
                         , innerNode
                         , typeToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds term {-Type-} body.term bodyTy : upRecVal.termPath)) ty
                         , termToNode (AICursor (Let5 md tBind.tBind tyBinds.tyBinds term ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
@@ -90,7 +92,19 @@ termPathToNode belowInfo termPath innerNode =
         , typeBoundary1: \upRecVal md change {-Term-} -> hole' "termPathToNode"
         , contextBoundary1: \upRecVal md x change {-Term-} -> hole' "termPathToNode"
         , tLet4: \upRecVal md tyBind tyBinds def {-Term-} bodyTy -> hole' "termPathToNode"
-        , let5: \upRecVal md tbind tbinds def defTy {-body-} bodyTy -> hole' "termPathToNode"
+        , let5: \upRecVal md tBind tyBinds def ty {-body-} bodyTy ->
+                  let newBI = (stepBI (Let5 md tBind.tBind tyBinds.tyBinds def.term ty.ty {-body-} bodyTy) belowInfo) in
+                  termPathToNode newBI upRecVal
+                    $ makeTermNode newBI upRecVal
+                        { tag: LetNodeTag
+                        , kids:
+                            [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds term ty.ty def.term bodyTy : upRecVal.termPath)) tBind
+                            , typeBindListToNode (AICursor (Let2 md tBind.tBind {-List TypeBind-} def.term ty.ty term bodyTy : termPath.termPath)) tyBinds
+                            , termToNode (AICursor ((Let3 md tBind.tBind tyBinds.tyBinds {-def-} ty.ty def.term bodyTy) : upRecVal.termPath)) def
+                            , typeToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds def.term {-Type-} term bodyTy : upRecVal.termPath)) ty
+                            , innerNode
+                            ]
+                        }
         , data4: \upRecVal md tbind tbinds ctrs {-body-} bodyTy -> hole' "termPathToNode"
         }
       )
@@ -139,6 +153,7 @@ typePathToNode belowInfo typePath innerNode =
                 $ makeTermNode newBI termPath
                     { kids:
                         [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term typePath.ty body.term bodyTy : termPath.termPath)) tBind
+                        , typeBindListToNode (AICursor (Let2 md tBind.tBind {-List TypeBind-} def.term ty body.term bodyTy : termPath.termPath)) tyBinds
                         , innerNode
                         , termToNode (AICursor (Let3 md tBind.tBind tyBinds.tyBinds {-Term-} typePath.ty body.term bodyTy : termPath.termPath)) def
                         , termToNode (AICursor (Let5 md tBind.tBind tyBinds.tyBinds def.term typePath.ty {-Term-} bodyTy : termPath.termPath)) body

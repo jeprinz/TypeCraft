@@ -67,7 +67,7 @@ initState =
         , query: emptyQuery
         }
   where
-    ty /\ tm = exampleProg3
+    ty /\ tm = exampleProg4
 
 data Clipboard
   = EmptyClip -- add more later, not priority yet
