@@ -14,16 +14,18 @@ import Data.Maybe (Maybe(..))
 import Data.Maybe (Maybe)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.TermRec (TermRecValue)
-import TypeCraft.Purescript.TermRec (TypeRecValue)
-import TypeCraft.Purescript.TermRec (recTerm)
 import TypeCraft.Purescript.Util (hole')
+import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.TermRec
 
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor ctxs ty up term) =
     recTerm
         {
-            lambda: \md x ty body bodyTy -> TermCursor body.ctxs body.ty (Lambda3 md x.tBind ty.ty bodyTy : up) body.term : Nil
+            lambda: \md x ty body bodyTy ->
+                TermBindCursor x.ctxs (Lambda1 md ty.ty body.term bodyTy : up) x.tBind :
+                TypeCursor ty.ctxs (Lambda2 md x.tBind body.term bodyTy : up) ty.ty :
+                TermCursor body.ctxs body.ty (Lambda3 md x.tBind ty.ty bodyTy : up) body.term : Nil
             , app: \md t1 t2 tyArg tyOut -> TermCursor t1.ctxs t1.ty (App1 md t2.term tyArg tyOut : up) t1.term
                 : TermCursor t2.ctxs t2.ty (App2 md t1.term tyArg tyOut : up) t2.term : Nil
             , var: \_ _ _ -> Nil
@@ -46,9 +48,17 @@ getCursorChildren (TermCursor ctxs ty up term) =
         {ctxs, ty, term}
 getCursorChildren (TypeCursor ctxs up (Arrow md t1 t2)) =
     TypeCursor ctxs (Arrow1 md t2 : up) t1 : TypeCursor ctxs (Arrow2 md t1 : up) t2 : Nil
-getCursorChildren (TypeBindCursor ctxs up _) = hole' "getCursorChildren"
-getCursorChildren (TermBindCursor ctxs up _) = hole' "getCursorChildren"
-getCursorChildren (TypeCursor ctxs up _) = hole' "getCursorChildren"
+getCursorChildren (TypeBindCursor ctxs up _) = Nil
+getCursorChildren (TermBindCursor ctxs up _) = Nil
+getCursorChildren (TypeCursor ctxs up ty) =
+      recType
+        ( { arrow: \md ty1 ty2 -> TypeCursor ty1.ctxs (Arrow1 md {--} ty2.ty : up) ty1.ty
+            : TypeCursor ty2.ctxs (Arrow2 md ty1.ty {--} : up) ty2.ty: Nil
+          , tHole: \md x -> Nil
+          , tNeu: \md x tyArgs -> hole' "getCursorChildren"
+          }
+        )
+        {ctxs, ty}
 getCursorChildren (CtrListCursor _ _ _) = Nil
 getCursorChildren (CtrParamListCursor _ _ _) = Nil
 getCursorChildren (TypeArgListCursor _ _ _) = Nil
@@ -94,8 +104,28 @@ parent (TermCursor ctxs ty termPath term) =
 --    Just $ TermCursor ctxs (getMDType up) bodyTy up (TLet md tyBind tyBinds def body bodyTy) /\ (1 - 1)
 --parent (TypeBindCursor ctxs (TypeBindListCons1 {-TypeBind-} tyBinds : up) tyBind) =
 --    Just $ TypeBindListCursor ctxs up (tyBind : tyBinds) /\ (1 - 1)
-parent (TermBindCursor ctxs up _) = hole' "parent"
-parent (TypeCursor ctxs up _) = hole' "parent"
+parent (TermBindCursor ctxs termBindPath tBind) =
+    recTermBindPath
+      { lambda1:
+          \termPath md argTy body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (1 - 1)
+      , let1:
+          \termPath md tyBinds def defTy body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (1 - 1)
+      , constructor1:
+          \ctrPath md ctrParams -> hole' "parent"
+      } {ctxs, tBind, termBindPath}
+parent (TypeCursor ctxs typePath ty) =
+    recTypePath
+      { lambda2:
+        \termPath md tBind {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
+        , let4:
+            \termPath md tBind tyBinds def {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (4 - 1)
+        , buffer2: \termPath md def {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
+        , tLet3: \termPath md tyBind tyBinds {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (3 - 1)
+        , ctrParam1: \ctrParamPath md {-Type-} -> (hole' "parent")
+        , typeArg1: \typeArgPath md {-Type-} -> (hole' "parent")
+        , arrow1: \typePath md tyIn {-Type-} -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (1 - 1)
+        , arrow2: \typePath md {-Type-} tyOut -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (2 - 1)
+        } {ctxs, typePath, ty}
 parent (CtrListCursor _ _ _) = hole' "parent"
 parent (CtrParamListCursor _ _ _) = hole' "parent"
 parent (TypeArgListCursor _ _ _) = hole' "parent"
@@ -115,4 +145,11 @@ stepCursorForwardsImpl childrenSkip cursor =
                Nothing -> cursor -- couldn't move cursor anywhere: no parent or children
 
 stepCursorBackwards :: CursorLocation -> CursorLocation
-stepCursorBackwards cursor = hole' "stepCursorBackwards"
+stepCursorBackwards cursor =
+    case parent cursor of
+        Nothing -> cursor
+        Just (par /\ me) ->
+            if me == 0 then par else
+                case index (getCursorChildren par) (me - 1) of
+                    Just newCur -> newCur
+                    Nothing -> unsafeThrow "shouldn't happen stepCursorBackwards"
