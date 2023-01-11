@@ -12,6 +12,8 @@ import Data.List (List, (:))
 import TypeCraft.Purescript.Context (AllContext, addDataToCtx, removeDataFromCtx, tyBindsWrapType)
 import TypeCraft.Purescript.TermRec (CtrParamRecValue, CtrRecValue, ListCtrParamRecValue, ListCtrRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue)
 import TypeCraft.Purescript.Kinds (bindsToKind)
+import TypeCraft.Purescript.Context
+import TypeCraft.Purescript.Context (addLetToCtx)
 
 type TermPathRecValue = {ctxs :: AllContext, ty :: Type, term :: Term, termPath :: UpPath}
 type TypePathRecValue = {ctxs :: AllContext, ty :: Type, typePath :: UpPath}
@@ -268,6 +270,7 @@ type ListTypeBindPathRec a = {
     data2 :: TermPathRecValue -> GADTMD -> TypeBindRecValue -> ListCtrRecValue -> TermRecValue -> Type -> a
     , tLet2 :: TermPathRecValue -> TLetMD -> TypeBindRecValue -> TypeRecValue -> TermRecValue -> Type -> a
     , typeBindListCons2 :: ListTypeBindPathRecValue -> TypeBindRecValue -> a
+    , let2 :: TermPathRecValue -> LetMD -> TermBindRecValue -> TermRecValue -> TypeRecValue -> TermRecValue -> Type -> a
 }
 
 recListTypeBindPath :: forall a . ListTypeBindPathRec a -> ListTypeBindPathRecValue -> a
@@ -277,11 +280,27 @@ recListTypeBindPath args {ctxs, tyBinds, listTypeBindPath: Data2 md tyBind ctrs 
         md {ctxs, tyBind}
         {ctxs: ctxs', ctrs}
         {ctxs: ctxs', ty: bodyTy, term: body} bodyTy
+recListTypeBindPath args {ctxs, tyBinds, listTypeBindPath: TLet2 md tyBind {-List TypeBind-} def body bodyTy : termPath} =
+    let ctxs' = addTLetToCtx ctxs tyBind tyBinds def in
+    args.tLet2 {ctxs, ty: bodyTy, term: TLet md tyBind tyBinds def body bodyTy, termPath}
+        md {ctxs, tyBind}
+        {ctxs, ty: def}
+        {ctxs: ctxs', ty: bodyTy, term: body} bodyTy
+recListTypeBindPath args {ctxs, tyBinds, listTypeBindPath: Let2 md tBind {-List TypeBind-} def defTy body bodyTy : termPath} =
+    let ctxs' = addLetToCtx ctxs tBind tyBinds defTy in
+    args.let2 {ctxs, ty: bodyTy, term: Let md tBind tyBinds def defTy body bodyTy, termPath}
+        md {ctxs, tBind} {ctxs: ctxs', ty: defTy, term: def}
+        {ctxs, ty: defTy}
+        {ctxs: ctxs', ty: bodyTy, term: body} bodyTy
+recListTypeBindPath args {ctxs, tyBinds, listTypeBindPath: TypeBindListCons2 tyBind {-List TypeBind-} : listTypeBindPath} =
+    args.typeBindListCons2 {ctxs, tyBinds: tyBind : tyBinds, listTypeBindPath}
+        {ctxs, tyBind}
 recListTypeBindPath _ _ = unsafeThrow "Either wasn't a ListTypeArgPath or I forgot a case"
 
 -- List TypeBind
 --    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
 --    TLet2 TLetMD TypeBind {-List TypeBind-} Type Term Type
+--    Let2 LetMD TermBind {-List TypeBind-} Term Type Term Type
 --    TypeBindListCons2 (TypeBind) {-List TypeBind-}
 
 {-

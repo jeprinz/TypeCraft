@@ -141,6 +141,14 @@ removeDataFromCtx ctxs tyBind@(TypeBind xmd x) tyBinds ctrs =
         , mdctx= filterKeys (\k -> not (member k ctrIds)) ctxs.mdctx
     }
 
+addTLetToCtx :: AllContext -> TypeBind -> (List TypeBind) -> Type -> AllContext
+addTLetToCtx ctxs tyBind@(TypeBind xmd x) tyBinds def =
+    ctxs{kctx = insert x (bindsToKind tyBinds) ctxs.kctx, mdkctx = insert x xmd.varName ctxs.mdkctx}
+
+addLetToCtx :: AllContext -> TermBind -> List TypeBind -> Type -> AllContext
+addLetToCtx ctxs tBind@(TermBind xmd x) tyBinds defTy
+    = ctxs{ctx = insert x (tyBindsWrapType tyBinds defTy) ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx}
+
 
 -- TODO: some of these things need to be organized into different files:
 tyBindsWrapKind :: List TypeBind -> Kind -> Kind

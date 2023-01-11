@@ -77,7 +77,7 @@ recTerm args {ctxs, term : Var md x tyArgs} = args.var md x {ctxs, tyArgs}
 recTerm args {ctxs, ty, term : Let md tBind@(TermBind xmd x) tyBinds def defTy body bodyTy}
     = if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
         -- TODO; should use number of tbinds here!
-        let ctxs' = ctxs{ctx = insert x (tyBindsWrapType tyBinds defTy) ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx} in
+        let ctxs' = addLetToCtx ctxs tBind tyBinds defTy in
         args.lett md {ctxs, tBind} {ctxs, tyBinds}
             {ctxs: ctxs',  ty: defTy, term: def}
             {ctxs, ty: defTy}
@@ -94,7 +94,7 @@ recTerm args {ctxs, ty, term : Data md tyBind@(TypeBind xmd x) tyBinds ctrs body
         bodyTy
 recTerm args {ctxs, ty, term : TLet md tyBind@(TypeBind xmd x) tyBinds def body bodyTy} =
     if not (bodyTy == ty) then unsafeThrow "shouldn't happen" else
-    let ctxs' = ctxs{kctx = insert x (bindsToKind tyBinds) ctxs.kctx, mdkctx = insert x xmd.varName ctxs.mdkctx} in
+    let ctxs' = addTLetToCtx ctxs tyBind tyBinds def in
     args.tlet md {ctxs, tyBind} {ctxs, tyBinds}
         {ctxs: ctxs', ty: def}
         {ctxs: ctxs', ty: bodyTy, term: body}

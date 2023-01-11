@@ -72,7 +72,6 @@ initState =
 data Clipboard
   = EmptyClip -- add more later, not priority yet
 
--- TODO: add more later, for now this is fine
 data CursorLocation
   = TermCursor AllContext Type UpPath Term
   | TypeCursor AllContext UpPath Type
