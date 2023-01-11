@@ -123,8 +123,8 @@ parent (TypeCursor ctxs typePath ty) =
         , tLet3: \termPath md tyBind tyBinds {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (3 - 1)
         , ctrParam1: \ctrParamPath md {-Type-} -> (hole' "parent")
         , typeArg1: \typeArgPath md {-Type-} -> (hole' "parent")
-        , arrow1: \typePath md tyIn {-Type-} -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (1 - 1)
-        , arrow2: \typePath md {-Type-} tyOut -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (2 - 1)
+        , arrow1: \typePath md {-Type-} _ -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (1 - 1)
+        , arrow2: \typePath md _ {-Type-} -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (2 - 1)
         } {ctxs, typePath, ty}
 parent (CtrListCursor _ _ _) = hole' "parent"
 parent (CtrParamListCursor _ _ _) = hole' "parent"
