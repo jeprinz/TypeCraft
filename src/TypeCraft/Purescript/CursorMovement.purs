@@ -142,16 +142,18 @@ parent (TypeBindListCursor ctxs listTypeBindPath tyBinds) =
 parent _ = hole' "given an ill-typed upPath to parent function (or I missed a case)"
 
 stepCursorForwards :: CursorLocation -> CursorLocation
-stepCursorForwards cursor = stepCursorForwardsImpl 0 cursor
+stepCursorForwards cursor = case stepCursorForwardsImpl 0 cursor of
+    Nothing -> cursor
+    Just newCur -> newCur
 -- Int is children to step past
-stepCursorForwardsImpl :: Int -> CursorLocation -> CursorLocation
+stepCursorForwardsImpl :: Int -> CursorLocation -> Maybe CursorLocation
 stepCursorForwardsImpl childrenSkip cursor =
     let children = getCursorChildren cursor in
     case index children childrenSkip of
-    Just child -> child
+    Just child -> Just child
     Nothing -> case parent cursor of
                Just (parent /\ index) -> stepCursorForwardsImpl (index + 1) parent
-               Nothing -> cursor -- couldn't move cursor anywhere: no parent or children
+               Nothing -> Nothing -- couldn't move cursor anywhere: no parent or children
 
 stepCursorBackwards :: CursorLocation -> CursorLocation
 stepCursorBackwards cursor =
