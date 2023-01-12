@@ -65,7 +65,7 @@ termToNode aboveInfo term =
                 , label: Nothing
                 , kids:
                     [ termToNode (stepAI (App1 md t2.term argTy outTy) aboveInfo) t1
-                    , termToNode (stepAI (App2 md t2.term argTy outTy) aboveInfo) t2
+                    , termToNode (stepAI (App2 md t1.term argTy outTy) aboveInfo) t2
                     ]
                 }
           , var:

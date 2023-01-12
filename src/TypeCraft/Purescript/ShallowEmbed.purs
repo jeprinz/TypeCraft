@@ -36,6 +36,10 @@ slet name def defTy body {kctx, ctx, ty} =
     let body' = body x {kctx, ctx: ctx', ty: ty} in
     Let defaultLetMD (TermBind {varName: name} x) Nil def' defTy' body' ty
 
+sapp :: STerm -> SType -> STerm -> STerm
+sapp t1 argTy t2 {kctx, ctx, ty} = let argTy' = argTy {kctx, ctx} in
+    App defaultAppMD (t1 {kctx, ctx, ty: Arrow defaultArrowMD argTy' ty}) (t2 {kctx, ctx, ty: argTy'}) argTy' ty
+
 sTHole :: STerm
 sTHole _ = Hole defaultHoleMD
 
@@ -84,3 +88,11 @@ exampleProg4 =
             (slet "f" (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
                 (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
                 (\f -> svar f))
+
+exampleProg5 :: Type /\ Term
+exampleProg5 =
+    sBindHole \hole1 -> sBindHole \hole2 -> sBindHole \hole3 ->
+        program (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
+            (slet "f" (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
+                (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
+                (\f -> (sapp (sapp (svar f) (shole hole1) sTHole) (shole hole2) sTHole)))

@@ -73,8 +73,26 @@ termPathToNode belowInfo termPath innerNode =
                         , termToNode (AICursor (Let5 md tBind.tBind tyBinds.tyBinds term ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
                         ]
                     }
-        , app1: \upRecVal md {-Term-} t2 argTy bodyTy -> hole' "termPathToNode"
-        , app2: \upRecVal md t1 {-Term-} argTy bodyTy -> hole' "termPathToNode"
+        , app1: \upRecVal md {-Term-} t2 argTy bodyTy ->
+            let newBI = (stepBI (App1 md {--} t2.term argTy bodyTy) belowInfo) in
+            termPathToNode newBI upRecVal
+                $ makeTermNode newBI upRecVal
+                    { tag: AppNodeTag
+                    , kids: [
+                            innerNode,
+                            termToNode (AICursor (App2 md term argTy bodyTy : upRecVal.termPath)) t2
+                        ]
+                    }
+        , app2: \upRecVal md t1 {-Term-} argTy bodyTy ->
+            let newBI = (stepBI (App2 md {--} t1.term argTy bodyTy) belowInfo) in
+            termPathToNode newBI upRecVal
+                $ makeTermNode newBI upRecVal
+                    { tag: AppNodeTag
+                    , kids: [
+                            termToNode (AICursor (App1 md term argTy bodyTy : upRecVal.termPath)) t1
+                            , innerNode
+                        ]
+                    }
         , lambda3:
             \upRecVal md tBind argTy {-body-} bodyTy ->
             let newBI = (stepBI (Lambda3 md tBind argTy.ty bodyTy) belowInfo) in

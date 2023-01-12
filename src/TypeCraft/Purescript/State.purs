@@ -9,7 +9,7 @@ import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
 import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), TermBind(..), Type(..), TypeArg, TypeBind, UpPath)
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
 import TypeCraft.Purescript.Util (hole)
-import TypeCraft.Purescript.ShallowEmbed (exampleProg2, exampleProg3, exampleProg4)
+import TypeCraft.Purescript.ShallowEmbed (exampleProg2, exampleProg3, exampleProg4, exampleProg5)
 import Data.Tuple.Nested
 
 {-
@@ -67,7 +67,7 @@ initState =
         , query: emptyQuery
         }
   where
-    ty /\ tm = exampleProg4
+    ty /\ tm = exampleProg5
 
 data Clipboard
   = EmptyClip -- add more later, not priority yet
