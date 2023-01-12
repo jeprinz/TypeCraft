@@ -214,7 +214,7 @@ typeBindListToNode aboveInfo tyBinds = -- TODO: write actual implementation
      makeNode {
         tag: TypeBindListNilNodeTag
         , kids: [[]]
-        , getCursor: Nothing
+        , getCursor: Just \_ -> makeState $ makeCursorMode $ TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
         , getSelect: Nothing
     }
 

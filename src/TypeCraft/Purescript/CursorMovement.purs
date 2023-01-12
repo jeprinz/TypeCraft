@@ -29,10 +29,13 @@ getCursorChildren (TermCursor ctxs ty up term) =
             , app: \md t1 t2 tyArg tyOut -> TermCursor t1.ctxs t1.ty (App1 md t2.term tyArg tyOut : up) t1.term
                 : TermCursor t2.ctxs t2.ty (App2 md t1.term tyArg tyOut : up) t2.term : Nil
             , var: \_ _ _ -> Nil
-            , lett: \md x tBinds def defTy body bodyTy -> TermCursor def.ctxs def.ty (Let3 md x.tBind tBinds.tyBinds defTy.ty body.term bodyTy : up) def.term
-                : TypeCursor defTy.ctxs (Let4 md x.tBind tBinds.tyBinds def.term body.term bodyTy : up) defTy.ty
-                : TermCursor body.ctxs body.ty (Let5 md x.tBind tBinds.tyBinds def.term defTy.ty bodyTy : up) body.term : Nil
-            , dataa : \md x tyBinds ctrs body bodyTy -> TermCursor body.ctxs body.ty (Data4 md x.tyBind tyBinds.tyBinds ctrs.ctrs bodyTy : up) body.term: Nil
+            , lett: \md tBind tBinds def defTy body bodyTy ->
+                TermBindCursor tBind.ctxs (Let1 md {--} tBinds.tyBinds def.term defTy.ty body.term bodyTy : up) tBind.tBind
+                : TypeBindListCursor tBinds.ctxs (Let2 md tBind.tBind {--} def.term defTy.ty body.term bodyTy : up) tBinds.tyBinds
+                : TermCursor def.ctxs def.ty (Let3 md tBind.tBind tBinds.tyBinds defTy.ty body.term bodyTy : up) def.term
+                : TypeCursor defTy.ctxs (Let4 md tBind.tBind tBinds.tyBinds def.term body.term bodyTy : up) defTy.ty
+                : TermCursor body.ctxs body.ty (Let5 md tBind.tBind tBinds.tyBinds def.term defTy.ty bodyTy : up) body.term : Nil
+            , dataa : \md tBind tyBinds ctrs body bodyTy -> TermCursor body.ctxs body.ty (Data4 md tBind.tyBind tyBinds.tyBinds ctrs.ctrs bodyTy : up) body.term: Nil
             , tlet : \md tbind tyBinds def body bodyTy ->
                 -- Add TypeBindList child!
                 TypeCursor def.ctxs (TLet3 md tbind.tyBind tyBinds.tyBinds body.term bodyTy : up) def.ty
@@ -71,9 +74,9 @@ parent (TermCursor ctxs ty termPath term) =
     recTermPath
         {
             let3: \upRec md tBind tyBinds defTy body bodyTy ->
-                Just $ TermCursor upRec.ctxs upRec.ty upRec.termPath upRec.term /\ (1 - 1)
-            , let5: \upRec md tBind tyBinds def defTy bodyTy ->
                 Just $ TermCursor upRec.ctxs upRec.ty upRec.termPath upRec.term /\ (3 - 1)
+            , let5: \upRec md tBind tyBinds def defTy bodyTy ->
+                Just $ TermCursor upRec.ctxs upRec.ty upRec.termPath upRec.term /\ (5 - 1)
             , data4: \upRec md bind tyBinds ctrs bodyTy ->
                 Just $ TermCursor upRec.ctxs upRec.ty upRec.termPath upRec.term /\ (4 - 1)
             , app1 : \upRec md {-Term-} t2 argTy bodyTy ->
@@ -129,7 +132,13 @@ parent (TypeCursor ctxs typePath ty) =
 parent (CtrListCursor _ _ _) = hole' "parent"
 parent (CtrParamListCursor _ _ _) = hole' "parent"
 parent (TypeArgListCursor _ _ _) = hole' "parent"
-parent (TypeBindListCursor _ _ _) = hole' "parent"
+parent (TypeBindListCursor ctxs listTypeBindPath tyBinds) =
+    recListTypeBindPath ({
+        data2 : \termPath md tyBind ctrs body bodyTy -> hole' "parent"
+        , tLet2 : \termPath md tyBind def body bodyTy -> hole' "parent"
+        , typeBindListCons2 : \listTypeBindPath tyBind -> hole' "parent"
+        , let2 : \termPath md tBind def defTy body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
+    }) {ctxs, listTypeBindPath, tyBinds}
 parent _ = hole' "given an ill-typed upPath to parent function (or I missed a case)"
 
 stepCursorForwards :: CursorLocation -> CursorLocation
@@ -151,5 +160,12 @@ stepCursorBackwards cursor =
         Just (par /\ me) ->
             if me == 0 then par else
                 case index (getCursorChildren par) (me - 1) of
-                    Just newCur -> newCur
+                    Just newCur -> getLastChild newCur
                     Nothing -> unsafeThrow "shouldn't happen stepCursorBackwards"
+
+getLastChild :: CursorLocation -> CursorLocation
+getLastChild cursor =
+    let children = getCursorChildren cursor in
+    case index children (length children - 1) of
+        Nothing -> cursor
+        Just child -> getLastChild child

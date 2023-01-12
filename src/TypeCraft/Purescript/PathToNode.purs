@@ -9,12 +9,12 @@ import Debug (trace)
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, TermBind, Tooth(..), Type, TypeArg, TypeBind, UpPath)
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, setCalculatedNodeData)
-import TypeCraft.Purescript.PathRec (TermPathRecValue, TypePathRecValue, TermBindPathRecValue, recTermBindPath, recTermPath, recTypePath)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, makeState)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), termBindToNode, termToNode, typeToNode)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.TermToNode (typeBindListToNode)
+import TypeCraft.Purescript.PathRec
 
 data BelowInfo term ty
   = BITerm
@@ -67,7 +67,7 @@ termPathToNode belowInfo termPath innerNode =
                     { tag: LetNodeTag
                     , kids:
                         [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds term ty.ty body.term bodyTy : upRecVal.termPath)) tBind
-                        , typeBindListToNode (AICursor (Let2 md tBind.tBind {-List TypeBind-} term ty.ty body.term bodyTy : termPath.termPath)) tyBinds
+                        , typeBindListToNode (AICursor (Let2 md tBind.tBind {-List TypeBind-} term ty.ty body.term bodyTy : upRecVal.termPath)) tyBinds
                         , innerNode
                         , typeToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds term {-Type-} body.term bodyTy : upRecVal.termPath)) ty
                         , termToNode (AICursor (Let5 md tBind.tBind tyBinds.tyBinds term ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
@@ -266,17 +266,36 @@ termBindPathToNode termBindPath innerNode =
 -- recTermBindPath
 --   ?a
 --   {ctxs, tBind: ?a, termBindPath: up}
-ctrListPathToNode :: AllContext -> BelowInfo (List Constructor) Unit -> UpPath -> Node -> Node
-ctrListPathToNode ctxs belowInfo up innerNode = (hole' "ctrListPathToNode")
+ctrListPathToNode :: BelowInfo (List Constructor) Unit -> ListCtrPathRecValue -> Node -> Node
+ctrListPathToNode belowInfo listCtrPath innerNode = (hole' "ctrListPathToNode")
 
-ctrParamListPathToNode :: AllContext -> BelowInfo (List CtrParam) Unit -> UpPath -> Node -> Node
-ctrParamListPathToNode ctxs belowInfo up innerNode = (hole' "ctrParamListPathToNode")
+ctrParamListPathToNode :: BelowInfo (List CtrParam) Unit -> ListCtrParamPathRecValue -> Node -> Node
+ctrParamListPathToNode belowInfo listCtrParamPath innerNode = (hole' "ctrParamListPathToNode")
 
-typeArgListPathToNode :: AllContext -> BelowInfo (List TypeArg) Unit -> UpPath -> Node -> Node
-typeArgListPathToNode ctxs belowInfo up innerNode = (hole' "typeArgListPathToNode")
+typeArgListPathToNode :: BelowInfo (List TypeArg) Unit -> ListTypeArgPathRecValue -> Node -> Node
+typeArgListPathToNode belowInfo listTypeArgPath innerNode = (hole' "typeArgListPathToNode")
 
-typeBindListPathToNode :: AllContext -> BelowInfo (List TypeBind) Unit -> UpPath -> Node -> Node
-typeBindListPathToNode ctxs belowInfo up innerNode = (hole' "typeBindListPathToNode")
+typeBindListPathToNode :: BelowInfo (List TypeBind) Unit -> ListTypeBindPathRecValue -> Node -> Node
+typeBindListPathToNode belowInfo typeBindListPath innerNode =
+    let tyBinds = typeBindListPath.tyBinds in
+    recListTypeBindPath ({
+        data2 : \termPath md tyBind ctrs body bodyTy -> hole' "typeBindListPathToNode"
+        , tLet2 : \termPath md tyBind def body bodyTy -> hole' "typeBindListPathToNode"
+        , typeBindListCons2 : \listTypeBindPath tyBind -> hole' "typeBindListPathToNode"
+        , let2 : \termPath md tBind def defTy body bodyTy ->
+              let newBI = BITerm in
+              termPathToNode newBI termPath
+                $ makeTermNode newBI termPath
+                    { kids:
+                        [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds def.term defTy.ty body.term bodyTy : termPath.termPath)) tBind
+                        , innerNode
+                        , termToNode (AICursor (Let3 md tBind.tBind tyBinds {-Term-} defTy.ty body.term bodyTy : termPath.termPath)) def
+                        , typeToNode (AICursor (Let4 md tBind.tBind tyBinds def.term {-Type-} body.term bodyTy : termPath.termPath)) defTy
+                        , termToNode (AICursor (Let5 md tBind.tBind tyBinds def.term defTy.ty {-Term-} bodyTy : termPath.termPath)) body
+                        ]
+                    , tag: LetNodeTag
+                    }
+    }) typeBindListPath
 
 {-
 Problems currently:

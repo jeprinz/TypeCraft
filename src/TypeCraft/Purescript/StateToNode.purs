@@ -8,6 +8,12 @@ import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), Sta
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeArgListToNode, typeBindListToNode, typeBindToNode, typeToNode)
 import TypeCraft.Purescript.Util (hole')
 
+{-
+TODO: Note from Jacob:
+Counterintuitvely, all cursor modes should use BISelect and AISelect, because it is from a cursor mode that a selection
+is possible.
+Conversely, all select modes should use BITerm and AICursor, because from select mode another selection is not possible.
+-}
 -- TODO: somehow `st.mode.cursorLocation` is being set to the mode
 stateToNode :: State -> Node
 stateToNode st = case st.mode of
@@ -29,22 +35,22 @@ stateToNode st = case st.mode of
       termBindPathToNode { ctxs, tBind, termBindPath }
         $ setNodeStyle makeCursorNodeStyle
         $ termBindToNode (AICursor termBindPath) { ctxs, tBind }
-    TypeArgListCursor ctxs upPath tyArgs ->
-      typeArgListPathToNode ctxs BITerm upPath
+    TypeArgListCursor ctxs listTypeArgPath tyArgs ->
+      typeArgListPathToNode BITerm {ctxs, listTypeArgPath, tyArgs} -- BITerm upPath
         $ setNodeStyle makeCursorNodeStyle
-        $ typeArgListToNode (AICursor upPath) { ctxs, tyArgs }
-    CtrListCursor ctxs upPath ctrs ->
-      ctrListPathToNode ctxs BITerm upPath
+        $ typeArgListToNode (AICursor listTypeArgPath) { ctxs, tyArgs }
+    CtrListCursor ctxs listCtrPath ctrs ->
+      ctrListPathToNode BITerm {ctxs, ctrs, listCtrPath}
         $ setNodeStyle makeCursorNodeStyle
-        $ ctrListToNode (AICursor upPath) { ctxs, ctrs }
-    CtrParamListCursor ctxs upPath ctrParams ->
-      ctrParamListPathToNode ctxs BITerm upPath
+        $ ctrListToNode (AICursor listCtrPath) { ctxs, ctrs }
+    CtrParamListCursor ctxs listCtrParamPath ctrParams ->
+      ctrParamListPathToNode BITerm {ctxs, ctrParams, listCtrParamPath}
         $ setNodeStyle makeCursorNodeStyle
-        $ ctrParamListToNode (AICursor upPath) { ctxs, ctrParams }
-    TypeBindListCursor ctxs upPath tyBinds ->
-      typeBindListPathToNode ctxs BITerm upPath
+        $ ctrParamListToNode (AICursor listCtrParamPath) { ctxs, ctrParams }
+    TypeBindListCursor ctxs listTypeBindPath tyBinds ->
+      typeBindListPathToNode BITerm {ctxs, tyBinds, listTypeBindPath}
         $ setNodeStyle makeCursorNodeStyle
-        $ typeBindListToNode (AICursor upPath) { ctxs, tyBinds }
+        $ typeBindListToNode (AICursor listTypeBindPath) { ctxs, tyBinds }
   SelectMode select -> case select of
     -- need more info about root to render it
     TermSelect ctxs isRootAtTop ty topPath middlePath term ->  -- NOTE: I fixed this section, it was wrong in many ways
