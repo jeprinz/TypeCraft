@@ -3,6 +3,9 @@ import { Backend } from '../Backend';
 import Editor from "../Editor";
 import { Node } from "../Node";
 import * as Punc from './Punctuation';
+import { showList } from '../../../TypeCraft/Purescript/output/Data.List.Types';
+import { showTooth } from '../../../TypeCraft/Purescript/output/TypeCraft.Purescript.Grammar';
+import { showCursorLocation } from '../../../TypeCraft/Purescript/output/TypeCraft.Purescript.State';
 
 export default function makeFrontend(backend: Backend): JSX.Element {
   function render(editor: Editor): JSX.Element[] {
@@ -40,18 +43,37 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           editor.setState(state)
 
           event.stopPropagation()
+        } else {
+          console.log(`getCursor is undefined for this '${node.tag.case}' node`)
         }
+
         // TODO: do selection
       }
 
-      return [
-        <div
-          className={([] as string[]).concat(["node"], classNames).join(" ")}
-          onClick={onClick}
-        >
-          {kids}
-        </div>
-      ]
+      if (node.queryString !== undefined) {
+        return [
+          <div
+            className={([] as string[]).concat(["node"], ["query-replace-new"], classNames).join(" ")}
+          >
+            {node.queryString}
+          </div>,
+          <div
+            className={([] as string[]).concat(["node"], ["query-replace-old"], classNames).join(" ")}
+            onClick={onClick}
+          >
+            {kids}
+          </div>
+        ]
+      } else {
+        return [
+          <div
+            className={([] as string[]).concat(["node"], classNames).join(" ")}
+            onClick={onClick}
+          >
+            {kids}
+          </div>
+        ]
+      }
     }
 
     function renderNode(node: Node): JSX.Element[] {
@@ -65,6 +87,9 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           throw new Error(`kid index ${kid_i} out of range for node tag '${node.tag.case}', which has ${node.kids.length} kids`);
         return renderNodes(node.kids[kid_i])
       }
+
+      const showLabel = (label: string | undefined) => label !== undefined ? (label.length > 0 ? label : "~") : "<undefined>"
+
       switch (node.tag.case) {
         case 'ty arr': return go(node, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat())
         case 'ty hol': return go(node, ["ty_hol"], [Punc.interrogative].flat())
@@ -74,7 +99,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'ty-arg': return go(node, ["ty-arg"], kid())
         case 'tm app': return go(node, ["tm_app"], [kid(), [Punc.application], kid()].flat())
         case 'tm lam': return go(node, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat())
-        case 'tm var': return go(node, ["tm_var"], [<span>{node.label}</span>].flat())
+        case 'tm var': return go(node, ["tm_var"], [<span>{showLabel(node.label)}</span>].flat())
         case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.colon], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat())
         case 'tm dat': return go(node, ["tm_dat"], [[Punc.data], kid(), [Punc.data], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat())
         case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat())
@@ -82,8 +107,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat()) // TODO: render contextchange
         case 'tm hol': return go(node, ["tm_hol"], [Punc.interrogative].flat()) // TODO: render type; is it a node child?
         case 'tm buf': return go(node, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat())
-        case 'ty-bnd': return go(node, ["ty-bnd"], [<span>{node.label ?? "<node.label == undefined>"}</span>])
-        case 'tm-bnd': return go(node, ["tm-bnd"], [<span>{node.label ?? "<node.label == undefined>"}</span>])
+        case 'ty-bnd': return go(node, ["ty-bnd"], [<span>{showLabel(node.label)}</span>])
+        case 'tm-bnd': return go(node, ["tm-bnd"], [<span>{showLabel(node.label)}</span>])
         case 'ctr-prm': return go(node, ["ctr-prm"], [[/* TODO: name */], [Punc.colon], kid()].flat()) // TODO: label
         case 'ctr': return go(node, ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat())
         // ty-arg-list

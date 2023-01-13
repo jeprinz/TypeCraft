@@ -12,6 +12,7 @@
   , "ordered-collections"
   , "prelude"
   , "refs"
+  , "strings"
   , "tuples"
   ]
 , packages = ./packages.dhall

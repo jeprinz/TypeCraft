@@ -1,6 +1,5 @@
 import React, { MouseEvent } from "react"
 import * as Backend from './Backend'
-import './Editor.css'
 import { State } from "../../TypeCraft/Typescript/State"
 
 export var isMouseDown: boolean = false
@@ -39,6 +38,10 @@ export default class Editor
     }
 
     render() {
-        return [this.props.render(this)]
+        return (
+            <div className="editor">
+                {[this.props.render(this)]}
+            </div>
+        )
     }
 }

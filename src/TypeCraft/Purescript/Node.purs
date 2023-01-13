@@ -3,6 +3,7 @@ module TypeCraft.Purescript.Node where
 import Control.Alternative
 import Control.Applicative
 import Prelude
+
 import Data.Array (find)
 import Data.Bounded.Generic (genericBottom, genericTop)
 import Data.Enum (class BoundedEnum, class Enum, cardinality, enumFromTo)
@@ -10,6 +11,7 @@ import Data.Enum.Generic (genericCardinality, genericFromEnum, genericPred, gene
 import Data.Foldable (foldr)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
+import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Nullable (Nullable)
 import TypeCraft.Purescript.Nullable as Nullable
@@ -27,6 +29,7 @@ foreign import makeNode_ ::
   , indentation :: NodeIndentation
   , isParenthesized :: Boolean
   , label :: Nullable String
+  , queryString :: Nullable String
   , tag :: NodeTag_
   } ->
   Node
@@ -41,12 +44,13 @@ makeNode ::
 makeNode x =
   makeNode_
     { kids: x.kids
-    , getCursor: Nullable.fromMaybe x.getCursor
+    , getCursor: Nullable.fromMaybe ((\f _ -> let st = f unit in Debug.trace (show $ st.mode) \_ -> st ) <$> x.getCursor)
     , getSelect: Nullable.fromMaybe x.getSelect
     , style: makeNormalNodeStyle
     , indentation: makeInlineNodeIndentation
     , isParenthesized: false
     , label: Nullable.fromMaybe Nothing
+    , queryString: Nullable.fromMaybe Nothing
     , tag: toNodeTag_ x.tag
     }
 
@@ -57,6 +61,8 @@ foreign import setNodeIndentation :: NodeIndentation -> Node -> Node
 foreign import setNodeParenthesized :: Boolean -> Node -> Node
 
 foreign import setNodeLabel :: String -> Node -> Node
+
+foreign import setNodeQueryString :: String -> Node -> Node
 
 -- NodeIndentation
 foreign import data NodeIndentation :: Type

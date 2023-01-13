@@ -6,6 +6,10 @@ type CursorLocation = any
 
 type Select = any
 
+export function handleKey(key: string, st: State): State | undefined {
+  return Nullable.fromMaybe(ModifyState.handleKey(key)(st))
+}
+
 export function moveCursorPrev(st: State): State | undefined {
   return Nullable.fromMaybe(ModifyState.moveCursorPrev(st))
 }

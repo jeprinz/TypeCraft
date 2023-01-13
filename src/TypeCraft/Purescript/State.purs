@@ -1,5 +1,6 @@
 module TypeCraft.Purescript.State where
 
+import Data.Tuple.Nested
 import Prelude
 import Prim hiding (Type)
 import Data.Generic.Rep (class Generic)
@@ -8,9 +9,8 @@ import Data.Show.Generic (genericShow)
 import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
 import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), TermBind(..), Type(..), TypeArg, TypeBind, UpPath)
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
+import TypeCraft.Purescript.ShallowEmbed (exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
 import TypeCraft.Purescript.Util (hole)
-import TypeCraft.Purescript.ShallowEmbed (exampleProg2, exampleProg3, exampleProg4, exampleProg5)
-import Data.Tuple.Nested
 
 {-
 This file will contain possible states for the editor
@@ -22,11 +22,17 @@ type State
     }
 
 data Mode
-  = CursorMode
-    { cursorLocation :: CursorLocation
+  = CursorMode CursorMode
+  | SelectMode SelectMode
+
+type CursorMode
+  = { cursorLocation :: CursorLocation
     , query :: Query
     }
-  | SelectMode Select
+
+type SelectMode
+  = { select :: Select
+    }
 
 derive instance genericMode :: Generic Mode _
 
@@ -67,7 +73,7 @@ initState =
         , query: emptyQuery
         }
   where
-    ty /\ tm = exampleProg5
+  ty /\ tm = exampleProg5
 
 data Clipboard
   = EmptyClip -- add more later, not priority yet

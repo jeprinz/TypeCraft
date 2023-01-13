@@ -47,7 +47,7 @@ makeTermNode belowInfo termPath preNode =
         , getSelect:
             case belowInfo of
               BITerm -> Nothing
-              BISelect middlePath term ty -> Just \_ -> makeState $ SelectMode $ TermSelect termPath.ctxs true ty termPath.termPath middlePath term
+              BISelect middlePath term ty -> Just \_ -> makeState $ SelectMode $ {select: TermSelect termPath.ctxs true ty termPath.termPath middlePath term}
         , tag: preNode.tag
         }
 
@@ -248,7 +248,6 @@ termBindPathToNode termBindPath innerNode =
     recTermBindPath
       { lambda1:
           \termPath md argTy body bodyTy ->
-          trace ("termBindPathToNode.lambda1.termPath.termPath = " <> show termPath.termPath) \_ ->
             let newBI = BITerm in -- (stepBI (Lambda1 md argTy.ty body.term bodyTy) BITerm) in
             termPathToNode newBI termPath
               $ makeTermNode newBI termPath {

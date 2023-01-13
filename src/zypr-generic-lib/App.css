@@ -9,10 +9,6 @@ body {}
 /* editor */
 
 .editor {
-  width: 100%;
-  height: 100%;
-  /* width: 500px;
-  height: 500px; */
   line-height: 1.2rem;
 
   overflow: scroll;
@@ -21,15 +17,8 @@ body {}
   font-family: monospace;
   font-size: 12pt;
   /* line-height: 15pt; */
-}
 
-.editor-inner {
-  padding: 2rem;
-  padding-bottom: 20rem;
-}
-
-.editor-inner div {
-  display: inline;
+  padding: 20px;
 }
 
 /* misc */

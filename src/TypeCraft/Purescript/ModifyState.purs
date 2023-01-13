@@ -3,9 +3,30 @@ module TypeCraft.Purescript.ModifyState where
 import Prelude
 import Data.Array ((:))
 import Data.Maybe (Maybe(..))
+import Debug (trace)
 import TypeCraft.Purescript.CursorMovement (stepCursorBackwards, stepCursorForwards)
-import TypeCraft.Purescript.State (CursorLocation, Mode(..), Select, State, emptyQuery, makeCursorMode)
+import TypeCraft.Purescript.Grammar (TermBind(..), TypeBind(..))
+import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
+import TypeCraft.Purescript.ManipulateString (manipulateString)
+import TypeCraft.Purescript.State (CursorLocation(..), CursorMode, Mode(..), Select, State, emptyQuery, makeCursorMode)
 import TypeCraft.Purescript.Util (hole')
+
+handleKey :: String -> State -> Maybe State
+handleKey key st = case st.mode of
+  CursorMode cursorMode -> case cursorMode.cursorLocation of
+    TypeBindCursor ctxs path (TypeBind md tyVarId)
+      | Just varName <- manipulateString key md.varName -> pure $ setMode (CursorMode cursorMode { cursorLocation = TypeBindCursor ctxs path (TypeBind md { varName = varName } tyVarId) }) st
+    TermBindCursor ctxs path (TermBind md tmVarId)
+      | Just varName <- manipulateString key md.varName -> pure $ setMode (CursorMode cursorMode { cursorLocation = TermBindCursor ctxs path (TermBind md { varName = varName } tmVarId) }) st
+    CtrParamListCursor ctxs path ctrs -> hole' "handleKey CtrParamListCursor"
+    _
+      | Just query <- manipulateQuery key st cursorMode -> pure st { mode = CursorMode cursorMode { query = query } }
+      | key == "ArrowLeft" -> moveCursorPrev st
+      | key == "ArrowRight" -> moveCursorNext st
+      | key == "Escape" -> pure st { mode = CursorMode cursorMode { query = emptyQuery } }
+      | key == "Enter" -> pure st -- TODO
+      | otherwise -> Nothing
+  SelectMode selectMode -> hole' "handleKey: SelectMode"
 
 -- caches old mode in history
 setMode :: Mode -> State -> State
@@ -42,6 +63,11 @@ moveSelectNext = hole' "moveSelectNext"
 
 setSelect :: Select -> State -> Maybe State
 setSelect = hole' "setSelect"
+
+requireCursorMode :: State -> Maybe CursorMode
+requireCursorMode st = case st.mode of
+  CursorMode cursorMode -> pure cursorMode
+  _ -> Nothing
 
 undo :: State -> Maybe State
 undo = hole' "undo"

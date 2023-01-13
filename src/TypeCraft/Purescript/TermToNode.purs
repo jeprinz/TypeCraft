@@ -141,12 +141,11 @@ termToNode aboveInfo term =
       $ makeNode
           { kids: nodeInfo.kids <#> setCalculatedNodeData nodeInfo.tag >>> pure
           , getCursor: Just \_ -> 
-              trace ("termToNode.aIGetPath aboveInfo = " <> show (aIGetPath aboveInfo)) \_ ->
               makeState $ makeCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
           , getSelect:
               case aboveInfo of
                 AICursor _path -> Nothing -- TODO: impl select
-                AISelect top middle -> Just \_ -> makeState $ SelectMode $ TermSelect term.ctxs (hole' "termToNode") term.ty middle top term.term
+                AISelect top middle -> Just \_ -> makeState $ SelectMode $ {select: TermSelect term.ctxs (hole' "termToNode") term.ty middle top term.term}
           , tag: nodeInfo.tag
           }
 
@@ -180,12 +179,11 @@ typeToNode aboveInfo ty =
     makeNode
       { kids: nodeInfo.kids <#> pure
       , getCursor: Just \_ -> 
-          trace ("typeToNode.aIGetPath aboveInfo = " <> show (aIGetPath aboveInfo)) \_ ->
           makeState $ makeCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
       , getSelect:
           case aboveInfo of
             AICursor path -> Nothing -- TODO: impl select
-            AISelect top middle -> Just \_ -> makeState $ SelectMode $ TypeSelect ty.ctxs false top middle ty.ty
+            AISelect top middle -> Just \_ -> makeState $ SelectMode $ {select: TypeSelect ty.ctxs false top middle ty.ty}
       , tag: nodeInfo.tag
       }
 
@@ -224,7 +222,6 @@ termBindToNode aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
     $ makeNode
         { kids: []
         , getCursor: Just \_ -> 
-              trace ("termBindToNode.aIGetPath aboveInfo = " <> show (aIGetPath aboveInfo)) \_ ->
               makeState $ makeCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tBind
         , getSelect: Nothing
         , tag: TermBindNodeTag

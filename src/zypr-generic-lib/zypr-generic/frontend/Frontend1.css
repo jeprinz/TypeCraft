@@ -16,21 +16,50 @@
   box-shadow: 0 0 0 1px black;
 }
 
+.node.query-replace-new {
+  background-color: rgb(196, 196, 255);
+}
+
+.node.query-replace-old {
+  background-color: rgb(205, 205, 205);
+}
+
 /* punctuation */
 
 .punctuation {
   display: inline;
 }
 
+.punctuation.application {
+  /* margin-right: 0.5rem; */
+  margin: 0 0.25rem;
+  color: gray;
+}
+
 .punctuation.lambda {
-  margin: 0 1rem 0 0;
+  margin: 0 0.5rem 0 0;
 }
 
 .punctuation.colon {
-  margin: 0 1rem;
+  margin: 0 0.5rem;
 }
 
 .punctuation.mapsto {
-  margin: 0 1rem;
+  margin: 0 0.5rem;
 }
 
+.punctuation.let {
+  margin: 0 0.5rem 0 0;
+}
+
+.punctuation.in {
+  margin: 0 0.5rem;
+}
+
+.punctuation.arrowR {
+  margin: 0 0.5rem;
+}
+
+.punctuation.assign {
+  margin: 0 0.5rem;
+}

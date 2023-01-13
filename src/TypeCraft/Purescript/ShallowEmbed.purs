@@ -1,15 +1,17 @@
 module TypeCraft.Purescript.ShallowEmbed where
-import TypeCraft.Purescript.Grammar
-import TypeCraft.Purescript.Context
-import Data.Map.Internal (Map, insert, empty, lookup)
-import Data.List (List(..), (:))
 
+import Data.Tuple.Nested
 import Prelude
 import Prim hiding (Type)
-import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.Context
+import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.MD
+
+import Data.List (List(..), (:))
+import Data.List as List
+import Data.Map.Internal (Map, insert, empty, lookup)
+import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Util (hole)
-import Data.Tuple.Nested
 
 {-
 This file defines a shallow embedding to make it easier to write terms for testing purposes
@@ -27,8 +29,17 @@ slambda name body {kctx, ctx, ty: Arrow _ ty1 ty2} =
     Lambda defaultLambdaMD (TermBind {varName: name} x) ty1 t ty2
 slambda _ _ _ = unsafeThrow "shouldn't happen slambda"
 
-slet :: String -> (TermVarID -> STerm) -> SType -> (TermVarID -> STerm) -> STerm
-slet name def defTy body {kctx, ctx, ty} =
+slet :: String -> Array TypeBind -> (TermVarID -> STerm) -> SType -> (TermVarID -> STerm) -> STerm
+slet name tyPrms def defTy body {kctx, ctx, ty} =
+    let x = freshInt unit in
+    let defTy' = (defTy {kctx, ctx}) in
+    let ctx' = insert x (List.foldr (\(TypeBind _ y) -> Forall y) (PType defTy') tyPrms) ctx in
+    let def' = def x {kctx, ctx: ctx', ty: defTy'} in
+    let body' = body x {kctx, ctx: ctx', ty: ty} in
+    Let defaultLetMD (TermBind {varName: name} x) (List.fromFoldable tyPrms) def' defTy' body' ty
+
+slet' :: String -> (TermVarID -> STerm) -> SType -> (TermVarID -> STerm) -> STerm
+slet' name def defTy body {kctx, ctx, ty} =
     let x = freshInt unit in
     let defTy' = (defTy {kctx, ctx}) in
     let ctx' = insert x (PType defTy') ctx in
@@ -85,7 +96,7 @@ exampleProg4 :: Type /\ Term
 exampleProg4 =
     sBindHole \hole1 -> sBindHole \hole2 -> sBindHole \hole3 ->
         program (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
-            (slet "f" (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
+            (slet' "f" (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
                 (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
                 (\f -> svar f))
 
@@ -93,6 +104,14 @@ exampleProg5 :: Type /\ Term
 exampleProg5 =
     sBindHole \hole1 -> sBindHole \hole2 -> sBindHole \hole3 ->
         program (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
-            (slet "f" (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
+            (slet' "f" (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
+                (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
+                (\f -> (sapp (sapp (svar f) (shole hole1) sTHole) (shole hole2) sTHole)))
+
+exampleProg6 :: Type /\ Term
+exampleProg6 =
+    sBindHole \hole1 -> sBindHole \hole2 -> sBindHole \hole3 ->
+        program (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
+            (slet "f" [ TypeBind {varName: "A"} 0 ] (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
                 (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
                 (\f -> (sapp (sapp (svar f) (shole hole1) sTHole) (shole hole2) sTHole)))

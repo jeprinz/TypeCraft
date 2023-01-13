@@ -3,12 +3,13 @@ export type Select = any // Purescript
 
 export type Node = {
     kids: Node[][],
-    getCursor: (() => Cursor) | undefined,
-    getSelect: (() => Select) | undefined,
+    getCursor?: (() => Cursor),
+    getSelect?: (() => Select),
     style: NodeStyle,
     indentation: NodeIndentation,
     isParenthesized: boolean,
     label?: string,
+    queryString?: string,
     tag: NodeTag
 }
 

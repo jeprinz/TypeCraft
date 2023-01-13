@@ -19,7 +19,7 @@ export const data = makePunc(["data"], "data")
 export const buffer = makePunc(["buffer"], "buf")
 
 export const arrowR = makePunc(["arrowR"], "→")
-export const application = makePunc(["application"], " ")
+export const application = makePunc(["application"], "•")
 export const colon = makePunc(["colon"], ":")
 export const mapsto = makePunc(["mapsto"], "↦")
 export const comma = makePunc(["comma"], ",")

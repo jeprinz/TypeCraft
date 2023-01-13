@@ -13,22 +13,8 @@ export const makeBackend = (state: State.State): Backend.Backend => {
       language: language(),
       format: (st: State.State) => [stateToNode(st)],
       handleKeyboardEvent: (event) => (st) => {
-        console.log("handleKeyboardEvent.event.key", event.key)
-        switch (event.key) {
-          case 'ArrowLeft': return ModifyState.moveCursorPrev(st)
-          case 'ArrowRight': return ModifyState.moveCursorNext(st)
-          default: return undefined
-        }
-        // TODO:
-        // return ModifyState.moveSelectNext(st)
-        // return ModifyState.moveSelectPrev(st)
-        // return ModifyState.undo(st)
-        // return ModifyState.redo(st)
-        // return ModifyState.copy(st)
-        // return ModifyState.cut(st)
-        // return ModifyState.paste(st)
-        // return ModifyState.delete_(st)
-        // return ModifyState.escape(st)
+        // console.log("handleKeyboardEvent.event.key", event.key)
+        return ModifyState.handleKey(event.key, st)
       }
     },
     state

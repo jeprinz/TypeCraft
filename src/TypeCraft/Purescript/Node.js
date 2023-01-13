@@ -97,6 +97,8 @@ export const setNodeParenthesized = isParenthesized => node => ({ ...node, isPar
 
 export const setNodeLabel = label => node => ({ ...node, label })
 
+export const setNodeQueryString = queryString => node => ({ ...node, queryString })
+
 // NodeIndentation
 export const makeInlineNodeIndentation = { case: 'inline' }
 export const makeNewlineNodeIndentation = { case: 'newline' }
