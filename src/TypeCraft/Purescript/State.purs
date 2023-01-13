@@ -97,13 +97,26 @@ instance showCursorLocation :: Show CursorLocation where
   show x = genericShow x
 
 {-
-The TypeContext, TermContext, and Type are understood as being inside the second path.
-e.g. if the term selection is  path1[path2[term]], then the contexts and type given are for inside path2 and outside term.
+Each Select mode consists of essentially two cursors:
+Select = Path      = topPath                                                        \
+       x Context   = context underneath topPath                                     | - Cursor 1
+       x Term      = middlePath [bottomTerm]                                        /
+       x Path      = middlePath                                                     \
+       x Context   = context underneath topPath <> middlePath                       | - Cursor 2
+       x Term      = bottomTerm                                                     /
+       x Boolean   = where the root is: true if at top, false if at bottom
+
+This state represents a program that looks like this:
+topPath [middlePath [bottomTerm]]
+
+Note that TermSelect in particular also has a Type wherever there is a context, which is the type at that point.
 -}
 -- Boolean is true if root is at top, false if at bottom. The Type and Context
 -- are at thte type of the Term, regardless of root.
 data Select
-  = TermSelect AllContext Boolean Type UpPath UpPath Term
+--  = TermSelect AllContext Boolean Type UpPath UpPath Term
+  = TermSelect UpPath AllContext Type Term UpPath AllContext Type Term Boolean
+--             <-------Cursor 1----------> <-----Cursor 2------------>
   | TypeSelect AllContext Boolean UpPath UpPath Type
   | CtrListSelect AllContext Boolean UpPath UpPath (List Constructor)
   | CtrParamListSelect AllContext Boolean UpPath UpPath (List CtrParam)

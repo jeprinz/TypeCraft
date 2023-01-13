@@ -171,3 +171,4 @@ getLastChild cursor =
     case index children (length children - 1) of
         Nothing -> cursor
         Just child -> getLastChild child
+

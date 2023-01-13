@@ -16,9 +16,9 @@ import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.TermToNode (typeBindListToNode)
 import TypeCraft.Purescript.PathRec
 
-data BelowInfo term ty
+data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
-  | BISelect DownPath term ty -- middle path, then bottom term. ty is type of term.
+  | BISelect DownPath term AllContext ty -- middle path, then bottom term. ctx and ty are the type and context of term.
 
 --stepBI :: forall gsort1 gsort2. Tooth -> BelowInfo gsort1 -> BelowInfo gsort2
 ----stepBI tooth (BITerm syn) = BITerm (step syn)
@@ -28,8 +28,7 @@ data BelowInfo term ty
 -- TODO: TODO: think about this!
 stepBI :: forall syn synty. Tooth -> BelowInfo syn synty -> BelowInfo syn synty
 stepBI tooth BITerm = BITerm
-
-stepBI tooth (BISelect middle bottom ty) = BISelect (tooth : middle) bottom ty
+stepBI tooth (BISelect middle bottom ctxs ty) = BISelect (tooth : middle) bottom ctxs ty
 
 type PreNode = {
     kids :: Array Node
@@ -47,7 +46,8 @@ makeTermNode belowInfo termPath preNode =
         , getSelect:
             case belowInfo of
               BITerm -> Nothing
-              BISelect middlePath term ty -> Just \_ -> makeState $ SelectMode $ {select: TermSelect termPath.ctxs true ty termPath.termPath middlePath term}
+              BISelect middlePath term ctxs ty -> Just \_ -> makeState $ SelectMode $
+                {select: TermSelect termPath.termPath termPath.ctxs termPath.ty termPath.term middlePath ctxs ty term true}
         , tag: preNode.tag
         }
 
@@ -142,7 +142,7 @@ typePathToNode belowInfo typePath innerNode =
             let
               belowType = case belowInfo of
                 BITerm -> typePath.ty
-                BISelect middlePath term _ -> typePath.ty -- TODO: combineDownPathTerm middlePath term
+                BISelect middlePath term _ _ -> typePath.ty -- TODO: combineDownPathTerm middlePath term
             in
               Just \_ -> 
                 trace "here typePathNode" \_ ->

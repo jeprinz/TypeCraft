@@ -3,37 +3,36 @@ module TypeCraft.Purescript.TermToNode where
 import Prelude
 import Prim hiding (Type)
 
-import Data.List ((:))
+import Data.Tuple.Nested
+import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe', maybe')
 import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar (Constructor, TermBind(..), Tooth(..), UpPath)
+import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, setCalculatedNodeData, setNodeLabel, setNodeLabelMaybe)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, makeState)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, ListCtrRecValue, recTerm, recType)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Node (setNodeIndentation)
 import TypeCraft.Purescript.Node (makeIndentNodeIndentation)
+import TypeCraft.Purescript.Context (AllContext)
 
-data AboveInfo
+data AboveInfo syn
   = AICursor UpPath
-  | AISelect UpPath UpPath -- top path, then middle path
+  | AISelect UpPath AllContext syn UpPath -- top path, then program below, then middle path
 
-stepAI :: Tooth -> AboveInfo -> AboveInfo
+stepAI :: forall syn. Tooth -> AboveInfo syn -> AboveInfo syn
 stepAI tooth (AICursor path) = AICursor (tooth : path)
+stepAI tooth (AISelect topPath ctx term middlePath) = AISelect topPath ctx term (tooth : middlePath)
 
-stepAI tooth (AISelect topPath middlePath) = AISelect topPath (tooth : middlePath)
-
-aIOnlyCursor :: AboveInfo -> AboveInfo
+aIOnlyCursor :: forall syn1 syn2. AboveInfo syn1 -> AboveInfo syn2
 aIOnlyCursor (AICursor path) = AICursor path
+aIOnlyCursor (AISelect topPath ctx term middlePath) = AICursor (middlePath <> topPath)
 
-aIOnlyCursor (AISelect topPath middlePath) = AICursor (middlePath <> topPath)
-
-aIGetPath :: AboveInfo -> UpPath
+aIGetPath :: forall syn. AboveInfo syn -> UpPath
 aIGetPath (AICursor path) = path
-
-aIGetPath (AISelect top middle) = middle <> top
+aIGetPath (AISelect top ctx term middle) = middle <> top
 
 indentIf :: Boolean -> Node -> Node
 indentIf false n = n
@@ -44,7 +43,7 @@ indentIf true n = setNodeIndentation makeIndentNodeIndentation n
 -- TODO: put TermPath into TermRecValue, and then don't need the TermPath argument here!
 -- Problem: what if I really did just have a term, without a TermPath though? I should still be able to recurse over that.
 -- So what is the right design here?
-termToNode :: AboveInfo -> TermRecValue -> Node
+termToNode :: AboveInfo (Term /\ Type) -> TermRecValue -> Node
 termToNode aboveInfo term =
   let
     nodeInfo =
@@ -85,7 +84,7 @@ termToNode aboveInfo term =
                 { tag: LetNodeTag
                 , label: Nothing
                 , kids:
-                    [ termBindToNode (stepAI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) aboveInfo) tBind
+                    [ termBindToNode (stepAI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tBind
                     , typeBindListToNode (stepAI (Let2 md tBind.tBind {-List TypeBind-} def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tyBinds
                     , termToNode (stepAI (Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
                     , typeToNode (stepAI (Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
@@ -97,9 +96,9 @@ termToNode aboveInfo term =
                 { tag: DataNodeTag
                 , label: Nothing
                 , kids:
-                    [ typeBindToNode (stepAI (Data1 md tbinds.tyBinds ctrs.ctrs term.term bodyTy) aboveInfo) x
-                    , typeBindListToNode (stepAI (Data2 md x.tyBind ctrs.ctrs term.term bodyTy) aboveInfo) tbinds
-                    , constructorListToNode (stepAI (Data3 md x.tyBind tbinds.tyBinds term.term bodyTy) aboveInfo) ctrs
+                    [ typeBindToNode (stepAI (Data1 md tbinds.tyBinds ctrs.ctrs term.term bodyTy) (aIOnlyCursor aboveInfo)) x
+                    , typeBindListToNode (stepAI (Data2 md x.tyBind ctrs.ctrs term.term bodyTy) (aIOnlyCursor aboveInfo)) tbinds
+                    , constructorListToNode (stepAI (Data3 md x.tyBind tbinds.tyBinds term.term bodyTy) (aIOnlyCursor aboveInfo)) ctrs
                     , termToNode (stepAI (Data4 md x.tyBind tbinds.tyBinds ctrs.ctrs bodyTy) aboveInfo) body
                     ]
                 }
@@ -128,7 +127,7 @@ termToNode aboveInfo term =
                 , label: Nothing
                 , kids:
                     [ termToNode (stepAI (Buffer1 md defTy.ty body.term bodyTy) aboveInfo) def
-                    , typeToNode (stepAI (Buffer2 md def.term body.term bodyTy) aboveInfo) defTy
+                    , typeToNode (stepAI (Buffer2 md def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
                     , termToNode (stepAI (Buffer3 md def.term defTy.ty bodyTy) aboveInfo) body
                     ]
                 }
@@ -144,12 +143,13 @@ termToNode aboveInfo term =
               makeState $ makeCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
           , getSelect:
               case aboveInfo of
-                AICursor _path -> Nothing -- TODO: impl select
-                AISelect top middle -> Just \_ -> makeState $ SelectMode $ {select: TermSelect term.ctxs (hole' "termToNode") term.ty middle top term.term}
+                AICursor _path -> Nothing
+                AISelect topPath topCtx (topTerm /\ topTy) middlePath -> Just \_ -> makeState $ SelectMode $
+                    {select: TermSelect topPath topCtx topTy topTerm middlePath term.ctxs term.ty term.term false}
           , tag: nodeInfo.tag
           }
 
-typeToNode :: AboveInfo -> TypeRecValue -> Node
+typeToNode :: AboveInfo Type -> TypeRecValue -> Node
 typeToNode aboveInfo ty =
   let
     nodeInfo =
@@ -183,14 +183,14 @@ typeToNode aboveInfo ty =
       , getSelect:
           case aboveInfo of
             AICursor path -> Nothing -- TODO: impl select
-            AISelect top middle -> Just \_ -> makeState $ SelectMode $ {select: TypeSelect ty.ctxs false top middle ty.ty}
+            AISelect top topCtx topTy middle -> Just \_ -> makeState $ SelectMode $ {select: TypeSelect ty.ctxs false top middle ty.ty}
       , tag: nodeInfo.tag
       }
 
-ctrListToNode :: AboveInfo -> ListCtrRecValue -> Node
+ctrListToNode :: AboveInfo Constructor -> ListCtrRecValue -> Node
 ctrListToNode aboveInfo ctrs = hole' "ctrListToNode"
 
-ctrToNode :: AboveInfo -> Constructor -> Node
+ctrToNode :: AboveInfo Constructor -> Constructor -> Node
 ctrToNode aboveInfo ctr = hole' "ctrToNode"
 
 --ctrParamToNode :: AllContext -> AboveInfo -> UpPath -> CtrParam -> Node
@@ -201,13 +201,13 @@ ctrToNode aboveInfo ctr = hole' "ctrToNode"
 --    , getSelect: Nothing
 --    , style: makeNormalNodeStyle
 --}
-typeArgToNode :: AboveInfo -> TypeArgRecValue -> Node
+typeArgToNode :: AboveInfo TypeArg -> TypeArgRecValue -> Node
 typeArgToNode aboveInfo tyArg = hole' "typeArgToNode"
 
-typeBindToNode :: AboveInfo -> TypeBindRecValue -> Node
+typeBindToNode :: AboveInfo TypeBind -> TypeBindRecValue -> Node
 typeBindToNode aboveInfo tyBind = hole' "typeBindToNode"
 
-typeBindListToNode :: AboveInfo -> ListTypeBindRecValue -> Node
+typeBindListToNode :: AboveInfo (List TypeBind) -> ListTypeBindRecValue -> Node
 typeBindListToNode aboveInfo tyBinds = -- TODO: write actual implementation
      makeNode {
         tag: TypeBindListNilNodeTag
@@ -216,7 +216,7 @@ typeBindListToNode aboveInfo tyBinds = -- TODO: write actual implementation
         , getSelect: Nothing
     }
 
-termBindToNode :: AboveInfo -> TermBindRecValue -> Node
+termBindToNode :: AboveInfo TermBind -> TermBindRecValue -> Node
 termBindToNode aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
   setNodeLabel md.varName
     $ makeNode
@@ -227,11 +227,11 @@ termBindToNode aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
         , tag: TermBindNodeTag
         }
 
-ctrParamListToNode :: AboveInfo -> ListCtrParamRecValue -> Node
+ctrParamListToNode :: AboveInfo (List CtrParam) -> ListCtrParamRecValue -> Node
 ctrParamListToNode aboveInfo ctrParams = hole' "ctrParamListToNode"
 
-typeArgListToNode :: AboveInfo -> ListTypeArgRecValue -> Node
+typeArgListToNode :: AboveInfo (List TypeArg) -> ListTypeArgRecValue -> Node
 typeArgListToNode aboveInfo tyArgs = hole' "typeArgListToNode"
 
-constructorListToNode :: AboveInfo -> ListCtrRecValue -> Node
+constructorListToNode :: AboveInfo (List Constructor) -> ListCtrRecValue -> Node
 constructorListToNode aboveInfo ctrs = hole' "constructorListToNode"

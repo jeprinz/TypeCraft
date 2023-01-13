@@ -10,6 +10,8 @@ import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrPar
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), State, CursorMode)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeArgListToNode, typeBindListToNode, typeBindToNode, typeToNode)
 import TypeCraft.Purescript.Util (hole')
+import Data.List(List(..))
+import Data.Tuple.Nested
 
 {-
 TODO: Note from Jacob:
@@ -17,15 +19,16 @@ Counterintuitvely, all cursor modes should use BISelect and AISelect, because it
 is possible.
 Conversely, all select modes should use BITerm and AICursor, because from select mode another selection is not possible.
 -}
+
 -- TODO: somehow `st.mode.cursorLocation` is being set to the mode
 stateToNode :: State -> Node
 stateToNode st = case st.mode of
   -- TODO: impl query
   CursorMode cursorMode -> case cursorMode.cursorLocation of
     TermCursor ctxs ty termPath term ->
-      termPathToNode BITerm { ctxs, term, termPath, ty }
+      termPathToNode (BISelect Nil term ctxs ty) { ctxs, term, termPath, ty }
         $ encursor cursorMode
-        $ termToNode (AICursor termPath) { ctxs, term, ty }
+        $ termToNode (AISelect termPath ctxs (term /\ ty) Nil) { ctxs, term, ty }
     TypeCursor ctxs typePath ty ->
       typePathToNode BITerm { ctxs, ty, typePath }
         $ encursor cursorMode
@@ -56,16 +59,16 @@ stateToNode st = case st.mode of
         $ typeBindListToNode (AICursor listTypeBindPath) { ctxs, tyBinds }
   SelectMode select -> case select of
     -- need more info about root to render it
-    { select: TermSelect ctxs isRootAtTop ty topPath middlePath term } ->  -- NOTE: I fixed this section, it was wrong in many ways
+    { select: TermSelect topPath ctx1 ty1 term1 middlePath ctx2 ty2 term2 root} -> -- TODO: render something differently depending on root?
       termPathToNode
         BITerm
-        { ctxs: hole' "stateToNode", ty: hole' "stateToNode", term: hole' "stateToNode", termPath: topPath } -- TODO: we need to get the context between the middle and top path. We could either store in the state, let pathToNode compute it, or write a separate function using the termPathRec recursor which computes the context at the top of a path, and apply that to middlepath. Same with ty, and also same with term.
+        { ctxs: ctx1, ty: ty1, term: term1, termPath: topPath}
         $ setNodeStyle makeSelectTopNodeStyle
         $ termPathToNode
             BITerm
-            { ctxs, ty, term: term, termPath: middlePath }
+            { ctxs: ctx2, ty: ty2, term: term2, termPath: middlePath }
         $ setNodeStyle makeSelectBotNodeStyle
-        $ typeToNode (AICursor (middlePath <> topPath)) { ctxs, ty }
+        $ termToNode (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2, term: term2 }
     _ -> hole' "stateToNode" -- TODO: all the other selections...
 
 encursor :: CursorMode -> Node -> Node
