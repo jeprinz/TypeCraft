@@ -12,11 +12,11 @@ isNonemptyQueryString :: Query -> Boolean
 isNonemptyQueryString query = not $ String.null query.string
 
 manipulateQuery :: String -> State -> CursorMode -> Maybe Query
-manipulateQuery key st cursorMode@{ query: query@{ string, completion_i, completionOption_i } }
-  | key == "ArrowUp" && isNonemptyQueryString query = pure query { completion_i = completion_i - 1 }
-  | key == "ArrowDown" && isNonemptyQueryString query = pure query { completion_i = completion_i + 1 }
-  | key == "ArrowLeft" && isNonemptyQueryString query = pure query { completionOption_i = query.completionOption_i - 1 }
-  | key == "ArrowRight" && isNonemptyQueryString query = pure query { completionOption_i = query.completionOption_i + 1 }
+manipulateQuery key st cursorMode@{ query: query@{ string, completionGroup_i, completionGroupItem_i } }
+  | key == "ArrowUp" && isNonemptyQueryString query = pure query { completionGroup_i = completionGroup_i - 1 }
+  | key == "ArrowDown" && isNonemptyQueryString query = pure query { completionGroup_i = completionGroup_i + 1 }
+  | key == "ArrowLeft" && isNonemptyQueryString query = pure query { completionGroupItem_i = query.completionGroupItem_i - 1 }
+  | key == "ArrowRight" && isNonemptyQueryString query = pure query { completionGroupItem_i = query.completionGroupItem_i + 1 }
   | otherwise = do
     traceM $ "manipulateQuery.key = " <> key
     string' <- manipulateString key string

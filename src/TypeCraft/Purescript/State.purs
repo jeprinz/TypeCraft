@@ -3,8 +3,10 @@ module TypeCraft.Purescript.State where
 import Data.Tuple.Nested
 import Prelude
 import Prim hiding (Type)
+import Data.Array as Array
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..))
+import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
 import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), TermBind(..), Type(..), TypeArg, TypeBind, UpPath)
@@ -41,16 +43,16 @@ instance showMode :: Show Mode where
 
 type Query
   = { string :: String
-    , completion_i :: Int
-    , completionOption_i :: Int
-    , completions :: Array (Array Completion)
+    , completionGroup_i :: Int
+    , completionGroupItem_i :: Int
+    , completionGroups :: Array (Array Completion)
     }
 
 data Completion
   = CompletionTerm Term
   | CompletionPath UpPath
 
-derive instance genericCompletion :: Generic Completion _ 
+derive instance genericCompletion :: Generic Completion _
 
 instance showCompletion :: Show Completion where
   show x = genericShow x
@@ -58,10 +60,15 @@ instance showCompletion :: Show Completion where
 emptyQuery :: Query
 emptyQuery =
   { string: ""
-  , completion_i: 0
-  , completionOption_i: 0
-  , completions: []
+  , completionGroup_i: 0
+  , completionGroupItem_i: 0
+  , completionGroups: []
   }
+
+getCompletion :: Query -> Maybe Completion
+getCompletion query =
+  Array.index query.completionGroups query.completionGroup_i
+    >>= (_ Array.!! query.completionGroupItem_i)
 
 makeCursorMode :: CursorLocation -> Mode
 makeCursorMode cursorLocation =
@@ -126,7 +133,7 @@ Note that TermSelect in particular also has a Type wherever there is a context, 
 -- are at thte type of the Term, regardless of root.
 data Select
   = TermSelect UpPath AllContext Type Term UpPath AllContext Type Term Boolean
---             <-------Cursor 1----------> <-----Cursor 2------------>
+  --             <-------Cursor 1----------> <-----Cursor 2------------>
   | TypeSelect UpPath AllContext Type UpPath AllContext Type Boolean
   | CtrListSelect UpPath AllContext (List Constructor) UpPath AllContext (List Constructor) Boolean
   | CtrParamListSelect UpPath AllContext (List CtrParam) UpPath AllContext (List CtrParam) Boolean
