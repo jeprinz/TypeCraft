@@ -58,5 +58,5 @@ export type NodeStyle
     | { case: 'query-insert-bot' }
     | { case: 'query-replace-new' }
     | { case: 'query-replace-old' }
-    | { case: 'query-invalid', string: string }
+    | { case: 'query-invalid' }
     | { case: 'query-metahole' }

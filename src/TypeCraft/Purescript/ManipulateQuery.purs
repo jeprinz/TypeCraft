@@ -5,7 +5,7 @@ import Data.Tuple.Nested
 import Prelude
 import Prim hiding (Type)
 import Data.Array.NonEmpty as Array
-import Data.Foldable (traverse_)
+import Data.Foldable (and, traverse_)
 import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..), isJust)
@@ -41,8 +41,10 @@ manipulateQuery key st cursorMode@{ query: query@{ string, completionGroup_i, co
 
 kindaStartsWith :: String -> String -> Boolean
 kindaStartsWith str pre =
-  isJust
-    $ String.stripPrefix (String.Pattern (String.take (String.length str) pre)) str
+  and
+    [ String.length pre > 0 -- prefix can't be empty
+    , isJust $ String.stripPrefix (String.Pattern (String.take (String.length str) pre)) str
+    ]
 
 calculateCompletionsGroups :: String -> State -> CursorMode -> Array (Array Completion)
 calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of

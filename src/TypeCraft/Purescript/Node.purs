@@ -207,7 +207,7 @@ foreign import makeQueryReplaceNewNodeStyle :: NodeStyle
 
 foreign import makeQueryReplaceOldNodeStyle :: NodeStyle
 
-foreign import makeQueryInvalidNodeStyle :: String -> NodeStyle
+foreign import makeQueryInvalidNodeStyle :: NodeStyle
 
 foreign import makeQueryMetaholeNodeStyle :: NodeStyle
 
