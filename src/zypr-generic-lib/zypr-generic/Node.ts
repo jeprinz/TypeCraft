@@ -10,6 +10,7 @@ export type Node = {
     isParenthesized: boolean,
     label?: string,
     queryString?: string,
+    completionGroups?: Node[],
     tag: NodeTag
 }
 
@@ -58,10 +59,3 @@ export type NodeStyle
     | { case: 'query-replace-new' }
     | { case: 'query-replace-old' }
     | { case: 'query-invalid', string: string }
-
-// // TODO: use properly
-// export type ExpNode =
-//     {
-//         exp: Exp,
-//         nodes: Node[]
-//     }

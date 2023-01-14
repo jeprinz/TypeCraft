@@ -2,27 +2,37 @@ module TypeCraft.Purescript.Grammar where
 
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.MD (AppMD, ArrowMD, BufferMD, ContextBoundaryMD, CtrMD, CtrParamMD, GADTMD, HoleMD, LambdaMD, LetMD, THoleMD, TLetMD, TNeuMD, TermBindMD, TypeArgMD, TypeBindMD, TypeBoundaryMD, VarMD)
+
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List)
+import Data.Maybe (Maybe, maybe)
 import Data.Show.Generic (genericShow)
+import Data.UUID (UUID, genUUID)
 import Effect.Ref (Ref, new, read, write)
 import Effect.Unsafe (unsafePerformEffect)
+import TypeCraft.Purescript.MD (AppMD, ArrowMD, BufferMD, ContextBoundaryMD, CtrMD, CtrParamMD, GADTMD, HoleMD, LambdaMD, LetMD, THoleMD, TLetMD, TNeuMD, TermBindMD, TypeArgMD, TypeBindMD, TypeBoundaryMD, VarMD, defaultTHoleMD)
+import TypeCraft.Purescript.Util (hole')
 
 type TypeHoleID
-  = Int -- figure out unique Ids later!
+  = UUID
 
 type TermVarID
-  = Int
+  = UUID
+
+freshTermVarID :: Unit -> TermVarID
+freshTermVarID _ = unsafePerformEffect genUUID
 
 type TypeVarID
-  = Int
+  = UUID
 
 data Type
   = Arrow ArrowMD Type Type
   | THole THoleMD TypeHoleID
   | TNeu TNeuMD TypeVarID (List TypeArg)
+
+freshTHole :: Unit -> Type
+freshTHole _ = THole defaultTHoleMD (freshTypeHoleID unit)
 
 data PolyType
   = Forall TypeVarID PolyType
@@ -46,8 +56,20 @@ data Term
 data TypeBind
   = TypeBind TypeBindMD TypeVarID
 
+freshTypeBind :: Maybe String -> TypeBind
+freshTypeBind mb_varName =
+  TypeBind
+    { varName: maybe "~" identity mb_varName }
+    (unsafePerformEffect genUUID)
+
 data TermBind
   = TermBind TermBindMD TermVarID
+
+freshTermBind :: Maybe String -> TermBind
+freshTermBind mb_varName =
+  TermBind
+    { varName: maybe "~" identity mb_varName }
+    (unsafePerformEffect genUUID)
 
 data CtrParam
   = CtrParam CtrParamMD Type
@@ -200,10 +222,10 @@ freshInt _ =
       currentValue
 
 freshTypeHoleID :: Unit -> TypeHoleID
-freshTypeHoleID = freshInt
+freshTypeHoleID _ = unsafePerformEffect genUUID
 
 freshTypeVarID :: Unit -> TypeVarID
-freshTypeVarID = freshInt
+freshTypeVarID _ = unsafePerformEffect genUUID
 
 instance eqType :: Eq Type where
   eq (Arrow _ t1 t2) (Arrow _ t1' t2') = (t1 == t1') && (t2 == t2')

@@ -30,6 +30,7 @@ foreign import makeNode_ ::
   , isParenthesized :: Boolean
   , label :: Nullable String
   , queryString :: Nullable String
+  , completionGroups :: Nullable Node
   , tag :: NodeTag_
   } ->
   Node
@@ -44,13 +45,14 @@ makeNode ::
 makeNode x =
   makeNode_
     { kids: x.kids
-    , getCursor: Nullable.fromMaybe ((\f _ -> let st = f unit in Debug.trace (show $ st.mode) \_ -> st ) <$> x.getCursor)
+    , getCursor: Nullable.fromMaybe x.getCursor
     , getSelect: Nullable.fromMaybe x.getSelect
     , style: makeNormalNodeStyle
     , indentation: makeInlineNodeIndentation
     , isParenthesized: false
     , label: Nullable.fromMaybe Nothing
     , queryString: Nullable.fromMaybe Nothing
+    , completionGroups: Nullable.fromMaybe Nothing
     , tag: toNodeTag_ x.tag
     }
 
@@ -63,6 +65,8 @@ foreign import setNodeParenthesized :: Boolean -> Node -> Node
 foreign import setNodeLabel :: String -> Node -> Node
 
 foreign import setNodeQueryString :: String -> Node -> Node
+
+foreign import setNodeCompletionGroups :: Array Node -> Node -> Node
 
 -- NodeIndentation
 foreign import data NodeIndentation :: Type

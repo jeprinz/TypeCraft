@@ -13,7 +13,9 @@
   , "prelude"
   , "refs"
   , "strings"
+  , "transformers"
   , "tuples"
+  , "uuid"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs" ]

@@ -99,6 +99,8 @@ export const setNodeLabel = label => node => ({ ...node, label })
 
 export const setNodeQueryString = queryString => node => ({ ...node, queryString })
 
+export const setNodeCompletionGroups = completionGroups => node => ({ ...node, completionGroups })
+
 // NodeIndentation
 export const makeInlineNodeIndentation = { case: 'inline' }
 export const makeNewlineNodeIndentation = { case: 'newline' }
