@@ -13,8 +13,8 @@ import Data.String as String
 import Data.UUID (UUID)
 import Debug (traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar (Type(..), Kind(..), PolyType(..), Term(..), TermVarID, Tooth(..), freshTHole, freshTermBind, freshTypeHoleID)
-import TypeCraft.Purescript.MD (defaultLambdaMD, defaultVarMD)
+import TypeCraft.Purescript.Grammar (Kind(..), PolyType(..), Term(..), TermVarID, Tooth(..), Type(..), freshHole, freshTHole, freshTermBind, freshTypeHoleID)
+import TypeCraft.Purescript.MD (defaultAppMD, defaultLambdaMD, defaultVarMD)
 import TypeCraft.Purescript.ManipulateString (isIgnoreKey, manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State)
 import TypeCraft.Purescript.Util (hole')
@@ -60,8 +60,9 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             Nothing -> unsafeThrow $ "the entry '" <> show (id /\ varName) <> "' was found in the ctxs.mdctx, but not in the ctxs.ctx: '" <> show ctxs.ctx <> "'"
             Just pty ->
               when (str `kindaStartsWith` varName) do
-                -- get the type of the var, and create holes for all the arguments
-                tell [ [ CompletionTerm $ fillNeutral pty id ty ] ]
+                case fillNeutral pty id ty of
+                  Nothing -> pure unit
+                  Just tm -> tell [ [ CompletionTerm tm ] ]
         )
         (Map.toUnfoldable ctxs.mdctx :: Array (UUID /\ String))
       -- lam
@@ -69,6 +70,18 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
         $ tell [ [ CompletionPath $ List.fromFoldable [ Lambda3 defaultLambdaMD (freshTermBind Nothing) (freshTHole unit) (freshTHole unit) ] ] ]
   _ -> [] -- TODO: impl
 
+-- create neutral form from variable of first type that can fill the hole of the
+-- second type 
 -- TODO: do properly
-fillNeutral :: PolyType -> TermVarID -> Type -> Term
-fillNeutral pty id ty = Var defaultVarMD id (List.fromFoldable [])
+fillNeutral :: PolyType -> TermVarID -> Type -> Maybe Term
+fillNeutral pty id ty = case pty of
+  Forall _ pty' -> fillNeutral pty' id ty
+  PType ty' -> fillNeutral' ty' id ty
+
+fillNeutral' :: Type -> TermVarID -> Type -> Maybe Term
+fillNeutral' ty id ty' = case ty of
+  -- TODO: generate args for neu
+  -- Arrow md ty1 ty2 ->
+  --   (\tm -> App defaultAppMD tm (freshHole unit) ty1 ?a)
+  --   <$> fillNeutral' ty2 id ty'
+  _ -> pure $ Var defaultVarMD id (List.fromFoldable []) -- TODO: obv wrong

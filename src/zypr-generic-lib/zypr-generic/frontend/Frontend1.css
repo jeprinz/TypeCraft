@@ -18,10 +18,12 @@
 
 .node.query-replace-new {
   background-color: rgb(196, 196, 255);
+  box-shadow: 0 0 0 1px black;
 }
 
 .node.query-replace-old {
   background-color: rgb(205, 205, 205);
+  box-shadow: 0 0 0 1px black;
 }
 
 /* punctuation */
