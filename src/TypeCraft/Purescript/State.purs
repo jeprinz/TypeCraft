@@ -48,6 +48,7 @@ type Query
     , completionGroups :: Array (Array Completion)
     }
 
+-- TODO: completions for other syntax kinds
 data Completion
   = CompletionTerm Term
   | CompletionPath UpPath

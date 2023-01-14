@@ -66,7 +66,7 @@ foreign import setNodeLabel :: String -> Node -> Node
 
 foreign import setNodeQueryString :: String -> Node -> Node
 
-foreign import setNodeCompletionGroups :: Array Node -> Node -> Node
+foreign import setNodeCompletionGroups :: Array (Array Node) -> Node -> Node
 
 -- NodeIndentation
 foreign import data NodeIndentation :: Type
@@ -208,6 +208,8 @@ foreign import makeQueryReplaceNewNodeStyle :: NodeStyle
 foreign import makeQueryReplaceOldNodeStyle :: NodeStyle
 
 foreign import makeQueryInvalidNodeStyle :: String -> NodeStyle
+
+foreign import makeQueryMetaholeNodeStyle :: NodeStyle
 
 -- utilities
 setIndentNodeIndentationIf :: Boolean -> Node -> Node

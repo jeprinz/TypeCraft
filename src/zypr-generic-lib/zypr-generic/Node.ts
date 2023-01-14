@@ -59,3 +59,4 @@ export type NodeStyle
     | { case: 'query-replace-new' }
     | { case: 'query-replace-old' }
     | { case: 'query-invalid', string: string }
+    | { case: 'query-metahole' }

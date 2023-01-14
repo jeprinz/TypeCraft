@@ -11,7 +11,7 @@ import Data.Show.Generic (genericShow)
 import Data.UUID (UUID, genUUID)
 import Effect.Ref (Ref, new, read, write)
 import Effect.Unsafe (unsafePerformEffect)
-import TypeCraft.Purescript.MD (AppMD, ArrowMD, BufferMD, ContextBoundaryMD, CtrMD, CtrParamMD, GADTMD, HoleMD, LambdaMD, LetMD, THoleMD, TLetMD, TNeuMD, TermBindMD, TypeArgMD, TypeBindMD, TypeBoundaryMD, VarMD, defaultTHoleMD)
+import TypeCraft.Purescript.MD (AppMD, ArrowMD, BufferMD, ContextBoundaryMD, CtrMD, CtrParamMD, GADTMD, HoleMD, LambdaMD, LetMD, THoleMD, TLetMD, TNeuMD, TermBindMD, TypeArgMD, TypeBindMD, TypeBoundaryMD, VarMD, defaultHoleMD, defaultTHoleMD)
 import TypeCraft.Purescript.Util (hole')
 
 type TypeHoleID
@@ -52,6 +52,9 @@ data Term
   | ContextBoundary ContextBoundaryMD TermVarID VarChange Term -- the VarChange goes from outside to inside.
   | Hole HoleMD {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}
   | Buffer BufferMD Term Type Term Type
+
+freshHole :: Unit -> Term
+freshHole _ = Hole defaultHoleMD
 
 data TypeBind
   = TypeBind TypeBindMD TypeVarID
