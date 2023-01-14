@@ -8,7 +8,7 @@ import TypeCraft.Purescript.CursorMovement (stepCursorBackwards, stepCursorForwa
 import TypeCraft.Purescript.Grammar (TermBind(..), TypeBind(..))
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
-import TypeCraft.Purescript.State (CursorLocation(..), CursorMode, Mode(..), Select, State, emptyQuery, makeCursorMode)
+import TypeCraft.Purescript.State (CursorLocation(..), CursorMode, Mode(..), Select, State, Query, emptyQuery, makeCursorMode)
 import TypeCraft.Purescript.Util (hole')
 
 handleKey :: String -> State -> Maybe State
@@ -24,9 +24,17 @@ handleKey key st = case st.mode of
       | key == "ArrowLeft" -> moveCursorPrev st
       | key == "ArrowRight" -> moveCursorNext st
       | key == "Escape" -> pure st { mode = CursorMode cursorMode { query = emptyQuery } }
-      | key == "Enter" -> pure st -- TODO
+      | key == "Enter" -> do
+        cursorMode' <- submitQuery cursorMode
+        pure $ setMode (CursorMode cursorMode') st
       | otherwise -> Nothing
   SelectMode selectMode -> hole' "handleKey: SelectMode"
+
+submitQuery :: CursorMode -> Maybe CursorMode
+submitQuery cursorMode = case cursorMode.cursorLocation of
+  TermCursor ctxs ty path tm -> do
+    hole' "submitQuery"
+  _ -> Nothing -- TODO: submit queries at other kinds of cursors?
 
 -- caches old mode in history
 setMode :: Mode -> State -> State

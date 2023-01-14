@@ -43,13 +43,24 @@ type Query
   = { string :: String
     , completion_i :: Int
     , completionOption_i :: Int
+    , completions :: Array (Array Completion)
     }
+
+data Completion
+  = CompletionTerm Term
+  | CompletionPath UpPath
+
+derive instance genericCompletion :: Generic Completion _ 
+
+instance showCompletion :: Show Completion where
+  show x = genericShow x
 
 emptyQuery :: Query
 emptyQuery =
   { string: ""
   , completion_i: 0
   , completionOption_i: 0
+  , completions: []
   }
 
 makeCursorMode :: CursorLocation -> Mode
