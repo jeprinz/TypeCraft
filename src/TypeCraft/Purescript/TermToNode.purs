@@ -183,7 +183,8 @@ typeToNode aboveInfo ty =
       , getSelect:
           case aboveInfo of
             AICursor path -> Nothing -- TODO: impl select
-            AISelect top topCtx topTy middle -> Just \_ -> makeState $ SelectMode $ {select: TypeSelect ty.ctxs false top middle ty.ty}
+            AISelect topPath topCtx topTy middlePath -> Just \_ -> makeState $ SelectMode $
+                {select: TypeSelect topPath topCtx topTy middlePath ty.ctxs ty.ty false}
       , tag: nodeInfo.tag
       }
 

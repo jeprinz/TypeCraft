@@ -114,14 +114,13 @@ Note that TermSelect in particular also has a Type wherever there is a context, 
 -- Boolean is true if root is at top, false if at bottom. The Type and Context
 -- are at thte type of the Term, regardless of root.
 data Select
---  = TermSelect AllContext Boolean Type UpPath UpPath Term
   = TermSelect UpPath AllContext Type Term UpPath AllContext Type Term Boolean
 --             <-------Cursor 1----------> <-----Cursor 2------------>
-  | TypeSelect AllContext Boolean UpPath UpPath Type
-  | CtrListSelect AllContext Boolean UpPath UpPath (List Constructor)
-  | CtrParamListSelect AllContext Boolean UpPath UpPath (List CtrParam)
-  | TypeArgListSelect AllContext Boolean UpPath UpPath (List TypeArg)
-  | TypeBindListSelect AllContext Boolean UpPath UpPath (List TypeBind)
+  | TypeSelect UpPath AllContext Type UpPath AllContext Type Boolean
+  | CtrListSelect UpPath AllContext (List Constructor) UpPath AllContext (List Constructor) Boolean
+  | CtrParamListSelect UpPath AllContext (List CtrParam) UpPath AllContext (List CtrParam) Boolean
+  | TypeArgListSelect UpPath AllContext (List TypeArg) UpPath AllContext (List TypeArg) Boolean
+  | TypeBindListSelect UpPath AllContext (List TypeBind) UpPath AllContext (List TypeBind) Boolean
 
 derive instance genericSelect :: Generic Select _
 
