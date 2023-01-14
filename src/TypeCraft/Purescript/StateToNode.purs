@@ -108,7 +108,7 @@ cursorModeToNode cursorMode =
                 -- head
                 setNodeStyle makeQueryInsertBotNodeStyle
                   $ termToNode
-                      (AISelect (termPath <> termPath') ctxs (term /\ ty) Nil)
+                      (AISelect (termPath' <> termPath) ctxs (term /\ ty) Nil)
                       { ctxs, term, ty }
               else
                 -- if this path completion is not selected, the render it with a

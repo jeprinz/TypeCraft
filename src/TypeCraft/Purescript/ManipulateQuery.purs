@@ -67,7 +67,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
         (Map.toUnfoldable ctxs.mdctx :: Array (UUID /\ String))
       -- lam
       when (str `kindaStartsWith` "lam")
-        $ tell [ [ CompletionPath $ List.fromFoldable [ Lambda3 defaultLambdaMD (freshTermBind Nothing) (freshTHole unit) (freshTHole unit) ] ] ]
+        $ tell [ [ CompletionPath $ List.fromFoldable [ Lambda3 defaultLambdaMD (freshTermBind Nothing) (freshTHole unit) ty ] ] ] -- TODO from Jacob: the fact that the body of this lambda is a freshTHole doesn't seem right, since that isn't the type of the program at that point.
   _ -> [] -- TODO: impl
 
 -- create neutral form from variable of first type that can fill the hole of the

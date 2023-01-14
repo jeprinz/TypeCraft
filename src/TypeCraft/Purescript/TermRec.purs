@@ -61,8 +61,8 @@ type TermRec a = {
 
 recTerm :: forall a. TermRec a -> TermRecValue -> a
 recTerm args {ctxs, ty: (Arrow _ ty1 ty2), term : (Lambda md bind@(TermBind xmd x) xty body bodyTy)}
-    = if not (ty1 == xty) then unsafeThrow "dynamic type error detected" else
-      if not (ty2 == bodyTy) then unsafeThrow "dynamic type error detected" else
+    = if not (ty1 == xty) then unsafeThrow "dynamic type error detected 8" else
+      if not (ty2 == bodyTy) then unsafeThrow "dynamic type error detected 9" else
       let ctxs' = ctxs{mdctx= insert x xmd.varName ctxs.mdctx, ctx= insert x (PType ty1) ctxs.ctx} in
         args.lambda md {ctxs, tBind: bind}
             {ctxs, ty: xty}
