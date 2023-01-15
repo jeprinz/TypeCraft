@@ -3,6 +3,7 @@ module TypeCraft.Purescript.State where
 import Data.Tuple.Nested
 import Prelude
 import Prim hiding (Type)
+
 import Data.Array as Array
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..))
@@ -49,9 +50,9 @@ type Query
     }
 
 -- TODO: completions for other syntax kinds
-data Completion
-  = CompletionTerm Term
-  | CompletionPath UpPath
+data Completion 
+  = CompletionTerm Term -- TODO: add Type 
+  | CompletionPath UpPath -- TODO: add TypeChange
 
 derive instance genericCompletion :: Generic Completion _
 
@@ -67,9 +68,9 @@ emptyQuery =
   }
 
 getCompletion :: Query -> Maybe Completion
-getCompletion query =
-  Array.index query.completionGroups query.completionGroup_i
-    >>= (_ Array.!! query.completionGroupItem_i)
+getCompletion query = do
+  cmpls <- query.completionGroups Array.!! (query.completionGroup_i `mod` Array.length query.completionGroups)
+  cmpls Array.!! (query.completionGroupItem_i `mod` Array.length cmpls)
 
 makeCursorMode :: CursorLocation -> Mode
 makeCursorMode cursorLocation =
