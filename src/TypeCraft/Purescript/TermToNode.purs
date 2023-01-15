@@ -88,6 +88,7 @@ termToNode aboveInfo term =
                     , typeBindListToNode (stepAI (Let2 md tBind.tBind {-List TypeBind-} def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tyBinds
                     , termToNode (stepAI (Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
                     , typeToNode (stepAI (Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
+                    , termToNode (stepAI (Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
                     , indentIf md.bodyIndented $ termToNode (stepAI (Let5 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy) aboveInfo) body
                     ]
                 }
