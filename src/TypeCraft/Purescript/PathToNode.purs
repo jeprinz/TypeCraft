@@ -38,7 +38,7 @@ type PreNode = {
 makeTermNode :: BelowInfo Term Type -> TermPathRecValue -> PreNode -> Node
 makeTermNode belowInfo termPath preNode =
       makeNode
-        { kids: preNode.kids <#> setCalculatedNodeData preNode.tag >>> pure
+        { kids: setCalculatedNodeData preNode.tag <$> preNode.kids
         , getCursor:
             Just \_ ->
               trace ("here termPathToNode" <> show termPath.termPath <> " \nand term is: " <> show termPath.term) \_ ->
@@ -68,8 +68,8 @@ termPathToNode belowInfo termPath innerNode =
                     , kids:
                         [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds term ty.ty body.term bodyTy : upRecVal.termPath)) tBind
                         , typeBindListToNode (AICursor (Let2 md tBind.tBind {-List TypeBind-} term ty.ty body.term bodyTy : upRecVal.termPath)) tyBinds
-                        , innerNode
                         , typeToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds term {-Type-} body.term bodyTy : upRecVal.termPath)) ty
+                        , innerNode
                         , termToNode (AICursor (Let5 md tBind.tBind tyBinds.tyBinds term ty.ty {-Term-} bodyTy : upRecVal.termPath)) body
                         ]
                     }
@@ -118,8 +118,8 @@ termPathToNode belowInfo termPath innerNode =
                         , kids:
                             [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term ty.ty term bodyTy : upRecVal.termPath)) tBind
                             , typeBindListToNode (AICursor (Let2 md tBind.tBind {-List TypeBind-} def.term ty.ty term bodyTy : termPath.termPath)) tyBinds
-                            , termToNode (AICursor ((Let3 md tBind.tBind tyBinds.tyBinds {-def-} ty.ty term bodyTy) : upRecVal.termPath)) def
                             , typeToNode (AICursor (Let4 md tBind.tBind tyBinds.tyBinds def.term {-Type-} term bodyTy : upRecVal.termPath)) ty
+                            , termToNode (AICursor ((Let3 md tBind.tBind tyBinds.tyBinds {-def-} ty.ty term bodyTy) : upRecVal.termPath)) def
                             , innerNode
                             ]
                         }
@@ -137,7 +137,7 @@ typePathToNode belowInfo typePath innerNode =
 
     makeTypeNode belowInfo typePath partialNode =
       makeNode
-        { kids: partialNode.kids <#> pure
+        { kids: partialNode.kids
         , getCursor:
             let
               belowType = case belowInfo of
@@ -172,8 +172,8 @@ typePathToNode belowInfo typePath innerNode =
                     { kids:
                         [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term typePath.ty body.term bodyTy : termPath.termPath)) tBind
                         , typeBindListToNode (AICursor (Let2 md tBind.tBind {-List TypeBind-} def.term ty body.term bodyTy : termPath.termPath)) tyBinds
-                        , termToNode (AICursor (Let3 md tBind.tBind tyBinds.tyBinds {-Term-} typePath.ty body.term bodyTy : termPath.termPath)) def
                         , innerNode
+                        , termToNode (AICursor (Let3 md tBind.tBind tyBinds.tyBinds {-Term-} typePath.ty body.term bodyTy : termPath.termPath)) def
                         , termToNode (AICursor (Let5 md tBind.tBind tyBinds.tyBinds def.term typePath.ty {-Term-} bodyTy : termPath.termPath)) body
                         ]
                     , tag: LetNodeTag
@@ -266,8 +266,8 @@ termBindPathToNode termBindPath innerNode =
               $ makeTermNode newBI termPath {
                     kids: [ innerNode
                     , typeBindListToNode (AICursor (Let2 md tBind {-List TypeBind-} def.term defTy.ty body.term bodyTy : termPath.termPath)) tyBinds
-                    , termToNode (AICursor ((Let3 md tBind tyBinds.tyBinds defTy.ty body.term bodyTy) : termPath.termPath)) def
                     , typeToNode (AICursor ((Let4 md tBind tyBinds.tyBinds def.term body.term bodyTy) : termPath.termPath)) defTy
+                    , termToNode (AICursor ((Let3 md tBind tyBinds.tyBinds defTy.ty body.term bodyTy) : termPath.termPath)) def
                     , termToNode (AICursor ((Let5 md tBind tyBinds.tyBinds def.term defTy.ty bodyTy) : termPath.termPath)) body
                     ]
                     , tag: LetNodeTag
@@ -306,8 +306,8 @@ typeBindListPathToNode belowInfo typeBindListPath innerNode =
                     { kids:
                         [ termBindToNode (AICursor (Let1 md {-tbind-} tyBinds def.term defTy.ty body.term bodyTy : termPath.termPath)) tBind
                         , innerNode
-                        , termToNode (AICursor (Let3 md tBind.tBind tyBinds {-Term-} defTy.ty body.term bodyTy : termPath.termPath)) def
                         , typeToNode (AICursor (Let4 md tBind.tBind tyBinds def.term {-Type-} body.term bodyTy : termPath.termPath)) defTy
+                        , termToNode (AICursor (Let3 md tBind.tBind tyBinds {-Term-} defTy.ty body.term bodyTy : termPath.termPath)) def
                         , termToNode (AICursor (Let5 md tBind.tBind tyBinds def.term defTy.ty {-Term-} bodyTy : termPath.termPath)) body
                         ]
                     , tag: LetNodeTag
