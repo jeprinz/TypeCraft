@@ -4,6 +4,7 @@ import Control.Monad.Writer
 import Data.Tuple.Nested
 import Prelude
 import Prim hiding (Type)
+
 import Data.Array.NonEmpty as Array
 import Data.Foldable (and, traverse_)
 import Data.List as List
@@ -14,7 +15,7 @@ import Data.UUID (UUID)
 import Debug (traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Grammar (Kind(..), PolyType(..), Term(..), TermVarID, Tooth(..), Type(..), freshHole, freshTHole, freshTermBind, freshTypeHoleID)
-import TypeCraft.Purescript.MD (defaultAppMD, defaultLambdaMD, defaultVarMD)
+import TypeCraft.Purescript.MD (defaultAppMD, defaultLambdaMD, defaultLetMD, defaultVarMD)
 import TypeCraft.Purescript.ManipulateString (isIgnoreKey, manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State)
 import TypeCraft.Purescript.Util (hole')
@@ -68,6 +69,13 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
       -- lam
       when (str `kindaStartsWith` "lam")
         $ tell [ [ CompletionPath $ List.fromFoldable [ Lambda3 defaultLambdaMD (freshTermBind Nothing) (freshTHole unit) ty ] ] ]
+      -- let
+      when (str `kindaStartsWith` "let")
+        $ tell
+            [ [ CompletionPath $ List.fromFoldable [ Let3 defaultLetMD (freshTermBind Nothing) List.Nil (freshTHole unit) (freshHole unit) ty ]
+              , CompletionPath $ List.fromFoldable [ Let5 defaultLetMD (freshTermBind Nothing) List.Nil (freshHole unit) (freshTHole unit) ty ]
+              ]
+            ]
   _ -> [] -- TODO: impl
 
 -- create neutral form from variable of first type that can fill the hole of the

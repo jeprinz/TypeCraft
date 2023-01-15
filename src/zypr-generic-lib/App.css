@@ -11,7 +11,7 @@ body {}
 .editor {
   line-height: 1.2rem;
 
-  overflow: scroll;
+  /* overflow: scroll; */
 
   white-space: pre;
   font-family: monospace;

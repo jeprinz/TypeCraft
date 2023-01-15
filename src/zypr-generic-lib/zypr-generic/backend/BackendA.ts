@@ -11,10 +11,12 @@ export const makeBackend = (state: State.State): Backend.Backend => {
   return {
     props: {
       language: language(),
-      format: (st: State.State) => [stateToNode(st)],
+      format: (st: State.State) => stateToNode(st),
       handleKeyboardEvent: (event) => (st) => {
         // console.log("handleKeyboardEvent.event.key", event.key)
-        return ModifyState.handleKey(event.key, st)
+        let st_ = ModifyState.handleKey(event.key, st)
+        if (st_ !== undefined) event.preventDefault()
+        return st_
       }
     },
     state

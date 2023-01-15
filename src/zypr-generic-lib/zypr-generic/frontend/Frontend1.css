@@ -4,13 +4,9 @@
   display: inline;
 }
 
-.node.cursorable {
+.node.cursorable {}
 
-}
-
-.node.selectable {
-
-}
+.node.selectable {}
 
 .node.cursor {
   box-shadow: 0 0 0 1px black;
@@ -24,6 +20,34 @@
 .node.query-replace-old {
   background-color: rgb(205, 205, 205);
   box-shadow: 0 0 0 1px black;
+}
+
+/* query */
+
+.query {
+  display: inline;
+}
+
+.query-string {
+  display: inline;
+  box-shadow: 0 0 0 1px black;
+}
+
+.query-completions {
+  display: inline;
+  position: relative;
+}
+
+.query-completions-inner {
+  position: absolute;
+  background: white;
+  box-shadow: 
+    2px 2px 2px 0 black,
+    0 0 0 1px blue;
+}
+
+.query-completion {
+  box-shadow: 0 0 0 1px blue;
 }
 
 /* punctuation */

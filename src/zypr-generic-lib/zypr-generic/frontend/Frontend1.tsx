@@ -14,34 +14,27 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       classNames: string[],
       kids: JSX.Element[],
     ): JSX.Element[] {
+      // Parenthesization
       if (node.isParenthesized)
         kids = ([] as JSX.Element[]).concat([Punc.parenL], kids, [Punc.parenR])
 
+      // TODO: Indentation 
+
+      // Cursor
       if (node.getCursor !== undefined) classNames.push("cursorable")
 
+      // Select
       if (node.getSelect !== undefined) classNames.push("selectable")
 
-      switch (node.style.case) {
-        case 'normal': break
-        case 'cursor': classNames.push("cursor"); break
-        case 'query-insert-bot': break // TODO
-        case 'query-insert-top': break // TODO
-        case 'query-invalid': break // TODO
-        case 'query-replace-new': break // TODO
-        case 'query-replace-old': break // TODO
-        case 'select-bot': break // TODO
-        case 'select-top': break // TODO
-      }
+      // NodeStyle
+      classNames.push(node.style.case)
 
       function onClick(event: React.MouseEvent) {
         console.log("onClick")
 
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
-          // editor.setState(getCursor())
-          let state = getCursor()
-          editor.setState(state)
-
+          editor.setState(getCursor())
           event.stopPropagation()
         } else {
           console.log(`getCursor is undefined for this '${node.tag.case}' node`)
@@ -50,6 +43,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         // TODO: do selection
       }
 
+      /*
       if (node.queryString !== undefined) {
         return [
           <div
@@ -74,10 +68,34 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           </div>
         ]
       }
+      */
+      let result = []
+      if (node.queryString !== undefined) {
+        result.push(
+          <div className="query">
+            <div className="query-string">{node.queryString}</div>
+            <div className="query-completions">
+              <div className="query-completions-inner">{
+                node.completions !== undefined ?
+                  node.completions.map(node => <div className="query-completion">{renderNode(node)}</div>) :
+                  <div className="query-completion query-completion-empty">no completions</div>
+              }</div>
+            </div>
+          </div>
+        )
+      }
+      result.push(
+        <div
+          className={([] as string[]).concat(["node"], classNames).join(" ")}
+          onClick={onClick}
+        >
+          {kids}
+        </div>
+      )
+      return result
     }
 
     function renderNode(node: Node): JSX.Element[] {
-
       // assumes that kids are always rendered in the order of the node's
       // children
       var kid_i = -1
@@ -85,7 +103,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         kid_i++
         if (!(0 <= kid_i && kid_i < node.kids.length))
           throw new Error(`kid index ${kid_i} out of range for node tag '${node.tag.case}', which has ${node.kids.length} kids`);
-        return renderNodes(node.kids[kid_i])
+        return renderNode(node.kids[kid_i])
       }
 
       const showLabel = (label: string | undefined) => label !== undefined ? (label.length > 0 ? label : "~") : "<undefined>"
@@ -126,15 +144,11 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       }
     }
 
-    function renderNodes(nodes: Node[]): JSX.Element[] {
-      return nodes.flatMap((node) => renderNode(node))
-    }
-
-    const nodes = backend.props.format(editor.state)
-    return renderNodes(nodes)
+    return renderNode(backend.props.format(editor.state))
   }
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
+    if (event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) return
     const state = editor.props.backend.handleKeyboardEvent(event)(editor.state)
     if (state === undefined) {
       console.log("[!] handleKeyboardEvent failed")

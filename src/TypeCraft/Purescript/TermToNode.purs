@@ -86,7 +86,6 @@ termToNode aboveInfo term =
                 , kids:
                     [ termBindToNode (stepAI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tBind
                     , typeBindListToNode (stepAI (Let2 md tBind.tBind {-List TypeBind-} def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tyBinds
-                    , termToNode (stepAI (Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
                     , typeToNode (stepAI (Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
                     , termToNode (stepAI (Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
                     , indentIf md.bodyIndented $ termToNode (stepAI (Let5 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy) aboveInfo) body
@@ -139,7 +138,7 @@ termToNode aboveInfo term =
     -- pieces that are the same for every syntactic form are done here:
     setNodeLabelMaybe nodeInfo.label
       $ makeNode
-          { kids: nodeInfo.kids <#> setCalculatedNodeData nodeInfo.tag >>> pure
+          { kids: setCalculatedNodeData nodeInfo.tag <$> nodeInfo.kids
           , getCursor: Just \_ -> 
               makeState $ makeCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
           , getSelect:
@@ -178,7 +177,7 @@ typeToNode aboveInfo ty =
         ty
   in
     makeNode
-      { kids: nodeInfo.kids <#> pure
+      { kids: nodeInfo.kids
       , getCursor: Just \_ -> 
           makeState $ makeCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
       , getSelect:
@@ -213,7 +212,7 @@ typeBindListToNode :: AboveInfo (List TypeBind) -> ListTypeBindRecValue -> Node
 typeBindListToNode aboveInfo tyBinds = -- TODO: write actual implementation
      makeNode {
         tag: TypeBindListNilNodeTag
-        , kids: [[]]
+        , kids: []
         , getCursor: Just \_ -> makeState $ makeCursorMode $ TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
         , getSelect: Nothing
     }

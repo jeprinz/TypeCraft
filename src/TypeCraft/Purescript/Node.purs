@@ -22,21 +22,21 @@ import TypeCraft.Purescript.Util (hole)
 foreign import data Node :: Type
 
 foreign import makeNode_ ::
-  { kids :: Array (Array Node)
+  { kids :: Array Node
   , getCursor :: Nullable (Unit -> State)
   , getSelect :: Nullable (Unit -> State)
   , style :: NodeStyle
   , indentation :: NodeIndentation
   , isParenthesized :: Boolean
-  , label :: Nullable String
-  , queryString :: Nullable String
-  , completionGroups :: Nullable Node
   , tag :: NodeTag_
+  , label :: Nullable String -- requires: Term.Var, TermBind
+  , queryString :: Nullable String -- requires: active query
+  , completions :: Nullable (Array Node) -- requires: active query
   } ->
   Node
 
 makeNode ::
-  { kids :: Array (Array Node)
+  { kids :: Array Node
   , getCursor :: Maybe (Unit -> State)
   , getSelect :: Maybe (Unit -> State)
   , tag :: NodeTag
@@ -52,7 +52,7 @@ makeNode x =
     , isParenthesized: false
     , label: Nullable.fromMaybe Nothing
     , queryString: Nullable.fromMaybe Nothing
-    , completionGroups: Nullable.fromMaybe Nothing
+    , completions: Nullable.fromMaybe Nothing
     , tag: toNodeTag_ x.tag
     }
 
@@ -66,7 +66,7 @@ foreign import setNodeLabel :: String -> Node -> Node
 
 foreign import setNodeQueryString :: String -> Node -> Node
 
-foreign import setNodeCompletionGroups :: Array (Array Node) -> Node -> Node
+foreign import setNodeCompletions :: Array Node -> Node -> Node
 
 -- NodeIndentation
 foreign import data NodeIndentation :: Type

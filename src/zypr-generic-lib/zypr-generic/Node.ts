@@ -2,7 +2,7 @@ export type Cursor = any // Purescript
 export type Select = any // Purescript
 
 export type Node = {
-    kids: Node[][],
+    kids: Node[],
     getCursor?: (() => Cursor),
     getSelect?: (() => Select),
     style: NodeStyle,
@@ -10,7 +10,7 @@ export type Node = {
     isParenthesized: boolean,
     label?: string,
     queryString?: string,
-    completionGroups?: Node[],
+    completions?: Node[],
     tag: NodeTag
 }
 
