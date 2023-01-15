@@ -72,7 +72,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
       -- let
       when (str `kindaStartsWith` "let")
         $ tell
-            [ [ CompletionPath $ List.fromFoldable [ Let3 defaultLetMD (freshTermBind Nothing) List.Nil (freshTHole unit) (freshHole unit) ty ]
+            [ [ CompletionPath $ List.fromFoldable [ Let3 defaultLetMD (freshTermBind Nothing) List.Nil ty (freshHole unit) ty ]
               , CompletionPath $ List.fromFoldable [ Let5 defaultLetMD (freshTermBind Nothing) List.Nil (freshHole unit) (freshTHole unit) ty ]
               ]
             ]

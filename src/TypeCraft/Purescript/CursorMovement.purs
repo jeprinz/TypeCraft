@@ -35,8 +35,8 @@ getCursorChildren (TermCursor ctxs ty up term) =
             , lett: \md tBind tBinds def defTy body bodyTy ->
                 TermBindCursor tBind.ctxs (Let1 md {--} tBinds.tyBinds def.term defTy.ty body.term bodyTy : up) tBind.tBind
                 : TypeBindListCursor tBinds.ctxs (Let2 md tBind.tBind {--} def.term defTy.ty body.term bodyTy : up) tBinds.tyBinds
-                : TermCursor def.ctxs def.ty (Let3 md tBind.tBind tBinds.tyBinds defTy.ty body.term bodyTy : up) def.term
                 : TypeCursor defTy.ctxs (Let4 md tBind.tBind tBinds.tyBinds def.term body.term bodyTy : up) defTy.ty
+                : TermCursor def.ctxs def.ty (Let3 md tBind.tBind tBinds.tyBinds defTy.ty body.term bodyTy : up) def.term
                 : TermCursor body.ctxs body.ty (Let5 md tBind.tBind tBinds.tyBinds def.term defTy.ty bodyTy : up) body.term : Nil
             , dataa : \md tBind tyBinds ctrs body bodyTy -> TermCursor body.ctxs body.ty (Data4 md tBind.tyBind tyBinds.tyBinds ctrs.ctrs bodyTy : up) body.term: Nil
             , tlet : \md tbind tyBinds def body bodyTy ->
@@ -77,7 +77,7 @@ parent (TermCursor ctxs ty termPath term) =
     recTermPath
         {
             let3: \upRec md tBind tyBinds defTy body bodyTy ->
-                Just $ TermCursor upRec.ctxs upRec.ty upRec.termPath upRec.term /\ (3 - 1)
+                Just $ TermCursor upRec.ctxs upRec.ty upRec.termPath upRec.term /\ (4 - 1)
             , let5: \upRec md tBind tyBinds def defTy bodyTy ->
                 Just $ TermCursor upRec.ctxs upRec.ty upRec.termPath upRec.term /\ (5 - 1)
             , data4: \upRec md bind tyBinds ctrs bodyTy ->
@@ -124,7 +124,7 @@ parent (TypeCursor ctxs typePath ty) =
       { lambda2:
         \termPath md tBind {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
         , let4:
-            \termPath md tBind tyBinds def {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (4 - 1)
+            \termPath md tBind tyBinds def {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (3 - 1)
         , buffer2: \termPath md def {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
         , tLet3: \termPath md tyBind tyBinds {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (3 - 1)
         , ctrParam1: \ctrParamPath md {-Type-} -> (hole' "parent")
