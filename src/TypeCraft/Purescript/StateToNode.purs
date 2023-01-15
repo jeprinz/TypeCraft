@@ -6,9 +6,12 @@ import Prim hiding (Type)
 import Data.Array (foldr)
 import Data.Array as Array
 import Data.List (List(..))
+import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.String as String
 import Data.Tuple.Nested ((/\))
+import TypeCraft.Purescript.ChangePath (chTermPath)
+import TypeCraft.Purescript.ChangeTerm (chTerm)
 import TypeCraft.Purescript.Grammar (freshHole)
 import TypeCraft.Purescript.Node (Node, makeCursorNodeStyle, makeQueryInsertBotNodeStyle, makeQueryInsertTopStyle, makeQueryInvalidNodeStyle, makeQueryMetaholeNodeStyle, makeQueryReplaceNewNodeStyle, makeSelectBotNodeStyle, makeSelectTopNodeStyle, setNodeCompletions, setNodeQueryString, setNodeStyle)
 import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeArgListPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode)
@@ -46,21 +49,20 @@ cursorModeToNode cursorMode =
     if not (String.null cursorMode.query.string) then
       -- if the query has content
       flip (foldr ($))
-          [ setNodeQueryString cursorMode.query.string
-          , setNodeCompletions
-              ( (Array.range 0 (n_completionGroups - 1) `Array.zip` cursorMode.query.completionGroups)
-                  <#> \(completionGroup_i /\ cmpls) ->
-                      completionToNode false
-                        if completionGroup_i == cursorMode.query.completionGroup_i `mod` n_completionGroups then
-                          fromJust $ cmpls Array.!! cursorMode.query.completionGroup_i `mod` n_completionGroups
-                        else
-                          -- cmpls should never be empty, because then there wouldn't be a completionGroup for it
-                          fromJust $ cmpls Array.!! 0
-              )
-          ]
-          case getCompletion cursorMode.query of
-            Nothing -> cursorModeTermToNode unit
-            Just cmpl -> completionToNode true cmpl
+        [ setNodeQueryString cursorMode.query.string
+        , setNodeCompletions
+            ( (Array.range 0 (n_completionGroups - 1) `Array.zip` cursorMode.query.completionGroups)
+                <#> \(completionGroup_i /\ cmpls) ->
+                    completionToNode false
+                      if completionGroup_i == cursorMode.query.completionGroup_i `mod` n_completionGroups then
+                        fromJust $ cmpls Array.!! cursorMode.query.completionGroup_i `mod` n_completionGroups
+                      else
+                        -- cmpls should never be empty, because then there wouldn't be a completionGroup for it
+                        fromJust $ cmpls Array.!! 0
+            )
+        ] case getCompletion cursorMode.query of
+        Nothing -> cursorModeTermToNode unit
+        Just cmpl -> completionToNode true cmpl
     else
       -- if the query is empty
       cursorModeTermToNode unit
@@ -92,29 +94,33 @@ cursorModeToNode cursorMode =
 
   completionToNode :: Boolean -> Completion -> Node
   completionToNode isInline cmpl = case cmpl of
-    CompletionTerm term -> case cursorMode.cursorLocation of
-      TermCursor ctxs ty termPath _ ->
+    CompletionTerm term ty -> case cursorMode.cursorLocation of
+      TermCursor ctxs _ty termPath _ ->
         setNodeStyle makeQueryReplaceNewNodeStyle
           $ termToNode
               (AISelect termPath ctxs (term /\ ty) Nil)
               { ctxs, term, ty }
       _ -> hole' "completionToNode CompletionTerm non-TermCursor"
-    CompletionPath termPath -> case cursorMode.cursorLocation of
+    CompletionTermPath termPath ch -> case cursorMode.cursorLocation of
       TermCursor ctxs ty termPath' term ->
-        -- TODO: why doesn't termPathToNode need to use termPath'? or, its wrong
-        setNodeStyle makeQueryInsertTopStyle
-          $ termPathToNode
-              BITerm
-              { ctxs, term, termPath, ty }
-              if isInline then
-                -- if inline, render with cursor term at head
-                setNodeStyle makeQueryInsertBotNodeStyle
-                  $ termToNode
-                      (AISelect (termPath' <> termPath) ctxs (term /\ ty) Nil)
-                      { ctxs, term, ty }
-              else
-                -- if not inline, then render with metahole at head
-                makeMetahole unit
+        let
+          _ /\ term' = chTerm Map.empty Map.empty ch term
+        in
+          -- TODO: why doesn't termPathToNode need to use termPath'? or, its wrong
+          setNodeStyle makeQueryInsertTopStyle
+            $ termPathToNode
+                BITerm
+                { ctxs, term, termPath, ty }
+                ( setNodeStyle makeQueryInsertBotNodeStyle
+                    if isInline then
+                      -- if inline, render with cursor term at head
+                      termToNode
+                        (AISelect (termPath' <> termPath) ctxs (term' /\ ty) Nil)
+                        { ctxs, term: term', ty }
+                    else
+                      -- if not inline, then render with metahole at head
+                      makeMetahole unit
+                )
       _ -> hole' "completionToNode CompletionPath non-TermCursor"
 
   makeMetahole :: Unit -> Node

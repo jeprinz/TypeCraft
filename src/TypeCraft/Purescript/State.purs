@@ -10,7 +10,7 @@ import Data.List (List(..))
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
-import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), TermBind(..), Type(..), TypeArg, TypeBind, UpPath)
+import TypeCraft.Purescript.Grammar (Change, Constructor, CtrParam, Term(..), TermBind(..), Type(..), TypeArg, TypeBind, UpPath)
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
 import TypeCraft.Purescript.ShallowEmbed (exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
 import TypeCraft.Purescript.Util (hole)
@@ -51,8 +51,8 @@ type Query
 
 -- TODO: completions for other syntax kinds
 data Completion 
-  = CompletionTerm Term -- TODO: add Type 
-  | CompletionPath UpPath -- TODO: add TypeChange
+  = CompletionTerm Term Type
+  | CompletionTermPath UpPath Change
 
 derive instance genericCompletion :: Generic Completion _
 
