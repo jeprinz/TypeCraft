@@ -1,14 +1,18 @@
 module TypeCraft.Purescript.ModifyState where
 
+import Data.Tuple.Nested
 import Prelude
 import Data.Array ((:))
+import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Debug (trace)
+import TypeCraft.Purescript.ChangePath (chTermPath, chTypePath)
+import TypeCraft.Purescript.ChangeTerm (chType)
 import TypeCraft.Purescript.CursorMovement (stepCursorBackwards, stepCursorForwards)
-import TypeCraft.Purescript.Grammar (TermBind(..), TypeBind(..))
+import TypeCraft.Purescript.Grammar (Change(..), TermBind(..), TypeBind(..))
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
-import TypeCraft.Purescript.State (CursorLocation(..), CursorMode, Mode(..), Select, State, Query, emptyQuery, makeCursorMode)
+import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select, State, emptyQuery, getCompletion, makeCursorMode)
 import TypeCraft.Purescript.Util (hole')
 
 handleKey :: String -> State -> Maybe State
@@ -32,8 +36,22 @@ handleKey key st = case st.mode of
 
 submitQuery :: CursorMode -> Maybe CursorMode
 submitQuery cursorMode = case cursorMode.cursorLocation of
-  TermCursor ctxs ty path tm -> do
-    hole' "submitQuery"
+  TermCursor ctxs ty path tm ->
+    getCompletion cursorMode.query
+      >>= case _ of
+          CompletionTerm tm' ty' -> do
+            pure
+              { cursorLocation: TermCursor ctxs ty' (chTermPath Map.empty Map.empty (Replace ty ty') path) tm'
+              , query: emptyQuery
+              }
+          CompletionTermPath pathNew ch ->
+            let
+              path' = chTypePath Map.empty Map.empty ch path
+            in
+              pure
+                { cursorLocation: TermCursor ctxs ty (pathNew <> path') tm
+                , query: emptyQuery
+                }
   _ -> Nothing -- TODO: submit queries at other kinds of cursors?
 
 -- caches old mode in history

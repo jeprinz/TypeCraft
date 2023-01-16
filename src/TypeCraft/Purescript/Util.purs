@@ -29,3 +29,7 @@ fromJust Nothing = unsafeThrow "fromJust failed"
 fromJust' :: forall a . String -> Maybe a -> a
 fromJust' _ (Just x) = x
 fromJust' msg Nothing = unsafeThrow $ "fromJust failed: " <> msg
+
+justWhen :: forall a. Boolean -> (Unit -> a) -> Maybe a 
+justWhen false _ = Nothing
+justWhen true k = Just (k unit)

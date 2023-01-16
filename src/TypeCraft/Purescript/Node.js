@@ -84,8 +84,10 @@ export const makeCursorNodeStyle = { case: 'cursor' }
 export const makeSelectTopNodeStyle = { case: 'select-top' }
 export const makeSelectBotNodeStyle = { case: 'select-bot' }
 export const makeQueryInsertTopStyle = { case: 'query-insert-top' }
+export const makeQueryInsertTopActiveStyle = { case: 'query-insert-top-active' }
 export const makeQueryInsertBotNodeStyle = { case: 'query-insert-bot' }
 export const makeQueryReplaceNewNodeStyle = { case: 'query-replace-new' }
+export const makeQueryReplaceNewActiveNodeStyle = { case: 'query-replace-new-active' }
 export const makeQueryReplaceOldNodeStyle = { case: 'query-replace-old' }
 export const makeQueryInvalidNodeStyle = (str) => ({ case: 'query-invalid', string: str })
 export const makeQueryMetaholeNodeStyle = { case: 'query-metahole' }

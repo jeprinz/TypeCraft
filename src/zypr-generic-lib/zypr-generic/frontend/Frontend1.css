@@ -30,8 +30,20 @@
 
 .query-string {
   display: inline;
-  box-shadow: 0 0 0 1px black;
+  background-color: rgb(255, 208, 106);
 }
+
+.query-insert-top {
+
+}
+
+.query-insert-top-active {
+  background-color: rgb(208, 236, 255);
+}
+
+.query-replace-new {}
+
+.query-replace-new-active {}
 
 .query-completions {
   display: inline;
@@ -41,7 +53,7 @@
 .query-completions-inner {
   position: absolute;
   background: white;
-  box-shadow: 
+  box-shadow:
     2px 2px 2px 0 black,
     0 0 0 1px blue;
 }

@@ -1,22 +1,22 @@
 module TypeCraft.Purescript.TermToNode where
 
+import Data.Tuple.Nested
 import Prelude
 import Prim hiding (Type)
+import TypeCraft.Purescript.Grammar
 
-import Data.Tuple.Nested
 import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe', maybe')
 import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar
+import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, setCalculatedNodeData, setNodeLabel, setNodeLabelMaybe)
+import TypeCraft.Purescript.Node (makeIndentNodeIndentation)
+import TypeCraft.Purescript.Node (setNodeIndentation)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, makeState)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, ListCtrRecValue, recTerm, recType)
-import TypeCraft.Purescript.Util (hole')
-import TypeCraft.Purescript.Node (setNodeIndentation)
-import TypeCraft.Purescript.Node (makeIndentNodeIndentation)
-import TypeCraft.Purescript.Context (AllContext)
+import TypeCraft.Purescript.Util (hole', justWhen)
 
 data AboveInfo syn
   = AICursor UpPath
@@ -43,8 +43,8 @@ indentIf true n = setNodeIndentation makeIndentNodeIndentation n
 -- TODO: put TermPath into TermRecValue, and then don't need the TermPath argument here!
 -- Problem: what if I really did just have a term, without a TermPath though? I should still be able to recurse over that.
 -- So what is the right design here?
-termToNode :: AboveInfo (Term /\ Type) -> TermRecValue -> Node
-termToNode aboveInfo term =
+termToNode :: Boolean -> AboveInfo (Term /\ Type) -> TermRecValue -> Node
+termToNode isActive aboveInfo term =
   let
     nodeInfo =
       recTerm
@@ -53,9 +53,9 @@ termToNode aboveInfo term =
                 { tag: LambdaNodeTag
                 , label: Nothing
                 , kids:
-                    [ termBindToNode (stepAI (Lambda1 md ty.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tBind
-                    , typeToNode (stepAI (Lambda2 md tBind.tBind body.term bodyTy) (aIOnlyCursor aboveInfo)) ty
-                    , termToNode (stepAI (Lambda3 md tBind.tBind ty.ty bodyTy) aboveInfo) body
+                    [ termBindToNode isActive (stepAI (Lambda1 md ty.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tBind
+                    , typeToNode isActive (stepAI (Lambda2 md tBind.tBind body.term bodyTy) (aIOnlyCursor aboveInfo)) ty
+                    , termToNode isActive (stepAI (Lambda3 md tBind.tBind ty.ty bodyTy) aboveInfo) body
                     ]
                 }
           , app:
@@ -63,8 +63,8 @@ termToNode aboveInfo term =
                 { tag: AppNodeTag
                 , label: Nothing
                 , kids:
-                    [ termToNode (stepAI (App1 md t2.term argTy outTy) aboveInfo) t1
-                    , termToNode (stepAI (App2 md t1.term argTy outTy) aboveInfo) t2
+                    [ termToNode isActive (stepAI (App1 md t2.term argTy outTy) aboveInfo) t1
+                    , termToNode isActive (stepAI (App2 md t1.term argTy outTy) aboveInfo) t2
                     ]
                 }
           , var:
@@ -84,11 +84,11 @@ termToNode aboveInfo term =
                 { tag: LetNodeTag
                 , label: Nothing
                 , kids:
-                    [ termBindToNode (stepAI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tBind
-                    , typeBindListToNode (stepAI (Let2 md tBind.tBind {-List TypeBind-} def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tyBinds
-                    , typeToNode (stepAI (Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
-                    , termToNode (stepAI (Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
-                    , indentIf md.bodyIndented $ termToNode (stepAI (Let5 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy) aboveInfo) body
+                    [ termBindToNode isActive (stepAI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tBind
+                    , typeBindListToNode isActive (stepAI (Let2 md tBind.tBind {-List TypeBind-} def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tyBinds
+                    , typeToNode isActive (stepAI (Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
+                    , termToNode isActive (stepAI (Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
+                    , indentIf md.bodyIndented $ termToNode isActive (stepAI (Let5 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy) aboveInfo) body
                     ]
                 }
           , dataa:
@@ -96,10 +96,10 @@ termToNode aboveInfo term =
                 { tag: DataNodeTag
                 , label: Nothing
                 , kids:
-                    [ typeBindToNode (stepAI (Data1 md tbinds.tyBinds ctrs.ctrs term.term bodyTy) (aIOnlyCursor aboveInfo)) x
-                    , typeBindListToNode (stepAI (Data2 md x.tyBind ctrs.ctrs term.term bodyTy) (aIOnlyCursor aboveInfo)) tbinds
-                    , constructorListToNode (stepAI (Data3 md x.tyBind tbinds.tyBinds term.term bodyTy) (aIOnlyCursor aboveInfo)) ctrs
-                    , termToNode (stepAI (Data4 md x.tyBind tbinds.tyBinds ctrs.ctrs bodyTy) aboveInfo) body
+                    [ typeBindToNode isActive (stepAI (Data1 md tbinds.tyBinds ctrs.ctrs term.term bodyTy) (aIOnlyCursor aboveInfo)) x
+                    , typeBindListToNode isActive (stepAI (Data2 md x.tyBind ctrs.ctrs term.term bodyTy) (aIOnlyCursor aboveInfo)) tbinds
+                    , constructorListToNode isActive (stepAI (Data3 md x.tyBind tbinds.tyBinds term.term bodyTy) (aIOnlyCursor aboveInfo)) ctrs
+                    , termToNode isActive (stepAI (Data4 md x.tyBind tbinds.tyBinds ctrs.ctrs bodyTy) aboveInfo) body
                     ]
                 }
           , tlet: \md x tbinds def body bodyTy -> hole' "termToNode"
@@ -107,13 +107,13 @@ termToNode aboveInfo term =
               \md c t ->
                 { tag: TypeBoundaryNodeTag
                 , label: Nothing
-                , kids: [ termToNode (stepAI (TypeBoundary1 md c) aboveInfo) t ]
+                , kids: [ termToNode isActive (stepAI (TypeBoundary1 md c) aboveInfo) t ]
                 }
           , contextBoundary:
               \md x c t ->
                 { tag: ContextBoundaryNodeTag
                 , label: Nothing
-                , kids: [ termToNode (stepAI (ContextBoundary1 md x c) aboveInfo) t ]
+                , kids: [ termToNode isActive (stepAI (ContextBoundary1 md x c) aboveInfo) t ]
                 }
           , hole:
               \md ->
@@ -126,9 +126,9 @@ termToNode aboveInfo term =
                 { tag: BufferNodeTag
                 , label: Nothing
                 , kids:
-                    [ termToNode (stepAI (Buffer1 md defTy.ty body.term bodyTy) aboveInfo) def
-                    , typeToNode (stepAI (Buffer2 md def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
-                    , termToNode (stepAI (Buffer3 md def.term defTy.ty bodyTy) aboveInfo) body
+                    [ termToNode isActive (stepAI (Buffer1 md defTy.ty body.term bodyTy) aboveInfo) def
+                    , typeToNode isActive (stepAI (Buffer2 md def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
+                    , termToNode isActive (stepAI (Buffer3 md def.term defTy.ty bodyTy) aboveInfo) body
                     ]
                 }
           }
@@ -139,18 +139,18 @@ termToNode aboveInfo term =
     setNodeLabelMaybe nodeInfo.label
       $ makeNode
           { kids: setCalculatedNodeData nodeInfo.tag <$> nodeInfo.kids
-          , getCursor: Just \_ -> 
+          , getCursor: justWhen isActive \_ _ -> 
               makeState $ makeCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
           , getSelect:
               case aboveInfo of
                 AICursor _path -> Nothing
-                AISelect topPath topCtx (topTerm /\ topTy) middlePath -> Just \_ -> makeState $ SelectMode $
+                AISelect topPath topCtx (topTerm /\ topTy) middlePath -> justWhen isActive \_ _ -> makeState $ SelectMode $
                     {select: TermSelect topPath topCtx topTy topTerm middlePath term.ctxs term.ty term.term false}
           , tag: nodeInfo.tag
           }
 
-typeToNode :: AboveInfo Type -> TypeRecValue -> Node
-typeToNode aboveInfo ty =
+typeToNode :: Boolean -> AboveInfo Type -> TypeRecValue -> Node
+typeToNode isActive aboveInfo ty =
   let
     nodeInfo =
       recType
@@ -158,8 +158,8 @@ typeToNode aboveInfo ty =
               \md ty1 ty2 ->
                 { tag: ArrowNodeTag
                 , kids:
-                    [ typeToNode (stepAI (Arrow1 md ty2.ty) aboveInfo) ty1
-                    , typeToNode (stepAI (Arrow2 md ty1.ty) aboveInfo) ty2
+                    [ typeToNode isActive (stepAI (Arrow1 md ty2.ty) aboveInfo) ty1
+                    , typeToNode isActive (stepAI (Arrow2 md ty1.ty) aboveInfo) ty2
                     ]
                 }
           , tHole:
@@ -178,61 +178,61 @@ typeToNode aboveInfo ty =
   in
     makeNode
       { kids: nodeInfo.kids
-      , getCursor: Just \_ -> 
+      , getCursor: justWhen isActive \_ _ -> 
           makeState $ makeCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
       , getSelect:
           case aboveInfo of
             AICursor path -> Nothing -- TODO: impl select
-            AISelect topPath topCtx topTy middlePath -> Just \_ -> makeState $ SelectMode $
+            AISelect topPath topCtx topTy middlePath -> justWhen isActive \_ _ -> makeState $ SelectMode $
                 {select: TypeSelect topPath topCtx topTy middlePath ty.ctxs ty.ty false}
       , tag: nodeInfo.tag
       }
 
-ctrListToNode :: AboveInfo Constructor -> ListCtrRecValue -> Node
-ctrListToNode aboveInfo ctrs = hole' "ctrListToNode"
+ctrListToNode :: Boolean -> AboveInfo Constructor -> ListCtrRecValue -> Node
+ctrListToNode isActive aboveInfo ctrs = hole' "ctrListToNode"
 
-ctrToNode :: AboveInfo Constructor -> Constructor -> Node
-ctrToNode aboveInfo ctr = hole' "ctrToNode"
+ctrToNode :: Boolean -> AboveInfo Constructor -> Constructor -> Node
+ctrToNode isActive aboveInfo ctr = hole' "ctrToNode"
 
 --ctrParamToNode :: AllContext -> AboveInfo -> UpPath -> CtrParam -> Node
 --ctrParamToNode ctxs aboveInfo up (CtrParam md ty) = makeNode {
 --    dat: makeNodeData {indentation: hole, isParenthesized: false, label: "CtrParam"}
---    , kids: [[typeToNode (stepAI (CtrParam1 md) (aIOnlyCursor aboveInfo)) {ctxs, ty}]]
+--    , kids: [[typeToNode isActive (stepAI (CtrParam1 md) (aIOnlyCursor aboveInfo)) {ctxs, ty}]]
 --    , getCursor: Nothing
 --    , getSelect: Nothing
 --    , style: makeNormalNodeStyle
 --}
-typeArgToNode :: AboveInfo TypeArg -> TypeArgRecValue -> Node
-typeArgToNode aboveInfo tyArg = hole' "typeArgToNode"
+typeArgToNode :: Boolean -> AboveInfo TypeArg -> TypeArgRecValue -> Node
+typeArgToNode isActive aboveInfo tyArg = hole' "typeArgToNode"
 
-typeBindToNode :: AboveInfo TypeBind -> TypeBindRecValue -> Node
-typeBindToNode aboveInfo tyBind = hole' "typeBindToNode"
+typeBindToNode :: Boolean -> AboveInfo TypeBind -> TypeBindRecValue -> Node
+typeBindToNode isActive aboveInfo tyBind = hole' "typeBindToNode"
 
-typeBindListToNode :: AboveInfo (List TypeBind) -> ListTypeBindRecValue -> Node
-typeBindListToNode aboveInfo tyBinds = -- TODO: write actual implementation
+typeBindListToNode :: Boolean -> AboveInfo (List TypeBind) -> ListTypeBindRecValue -> Node
+typeBindListToNode isActive aboveInfo tyBinds = -- TODO: write actual implementation
      makeNode {
         tag: TypeBindListNilNodeTag
         , kids: []
-        , getCursor: Just \_ -> makeState $ makeCursorMode $ TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
+        , getCursor: justWhen isActive \_ _ -> makeState $ makeCursorMode $ TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
         , getSelect: Nothing
     }
 
-termBindToNode :: AboveInfo TermBind -> TermBindRecValue -> Node
-termBindToNode aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
+termBindToNode :: Boolean -> AboveInfo TermBind -> TermBindRecValue -> Node
+termBindToNode isActive aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
   setNodeLabel md.varName
     $ makeNode
         { kids: []
-        , getCursor: Just \_ -> 
+        , getCursor: justWhen isActive \_ _ ->
               makeState $ makeCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tBind
         , getSelect: Nothing
         , tag: TermBindNodeTag
         }
 
-ctrParamListToNode :: AboveInfo (List CtrParam) -> ListCtrParamRecValue -> Node
-ctrParamListToNode aboveInfo ctrParams = hole' "ctrParamListToNode"
+ctrParamListToNode ::Boolean -> AboveInfo (List CtrParam) -> ListCtrParamRecValue -> Node
+ctrParamListToNode isActive aboveInfo ctrParams = hole' "ctrParamListToNode"
 
-typeArgListToNode :: AboveInfo (List TypeArg) -> ListTypeArgRecValue -> Node
-typeArgListToNode aboveInfo tyArgs = hole' "typeArgListToNode"
+typeArgListToNode :: Boolean -> AboveInfo (List TypeArg) -> ListTypeArgRecValue -> Node
+typeArgListToNode isActive aboveInfo tyArgs = hole' "typeArgListToNode"
 
-constructorListToNode :: AboveInfo (List Constructor) -> ListCtrRecValue -> Node
-constructorListToNode aboveInfo ctrs = hole' "constructorListToNode"
+constructorListToNode :: Boolean -> AboveInfo (List Constructor) -> ListCtrRecValue -> Node
+constructorListToNode isActive aboveInfo ctrs = hole' "constructorListToNode"

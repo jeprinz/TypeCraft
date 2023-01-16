@@ -200,10 +200,12 @@ foreign import makeSelectTopNodeStyle :: NodeStyle
 foreign import makeSelectBotNodeStyle :: NodeStyle
 
 foreign import makeQueryInsertTopStyle :: NodeStyle
+foreign import makeQueryInsertTopActiveStyle :: NodeStyle
 
 foreign import makeQueryInsertBotNodeStyle :: NodeStyle
 
 foreign import makeQueryReplaceNewNodeStyle :: NodeStyle
+foreign import makeQueryReplaceNewActiveNodeStyle :: NodeStyle
 
 foreign import makeQueryReplaceOldNodeStyle :: NodeStyle
 

@@ -55,8 +55,10 @@ export type NodeStyle
     | { case: 'select-top' }
     | { case: 'select-bot' }
     | { case: 'query-insert-top' }
+    | { case: 'query-insert-top-active' }
     | { case: 'query-insert-bot' }
     | { case: 'query-replace-new' }
+    | { case: 'query-replace-new-isActive' }
     | { case: 'query-replace-old' }
     | { case: 'query-invalid' }
     | { case: 'query-metahole' }
