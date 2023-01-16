@@ -110,7 +110,6 @@ cursorModeToNode cursorMode =
       _ -> hole' "completionToNode CompletionTerm non-TermCursor"
     CompletionTermPath termPath ch -> case cursorMode.cursorLocation of
       TermCursor ctxs ty termPath' term ->
-        -- TODO: why doesn't termPathToNode need to use termPath'? or, its wrong
         ( if opts.isActive then
             setNodeStyle makeQueryInsertTopActiveStyle
           else
@@ -130,6 +129,37 @@ cursorModeToNode cursorMode =
                     makeMetahole unit
               )
       _ -> hole' "completionToNode CompletionPath non-TermCursor"
+    CompletionType ty -> case cursorMode.cursorLocation of
+      TypeCursor ctxs path _ty ->
+        ( if opts.isActive then
+            setNodeStyle makeQueryReplaceNewActiveNodeStyle
+          else
+            setNodeStyle makeQueryReplaceNewNodeStyle
+        )
+          $ typeToNode false
+              (AISelect path ctxs ty Nil)
+              { ctxs, ty }
+      _ -> hole' "completionToNode CompletionType non-TypeCursor"
+    CompletionTypePath path' ch -> case cursorMode.cursorLocation of
+      TypeCursor ctxs path ty ->
+        ( if opts.isActive then
+            setNodeStyle makeQueryInsertTopActiveStyle
+          else
+            setNodeStyle makeQueryInsertTopStyle
+        )
+          $ typePathToNode false
+              BITerm
+              { ctxs, ty, typePath: path' }
+              ( setNodeStyle makeQueryInsertBotNodeStyle
+                  if opts.isInline then
+                    -- if inline, render with cursor type at head
+                    typeToNode true
+                      (AISelect (path' <> path) ctxs ty (path' <> path))
+                      { ctxs, ty }
+                  else
+                    makeMetahole unit
+              )
+      _ -> hole' "completionToNode CompletionTypePath non-TypeCursor"
 
   makeMetahole :: Unit -> Node
   makeMetahole _ = case cursorMode.cursorLocation of

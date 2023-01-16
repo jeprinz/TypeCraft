@@ -47,6 +47,8 @@ defaultTHoleMD :: THoleMD
 defaultTHoleMD = {}
 defaultTLambdaMD :: TLambdaMD
 defaultTLambdaMD = {bodyIndented : false}
+defaultTLetMD :: TLetMD
+defaultTLetMD = {}
 
 -- Term metadata defaults
 defaultHoleMD :: HoleMD

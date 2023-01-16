@@ -2,20 +2,22 @@ module TypeCraft.Purescript.ModifyState where
 
 import Data.Tuple.Nested
 import Prelude
+
 import Data.Array ((:))
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Debug (trace)
+import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.ChangePath (chTermPath, chTypePath)
-import TypeCraft.Purescript.ChangeTerm (chType)
+import TypeCraft.Purescript.ChangeTerm (chType, chTypeParamList)
+import TypeCraft.Purescript.Context (ctxInject, kCtxInject)
+import TypeCraft.Purescript.Context (kCtxInject)
 import TypeCraft.Purescript.CursorMovement (stepCursorBackwards, stepCursorForwards)
 import TypeCraft.Purescript.Grammar (Change(..), TermBind(..), TypeBind(..))
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select, State, emptyQuery, getCompletion, makeCursorMode)
 import TypeCraft.Purescript.Util (hole')
-import TypeCraft.Purescript.Context (kCtxInject)
-import TypeCraft.Purescript.Context (ctxInject)
 
 handleKey :: String -> State -> Maybe State
 handleKey key st = case st.mode of
@@ -41,7 +43,7 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
   TermCursor ctxs ty path tm ->
     getCompletion cursorMode.query
       >>= case _ of
-          CompletionTerm tm' ty' -> do
+          CompletionTerm tm' ty' -> 
             pure
               { cursorLocation: TermCursor ctxs ty' (chTermPath Map.empty Map.empty (Replace ty ty') path) tm'
               , query: emptyQuery
@@ -54,6 +56,22 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
                 { cursorLocation: TermCursor ctxs ty (pathNew <> path') tm
                 , query: emptyQuery
                 }
+          _ -> unsafeThrow "tried to submit a non-CompletionTerm* completion at a TermCursor"
+  TypeCursor ctxs path ty -> 
+    getCompletion cursorMode.query >>= case _ of 
+      CompletionType ty' -> 
+        let path' = chTypePath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) (Replace ty ty') path in 
+        pure {
+          cursorLocation: TypeCursor ctxs path' ty'
+          , query: emptyQuery
+        }
+      CompletionTypePath pathNew ch -> 
+        let path' = chTypePath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) ch path in 
+        pure {
+          cursorLocation: TypeCursor ctxs (pathNew <> path') ty,
+          query: emptyQuery
+        }
+      _ -> unsafeThrow "tried to submit a non-CompletionType* completion at a TypeCursor"
   _ -> Nothing -- TODO: submit queries at other kinds of cursors?
 
 -- caches old mode in history

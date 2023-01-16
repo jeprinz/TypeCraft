@@ -6,6 +6,7 @@ import Prim hiding (Type)
 import Control.Monad.Except as Except
 import Control.Monad.State as State
 import Control.Monad.Writer as Writer
+import Data.Array (any)
 import Data.Array.NonEmpty as Array
 import Data.Either (Either(..), either)
 import Data.Foldable (and, traverse_)
@@ -18,8 +19,8 @@ import Data.Tuple (fst, snd)
 import Data.UUID (UUID)
 import Debug (traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar (Change(..), Kind(..), PolyType(..), Term(..), TermVarID, Tooth(..), Type(..), TypeArg(..), TypeHoleID, TypeVarID, freshHole, freshTHole, freshTermBind, freshTypeHoleID)
-import TypeCraft.Purescript.MD (defaultAppMD, defaultLambdaMD, defaultLetMD, defaultVarMD)
+import TypeCraft.Purescript.Grammar (Change(..), Kind(..), PolyType(..), Term(..), TermVarID, Tooth(..), Type(..), TypeArg(..), TypeHoleID, TypeVarID, freshHole, freshTHole, freshTermBind, freshTypeBind, freshTypeHoleID, tyInject)
+import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultBufferMD, defaultLambdaMD, defaultLetMD, defaultTLambdaMD, defaultTLetMD, defaultTypeBoundaryMD, defaultVarMD)
 import TypeCraft.Purescript.ManipulateString (isIgnoreKey, manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State)
 import TypeCraft.Purescript.Util (hole')
@@ -47,19 +48,22 @@ manipulateQuery key st cursorMode@{ query: query@{ string, completionGroup_i, co
 kindaStartsWith :: String -> String -> Boolean
 kindaStartsWith str pre =
   and
-    [ String.length pre > 0 -- prefix can't be empty
+    [ String.length str > 0 -- string can't be empty
     , isJust $ String.stripPrefix (String.Pattern (String.take (String.length str) pre)) str
+    ]
+
+kindaStartsWithAny :: String -> Array String -> Boolean
+kindaStartsWithAny str pres =
+  and
+    [ String.length str > 0 -- string can't be empty
+    , any (isJust <<< \pre -> String.stripPrefix (String.Pattern (String.take (String.length str) pre)) str) pres
     ]
 
 calculateCompletionsGroups :: String -> State -> CursorMode -> Array (Array Completion)
 calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
   TermCursor ctxs ty path tm ->
     Writer.execWriter do
-      {-
-    use ctxs.mdctx.termVarNames to list names
-    filter names by kindaStartWith
-    -}
-      -- var
+      -- Var
       traverse_
         ( \(id /\ varName) -> case Map.lookup id ctxs.ctx of
             Nothing -> unsafeThrow $ "the entry '" <> show (id /\ varName) <> "' was found in the ctxs.mdctx, but not in the ctxs.ctx: '" <> show ctxs.ctx <> "'"
@@ -70,23 +74,84 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
                   Right (tm' /\ sub) -> Writer.tell [ [ CompletionTerm tm' (applySubType sub ty) ] ]
         )
         (Map.toUnfoldable ctxs.mdctx :: Array (UUID /\ String))
-      -- lam
-      when (str `kindaStartsWith` "lam")
+      -- Lambda
+      when (str `kindaStartsWithAny` [ "lam", "\\" ])
         $ Writer.tell
             [ [ let
                   alpha = freshTHole unit
                 in
                   CompletionTermPath -- lam (~ : alpha) ↦ ({} : ty)
-                    (List.fromFoldable [ Lambda3 defaultLambdaMD (freshTermBind Nothing) alpha ty ])
-                    (Plus alpha (Replace ty ty))
+                    (List.singleton $ Lambda3 defaultLambdaMD (freshTermBind Nothing) alpha ty)
+                    (Plus alpha (tyInject ty))
               ]
             ]
-      -- let
+      -- Let
       when (str `kindaStartsWith` "let")
         $ Writer.tell
             [ [ CompletionTermPath -- let ~<∅> : alpha = ? in {} : ty
-                  (List.fromFoldable [ Let5 defaultLetMD (freshTermBind Nothing) List.Nil (freshHole unit) (freshTHole unit) ty ])
-                  (Replace ty ty)
+                  (List.singleton $ Let5 defaultLetMD (freshTermBind Nothing) List.Nil (freshHole unit) (freshTHole unit) ty)
+                  (tyInject ty)
+              ]
+            ]
+      -- App
+      when (str `kindaStartsWithAny` [ " ", "$" ])
+        $ Writer.tell
+            [ [ CompletionTermPath -- ({} ?)
+                  (List.singleton $ App1 defaultAppMD (freshHole unit) (freshTHole unit) (freshTHole unit))
+                  (Minus (freshTHole unit) (tyInject ty))
+              ]
+            ]
+      -- TLet
+      when (str `kindaStartsWith` "tlet")
+        $ Writer.tell
+            [ [ CompletionTermPath
+                  (List.singleton $ TLet4 defaultTLetMD (freshTypeBind Nothing) List.Nil (freshTHole unit) ty)
+                  (tyInject ty)
+              ]
+            ]
+      -- TypeBoundary
+      when (str `kindaStartsWithAny` [ "{}", "boundary" ])
+        $ Writer.tell
+            [ [ CompletionTermPath
+                  (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (tyInject ty))
+                  (tyInject ty)
+              ]
+            ]
+      -- Hole
+      when (str `kindaStartsWithAny` [ "hole", "?" ])
+        $ Writer.tell
+            [ [ CompletionTerm
+                  (freshHole unit)
+                  ty
+              ]
+            ]
+      -- Buffer
+      when (str `kindaStartsWithAny` [ "buffer", "#" ])
+        $ Writer.tell
+            [ [ CompletionTermPath
+                  (List.singleton $ Buffer3 defaultBufferMD (freshHole unit) (freshTHole unit) ty)
+                  (tyInject ty)
+              ]
+            ]
+  TypeCursor ctxs path ty ->
+    Writer.execWriter do
+      -- TNeu
+      -- TODO: TNeu
+      -- Arrow
+      when (str `kindaStartsWithAny` [ "arrow", "->" ])
+        $ Writer.tell
+            [ [ let
+                  thole = freshTHole unit
+                in
+                  CompletionTypePath
+                    (List.singleton $ Arrow1 defaultArrowMD thole)
+                    (Plus thole (tyInject ty))
+              ]
+            ]
+      -- THole
+      when (str `kindaStartsWithAny` [ "hole", "?" ])
+        $ Writer.tell
+            [ [ CompletionType (freshTHole unit)
               ]
             ]
   _ -> [] -- TODO: impl

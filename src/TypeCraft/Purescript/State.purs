@@ -53,6 +53,8 @@ type Query
 data Completion 
   = CompletionTerm Term Type
   | CompletionTermPath UpPath Change
+  | CompletionType Type
+  | CompletionTypePath UpPath Change
 
 derive instance genericCompletion :: Generic Completion _
 
