@@ -121,7 +121,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.colon], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat())
         case 'tm dat': return go(node, ["tm_dat"], [[Punc.data], kid(), [Punc.data], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat())
         case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat())
-        case 'tm ty-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat()) // TODO: render typechange
+        case 'tm ty-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat()) // TODO: render typechange
         case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat()) // TODO: render contextchange
         case 'tm hol': return go(node, ["tm_hol"], [Punc.interrogative].flat()) // TODO: render type; is it a node child?
         case 'tm buf': return go(node, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat())
@@ -141,6 +141,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         // ctr-prm-list
         case 'ctr-prm-list cons': return go(node, ["ctr-prm-list_cons"], [kid(), [Punc.comma], kid()].flat())
         case 'ctr-prm-list nil': return go(node, ["ctr-prm-list_nil"], [Punc.listNil])
+        // change
+        case 'replace': return go(node, ["replace"], [kid(), [Punc.rewrite], kid()].flat())
+        case 'plus': return go(node, ["plus"], [[Punc.plus], kid(), [Punc.bracketL], kid(), [Punc.bracketR]].flat())
+        case 'minus': return go(node, ["minus"], [[Punc.minus], kid(), [Punc.bracketL], kid(), [Punc.bracketR]].flat())
       }
     }
 
@@ -148,7 +152,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
   }
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
-    if (event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) return
+    if (event.altKey || event.ctrlKey || event.metaKey) return
     const state = editor.props.backend.handleKeyboardEvent(event)(editor.state)
     if (state === undefined) {
       console.log("[!] handleKeyboardEvent failed")

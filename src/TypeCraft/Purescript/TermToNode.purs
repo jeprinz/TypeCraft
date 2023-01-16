@@ -11,7 +11,7 @@ import Data.Maybe (Maybe(..), fromMaybe', maybe')
 import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
-import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, setCalculatedNodeData, setNodeLabel, setNodeLabelMaybe)
+import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, setCalculatedNodeData, setNodeIndentation, setNodeLabel, setNodeLabelMaybe, setNodeParenthesized)
 import TypeCraft.Purescript.Node (makeIndentNodeIndentation)
 import TypeCraft.Purescript.Node (setNodeIndentation)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, makeState)
@@ -24,18 +24,22 @@ data AboveInfo syn
 
 stepAI :: forall syn. Tooth -> AboveInfo syn -> AboveInfo syn
 stepAI tooth (AICursor path) = AICursor (tooth : path)
+
 stepAI tooth (AISelect topPath ctx term middlePath) = AISelect topPath ctx term (tooth : middlePath)
 
 aIOnlyCursor :: forall syn1 syn2. AboveInfo syn1 -> AboveInfo syn2
 aIOnlyCursor (AICursor path) = AICursor path
+
 aIOnlyCursor (AISelect topPath ctx term middlePath) = AICursor (middlePath <> topPath)
 
 aIGetPath :: forall syn. AboveInfo syn -> UpPath
 aIGetPath (AICursor path) = path
+
 aIGetPath (AISelect top ctx term middle) = middle <> top
 
 indentIf :: Boolean -> Node -> Node
 indentIf false n = n
+
 indentIf true n = setNodeIndentation makeIndentNodeIndentation n
 
 -- need to track a path for the cursor, and two paths for the selction.
@@ -104,10 +108,13 @@ termToNode isActive aboveInfo term =
                 }
           , tlet: \md x tbinds def body bodyTy -> hole' "termToNode"
           , typeBoundary:
-              \md c t ->
+              \md ch t ->
                 { tag: TypeBoundaryNodeTag
                 , label: Nothing
-                , kids: [ termToNode isActive (stepAI (TypeBoundary1 md c) aboveInfo) t ]
+                , kids:
+                    [ termToNode isActive (stepAI (TypeBoundary1 md ch) aboveInfo) t
+                    , changeToNode { ch, ctxs: term.ctxs }
+                    ]
                 }
           , contextBoundary:
               \md x c t ->
@@ -139,13 +146,16 @@ termToNode isActive aboveInfo term =
     setNodeLabelMaybe nodeInfo.label
       $ makeNode
           { kids: setCalculatedNodeData nodeInfo.tag <$> nodeInfo.kids
-          , getCursor: justWhen isActive \_ _ -> 
-              makeState $ makeCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
+          , getCursor:
+              justWhen isActive \_ _ ->
+                makeState $ makeCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
           , getSelect:
               case aboveInfo of
                 AICursor _path -> Nothing
-                AISelect topPath topCtx (topTerm /\ topTy) middlePath -> justWhen isActive \_ _ -> makeState $ SelectMode $
-                    {select: TermSelect topPath topCtx topTy topTerm middlePath term.ctxs term.ty term.term false}
+                AISelect topPath topCtx (topTerm /\ topTy) middlePath ->
+                  justWhen isActive \_ _ ->
+                    makeState $ SelectMode
+                      $ { select: TermSelect topPath topCtx topTy topTerm middlePath term.ctxs term.ty term.term false }
           , tag: nodeInfo.tag
           }
 
@@ -178,13 +188,16 @@ typeToNode isActive aboveInfo ty =
   in
     makeNode
       { kids: nodeInfo.kids
-      , getCursor: justWhen isActive \_ _ -> 
-          makeState $ makeCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
+      , getCursor:
+          justWhen isActive \_ _ ->
+            makeState $ makeCursorMode $ TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
       , getSelect:
           case aboveInfo of
             AICursor path -> Nothing -- TODO: impl select
-            AISelect topPath topCtx topTy middlePath -> justWhen isActive \_ _ -> makeState $ SelectMode $
-                {select: TypeSelect topPath topCtx topTy middlePath ty.ctxs ty.ty false}
+            AISelect topPath topCtx topTy middlePath ->
+              justWhen isActive \_ _ ->
+                makeState $ SelectMode
+                  $ { select: TypeSelect topPath topCtx topTy middlePath ty.ctxs ty.ty false }
       , tag: nodeInfo.tag
       }
 
@@ -209,12 +222,12 @@ typeBindToNode :: Boolean -> AboveInfo TypeBind -> TypeBindRecValue -> Node
 typeBindToNode isActive aboveInfo tyBind = hole' "typeBindToNode"
 
 typeBindListToNode :: Boolean -> AboveInfo (List TypeBind) -> ListTypeBindRecValue -> Node
-typeBindListToNode isActive aboveInfo tyBinds = -- TODO: write actual implementation
-     makeNode {
-        tag: TypeBindListNilNodeTag
-        , kids: []
-        , getCursor: justWhen isActive \_ _ -> makeState $ makeCursorMode $ TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
-        , getSelect: Nothing
+typeBindListToNode isActive aboveInfo tyBinds =  -- TODO: write actual implementation
+  makeNode
+    { tag: TypeBindListNilNodeTag
+    , kids: []
+    , getCursor: justWhen isActive \_ _ -> makeState $ makeCursorMode $ TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
+    , getSelect: Nothing
     }
 
 termBindToNode :: Boolean -> AboveInfo TermBind -> TermBindRecValue -> Node
@@ -222,13 +235,14 @@ termBindToNode isActive aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
   setNodeLabel md.varName
     $ makeNode
         { kids: []
-        , getCursor: justWhen isActive \_ _ ->
+        , getCursor:
+            justWhen isActive \_ _ ->
               makeState $ makeCursorMode $ TermBindCursor ctxs (aIGetPath aboveInfo) tBind
         , getSelect: Nothing
         , tag: TermBindNodeTag
         }
 
-ctrParamListToNode ::Boolean -> AboveInfo (List CtrParam) -> ListCtrParamRecValue -> Node
+ctrParamListToNode :: Boolean -> AboveInfo (List CtrParam) -> ListCtrParamRecValue -> Node
 ctrParamListToNode isActive aboveInfo ctrParams = hole' "ctrParamListToNode"
 
 typeArgListToNode :: Boolean -> AboveInfo (List TypeArg) -> ListTypeArgRecValue -> Node
@@ -236,3 +250,61 @@ typeArgListToNode isActive aboveInfo tyArgs = hole' "typeArgListToNode"
 
 constructorListToNode :: Boolean -> AboveInfo (List Constructor) -> ListCtrRecValue -> Node
 constructorListToNode isActive aboveInfo ctrs = hole' "constructorListToNode"
+
+type ChangeRecValue
+  = { ctxs :: AllContext, ch :: Change }
+
+makeChangeNode :: { kids :: Array Node, tag :: NodeTag } -> Node
+makeChangeNode { tag, kids } = makeNode { tag, kids, getCursor: Nothing, getSelect: Nothing }
+
+changeToNode :: ChangeRecValue -> Node
+changeToNode val = case val.ch of
+  CArrow ch1 ch2 ->
+    makeChangeNode
+      { tag: ArrowNodeTag
+      , kids:
+          [ changeToNode val { ch = ch1 }
+          , changeToNode val { ch = ch2 }
+          ]
+      }
+  CHole _ ->
+    makeChangeNode
+      { tag: THoleNodeTag
+      , kids: []
+      }
+  Replace ty1 ty2 ->
+    setNodeParenthesized true $
+    makeChangeNode
+      { tag: ReplaceNodeTag
+      , kids:
+          [ typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty: ty1 }
+          , typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty: ty2 }
+          ]
+      }
+  Plus ty ch ->
+    makeChangeNode
+      { tag: PlusNodeTag
+      , kids:
+          [ typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty }
+          , changeToNode val { ch = ch }
+          ]
+      }
+  Minus ty ch ->
+    makeChangeNode
+      { tag: MinusNodeTag
+      , kids:
+          [ typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty }
+          , changeToNode val { ch = ch }
+          ]
+      }
+  CNeu id args ->
+    makeChangeNode
+      { tag: TNeuNodeTag
+      , kids: [] -- TODO: type args 
+      }
+
+-- since this will never be used for non-cursorable things
+-- TODO: make AboveInfo a Maybe, so that when its nothing covers the false
+-- Boolean case in *toNode functions
+dummyAboveInfo :: forall a. AboveInfo a
+dummyAboveInfo = AICursor Nil

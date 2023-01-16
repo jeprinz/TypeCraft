@@ -171,4 +171,9 @@ cursorModeToNode cursorMode =
           $ termToNode false
               (AISelect termPath ctxs (term /\ ty) Nil)
               { ctxs, term, ty }
-    _ -> hole' "makeMetahole non-TermCursor"
+    TypeCursor ctxs path ty ->
+      setNodeStyle makeQueryMetaholeNodeStyle
+        $ typeToNode false
+            (AISelect path ctxs ty Nil)
+            { ctxs, ty }
+    _ -> hole' "makeMetahole: unhandled cursor case"

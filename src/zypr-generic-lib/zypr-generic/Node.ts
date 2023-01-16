@@ -48,6 +48,10 @@ export type NodeTag
     | { case: 'ctr-list nil' }
     | { case: 'ctr-prm-list cons' }
     | { case: 'ctr-prm-list nil' }
+    | { case: 'replace' }
+    | { case: 'plus' }
+    | { case: 'minus' }
+
 
 export type NodeStyle
     = { case: 'normal' }

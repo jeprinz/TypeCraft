@@ -125,6 +125,10 @@ data NodeTag
   -- NodeTag: List CtrParam
   | CtrParamListConsNodeTag
   | CtrParamListNilNodeTag
+  -- Change
+  | ReplaceNodeTag
+  | PlusNodeTag
+  | MinusNodeTag
 
 derive instance eqNodeTag :: Eq NodeTag
 
@@ -182,6 +186,9 @@ toNodeTag_ = case _ of
   ConstructorListNilNodeTag -> makeNodeTag_ "ctr-list nil"
   CtrParamListConsNodeTag -> makeNodeTag_ "ctr-prm-list cons"
   CtrParamListNilNodeTag -> makeNodeTag_ "ctr-prm-list nil"
+  ReplaceNodeTag -> makeNodeTag_ "replace"
+  PlusNodeTag -> makeNodeTag_ "plus"
+  MinusNodeTag -> makeNodeTag_ "minus"
 
 foreign import getNodeTag_ :: Node -> NodeTag_ 
 

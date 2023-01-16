@@ -1,29 +1,25 @@
 module TypeCraft.Purescript.ManipulateQuery where
 
-import Data.Tuple.Nested
+import Data.Tuple.Nested (type (/\), (/\))
 import Prelude
 import Prim hiding (Type)
 import Control.Monad.Except as Except
 import Control.Monad.State as State
 import Control.Monad.Writer as Writer
 import Data.Array (any)
-import Data.Array.NonEmpty as Array
-import Data.Either (Either(..), either)
+import Data.Either (Either(..))
 import Data.Foldable (and, traverse_)
 import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.String as String
-import Data.Traversable (sequence, traverse)
-import Data.Tuple (fst, snd)
 import Data.UUID (UUID)
 import Debug (traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar (Change(..), Kind(..), PolyType(..), Term(..), TermVarID, Tooth(..), Type(..), TypeArg(..), TypeHoleID, TypeVarID, freshHole, freshTHole, freshTermBind, freshTypeBind, freshTypeHoleID, tyInject)
-import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultBufferMD, defaultLambdaMD, defaultLetMD, defaultTLambdaMD, defaultTLetMD, defaultTypeBoundaryMD, defaultVarMD)
-import TypeCraft.Purescript.ManipulateString (isIgnoreKey, manipulateString)
+import TypeCraft.Purescript.Grammar (Change(..), PolyType(..), Term(..), TermVarID, Tooth(..), Type(..), TypeArg(..), TypeHoleID, TypeVarID, freshHole, freshTHole, freshTermBind, freshTypeBind, tyInject)
+import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultBufferMD, defaultLambdaMD, defaultLetMD, defaultTLetMD, defaultTypeBoundaryMD, defaultVarMD)
+import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State)
-import TypeCraft.Purescript.Util (hole')
 
 isNonemptyQueryString :: Query -> Boolean
 isNonemptyQueryString query = not $ String.null query.string
@@ -144,7 +140,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
                   thole = freshTHole unit
                 in
                   CompletionTypePath
-                    (List.singleton $ Arrow1 defaultArrowMD thole)
+                    (List.singleton $ Arrow2 defaultArrowMD thole)
                     (Plus thole (tyInject ty))
               ]
             ]
