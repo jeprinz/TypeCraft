@@ -27,6 +27,7 @@ Dually, chTerm should never output an input change of the form (Plus ...)
 -}
 
 chTermPath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
+chTermPath _ _ _ Nil = Nil
 chTermPath kctx ctx (CArrow c1 c2) (App1 md {-here-} t argTy outTy : up) =
     if not (argTy == fst (getEndpoints c1) && outTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen" else
     let t' = chTermBoundary kctx ctx c1 t in
@@ -44,8 +45,12 @@ chTermPath kctx ctx (Minus t c) (App1 md {-here-} arg argTy outTy : up) =
     Buffer3 defaultBufferMD arg argTy {-Term-} outTy : up'
 -- TODO: App2 case, other App1 cases with other TypeChanges
 --    App2 AppMD Term {-Term-} Type Type -- TODO: this case goes along with the polymorphism change stuff
-chTermPath kctx ctx c  (Let3 md x tbinds {-Term = here-} ty body tybody : up) =
-    hole' "chTermPath"
+chTermPath kctx ctx ch  (Let3 md tBind@(TermBind _ x) tyBinds {-Term = here-} ty body bodyTy : termPath) =
+    if not (ty == fst (getEndpoints ch)) then unsafeThrow "shouldn't happen" else
+    let ctx' = insert x (VarTypeChange (tyBindsWrapChange tyBinds ch)) ctx in
+    let c2 /\ body' = chTerm kctx ctx' (tyInject bodyTy) body in
+    let termPath' = chTermPath kctx ctx c2 termPath in
+    Let3 md tBind tyBinds {-def-} (snd (getEndpoints ch)) body' (snd (getEndpoints c2)) : termPath'
 chTermPath kctx ctx c (Let5 md tBind@(TermBind _ x) tbinds def ty {-body = here-} tybody : up) =
     if not (fst (getEndpoints c) == tybody) then unsafeThrow "shouldn't happen" else
     let ctx' = delete x ctx in
@@ -81,7 +86,7 @@ chTermPath kctx ctx c (TLet4 md tyBind@(TypeBind _ x) tyBinds def {-Term-} bodyT
     let kctx' = delete x kctx in
     let up' = chTermPath kctx' ctx c up in
     TLet4 md tyBind tyBinds def {-Term-} bodyTy : up'
-chTermPath _ _ _ _ = unsafeThrow "finish implementing all cases"
+chTermPath _ _ ch path = unsafeThrow ("finish implementing all cases. Path is:" <> show path <> "and ch is: " <> show ch)
 
 chTypePath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
 chTypePath kctx ctx ch (Let4 md tBind@(TermBind _ x) tyBinds def {-Type-} body bodyTy : termPath) =
@@ -108,7 +113,7 @@ chTypePath kctx ctx ch (Arrow2 md ty1 {-Type-} : typePath) =
 --    CtrParam1 CtrParamMD {-Type-}
 --    TypeArg1 TypeArgMD {-Type-}
 --    TLet3 TLetMD TypeBind (List TypeBind) {-Type-} Term Type
-chTypePath _ _ _ _ = hole' "chTypePath"
+chTypePath _ _ ch path = hole' ("chTypePath. Path is:" <> show path <> "and ch is: " <> show ch)
 
 -- TODO: I believe that Constructors should change by a Change
 chCtrPath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath

@@ -14,6 +14,8 @@ import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select, State, emptyQuery, getCompletion, makeCursorMode)
 import TypeCraft.Purescript.Util (hole')
+import TypeCraft.Purescript.Context (kCtxInject)
+import TypeCraft.Purescript.Context (ctxInject)
 
 handleKey :: String -> State -> Maybe State
 handleKey key st = case st.mode of
@@ -46,7 +48,7 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
               }
           CompletionTermPath pathNew ch ->
             let
-              path' = chTypePath Map.empty Map.empty ch path
+              path' = chTermPath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) ch path
             in
               pure
                 { cursorLocation: TermCursor ctxs ty (pathNew <> path') tm
