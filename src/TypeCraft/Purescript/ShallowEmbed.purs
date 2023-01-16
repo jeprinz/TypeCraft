@@ -13,7 +13,7 @@ import Data.Map.Internal (Map, insert, empty, lookup)
 import Data.UUID (genUUID)
 import Effect.Exception.Unsafe (unsafeThrow)
 import Effect.Unsafe (unsafePerformEffect)
-import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Util (hole, hole')
 
 {-
 This file defines a shallow embedding to make it easier to write terms for testing purposes
@@ -53,14 +53,14 @@ sapp :: STerm -> SType -> STerm -> STerm
 sapp t1 argTy t2 {kctx, ctx, ty} = let argTy' = argTy {kctx, ctx} in
     App defaultAppMD (t1 {kctx, ctx, ty: Arrow defaultArrowMD argTy' ty}) (t2 {kctx, ctx, ty: argTy'}) argTy' ty
 
-sTHole :: STerm
-sTHole _ = Hole defaultHoleMD
+sHole :: STerm
+sHole _ = Hole defaultHoleMD
 
-sBindHole :: forall a. (TypeHoleID -> a) -> a
-sBindHole bla = bla (freshTypeHoleID unit)
+sBindTHole :: forall a. (TypeHoleID -> a) -> a
+sBindTHole bla = bla (freshTypeHoleID unit)
 
-shole :: TypeHoleID -> SType
-shole x _ = THole defaultTHoleMD x
+sTHole :: TypeHoleID -> SType
+sTHole x _ = THole defaultTHoleMD x
 
 sarrow :: SType -> SType -> SType
 sarrow ty1 ty2 ct = Arrow defaultArrowMD (ty1 ct) (ty2 ct)
@@ -82,38 +82,45 @@ exampleType1 = THole defaultHoleMD (unsafePerformEffect genUUID)
 --    slambda "x" (\x -> svar x)
 --    ) exampleType1
 
+exampleProg1 :: Type /\ Term
+exampleProg1 = 
+    sBindTHole \hole1 -> program
+        (sTHole hole1) 
+        sHole
+
+
 exampleProg2 :: Type /\ Term
 exampleProg2 =
-    sBindHole \hole1 -> sBindHole \hole2 -> sBindHole \hole3 ->
-        program (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
-            (slambda "x" \x -> (slambda "y" \y -> sTHole))
+    sBindTHole \hole1 -> sBindTHole \hole2 -> sBindTHole \hole3 ->
+        program (sarrow (sTHole hole1) (sarrow (sTHole hole2) (sTHole hole3)))
+            (slambda "x" \x -> (slambda "y" \y -> sHole))
 
 exampleProg3 :: Type /\ Term
 exampleProg3 =
-    sBindHole \hole1 -> sBindHole \hole2 -> sBindHole \hole3 ->
-        program (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
+    sBindTHole \hole1 -> sBindTHole \hole2 -> sBindTHole \hole3 ->
+        program (sarrow (sTHole hole1) (sarrow (sTHole hole2) (sTHole hole3)))
             (slambda "x" \x -> (slambda "y" \y -> svar x))
 
 exampleProg4 :: Type /\ Term
 exampleProg4 =
-    sBindHole \hole1 -> sBindHole \hole2 -> sBindHole \hole3 ->
-        program (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
+    sBindTHole \hole1 -> sBindTHole \hole2 -> sBindTHole \hole3 ->
+        program (sarrow (sTHole hole1) (sarrow (sTHole hole2) (sTHole hole3)))
             (slet' "f" (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
-                (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
+                (sarrow (sTHole hole1) (sarrow (sTHole hole2) (sTHole hole3)))
                 (\f -> svar f))
 
 exampleProg5 :: Type /\ Term
 exampleProg5 =
-    sBindHole \hole1 -> sBindHole \hole2 -> sBindHole \hole3 ->
-        program (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
+    sBindTHole \hole1 -> sBindTHole \hole2 -> sBindTHole \hole3 ->
+        program (sarrow (sTHole hole1) (sarrow (sTHole hole2) (sTHole hole3)))
             (slet' "f" (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
-                (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
-                (\f -> (sapp (sapp (svar f) (shole hole1) sTHole) (shole hole2) sTHole)))
+                (sarrow (sTHole hole1) (sarrow (sTHole hole2) (sTHole hole3)))
+                (\f -> (sapp (sapp (svar f) (sTHole hole1) sHole) (sTHole hole2) sHole)))
 
 exampleProg6 :: Type /\ Term
 exampleProg6 =
-    sBindHole \hole1 -> sBindHole \hole2 -> sBindHole \hole3 ->
-        program (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
+    sBindTHole \hole1 -> sBindTHole \hole2 -> sBindTHole \hole3 ->
+        program (sarrow (sTHole hole1) (sarrow (sTHole hole2) (sTHole hole3)))
             (slet "f" [ TypeBind {varName: "A"} (unsafePerformEffect genUUID) ] (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
-                (sarrow (shole hole1) (sarrow (shole hole2) (shole hole3)))
-                (\f -> (sapp (sapp (svar f) (shole hole1) sTHole) (shole hole2) sTHole)))
+                (sarrow (sTHole hole1) (sarrow (sTHole hole2) (sTHole hole3)))
+                (\f -> (sapp (sapp (svar f) (sTHole hole1) sHole) (sTHole hole2) sHole)))

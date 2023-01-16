@@ -17,7 +17,7 @@ import TypeCraft.Purescript.Node (Node, makeCursorNodeStyle, makeQueryInsertBotN
 import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeArgListPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), State, getCompletion)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeArgListToNode, typeBindListToNode, typeBindToNode, typeToNode)
-import TypeCraft.Purescript.Util (fromJust, hole')
+import TypeCraft.Purescript.Util (fromJust, fromJust', hole')
 
 {-
 TODO: Note from Jacob: Counterintuitvely, all cursor modes should use BISelect
@@ -55,10 +55,10 @@ cursorModeToNode cursorMode =
                 <#> \(completionGroup_i /\ cmpls) ->
                     completionToNode false
                       if completionGroup_i == cursorMode.query.completionGroup_i `mod` n_completionGroups then
-                        fromJust $ cmpls Array.!! cursorMode.query.completionGroup_i `mod` n_completionGroups
+                        fromJust' "cursorModeToNode: cmpls Array.!! cursorMode.query.completionGroupItem_i `mod` Array.length cmpls" $ cmpls Array.!! cursorMode.query.completionGroupItem_i `mod` Array.length cmpls
                       else
                         -- cmpls should never be empty, because then there wouldn't be a completionGroup for it
-                        fromJust $ cmpls Array.!! 0
+                        fromJust' "cursorModeToNode: cmpls Array.!! 0" $ cmpls Array.!! 0
             )
         ] case getCompletion cursorMode.query of
         Nothing -> cursorModeTermToNode unit

@@ -12,7 +12,7 @@ import Data.Show.Generic (genericShow)
 import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
 import TypeCraft.Purescript.Grammar (Change, Constructor, CtrParam, Term(..), TermBind(..), Type(..), TypeArg, TypeBind, UpPath)
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
-import TypeCraft.Purescript.ShallowEmbed (exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
+import TypeCraft.Purescript.ShallowEmbed (exampleProg1, exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
 import TypeCraft.Purescript.Util (hole)
 
 {-
@@ -93,7 +93,7 @@ initState =
         , query: emptyQuery
         }
   where
-  ty /\ tm = exampleProg5
+  ty /\ tm = exampleProg1
 
 data Clipboard
   = EmptyClip -- add more later, not priority yet

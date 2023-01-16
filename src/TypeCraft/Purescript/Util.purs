@@ -25,3 +25,7 @@ head' l = case head l of
 fromJust :: forall a . Maybe a -> a
 fromJust (Just x) = x
 fromJust Nothing = unsafeThrow "fromJust failed"
+
+fromJust' :: forall a . String -> Maybe a -> a
+fromJust' _ (Just x) = x
+fromJust' msg Nothing = unsafeThrow $ "fromJust failed: " <> msg
