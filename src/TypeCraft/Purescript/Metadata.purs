@@ -67,7 +67,7 @@ defaultLetMD :: LetMD
 defaultLetMD = {varIndented : false, typeIndented : false,
     defIndented : true, bodyIndented : true}
 
----- termbind
---defaultTermBindMD :: TermBindMD
---defaultTermBindMD = {}
+-- termbind
+defaultTermBindMD :: TermBindMD
+defaultTermBindMD = {varName : "placeholder"}
 

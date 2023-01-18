@@ -17,6 +17,7 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
+import Debug (trace)
 
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
 chTermBoundary :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Term
@@ -80,9 +81,15 @@ chTerm kctx ctx c t =
                 if not (ty1 == ty2) then unsafeThrow "shouldn't happen" else
                 if not (bodyTy == fst (getEndpoints c)) then unsafeThrow "shouldn't happen" else
                 let c2' /\ t' = chTerm kctx (insert x (VarDelete (PType ty2)) ctx) c t in
-                (Minus ty1 c2') /\ t'
+                (CArrow (tyInject ty1) c2') /\ t'
+            (Minus ty c) /\ t ->
+                let c' /\ t' = chTerm kctx ctx c t in
+                (CArrow (tyInject ty) c') /\ App defaultAppMD t' (Hole defaultHoleMD) ty (snd (getEndpoints c))
             (Plus ty c) /\ t ->
-                c /\ App defaultAppMD t (Hole defaultHoleMD) ty (snd (getEndpoints c))
+                let tBind@(TermBind _ x) = (freshTermBind Nothing) in
+                let ctx' = insert x (VarInsert (PType ty)) ctx in
+                let c' /\ t' = chTerm kctx ctx' c t in
+                (CArrow (tyInject ty) c') /\ Lambda defaultLambdaMD tBind ty t' (snd (getEndpoints c'))
             c /\ Let md tBind@(TermBind _ x) binds t1 ty t2 tybody ->
                 -- TODO: need to include the binds into the kctx for some things I think?
                 if not (fst (getEndpoints c) == ty) then unsafeThrow "shouldn't happen" else
@@ -101,6 +108,7 @@ chTerm kctx ctx c t =
 --                let c' /\ t' = chTerm (ctxKindCons kctx x (TVarTypeChange tyChange)) ctx c t in
                 let c' /\ t' = chTerm (ctxKindCons kctx x (TVarKindChange (kindInject (tyBindsWrapKind params Type)))) ctx c t in
                 c' /\ TLet md x params ty' t' (snd (getEndpoints c')) -- TODO: what if c references x? Then it is out of scope above.
+            c /\ Hole md -> (tyInject (snd (getEndpoints c))) /\ Hole md
             cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
         )
     in
