@@ -105,11 +105,11 @@ termPathToNode isActive belowInfo termPath innerNode =
                         , innerNode
                         ]
                     }
-        , buffer1: \upRecVal md {-Term-} bufTy body bodyTy -> hole' "termPathToNode isActive"
-        , buffer3: \upRecVal md buf bufTy {-Term-} bodyTy -> hole' "termPathToNode isActive"
-        , typeBoundary1: \upRecVal md change {-Term-} -> hole' "termPathToNode isActive"
-        , contextBoundary1: \upRecVal md x change {-Term-} -> hole' "termPathToNode isActive"
-        , tLet4: \upRecVal md tyBind tyBinds def {-Term-} bodyTy -> hole' "termPathToNode isActive"
+        , buffer1: \upRecVal md {-Term-} bufTy body bodyTy -> hole' "termPathToNode 1"
+        , buffer3: \upRecVal md buf bufTy {-Term-} bodyTy -> hole' "termPathToNode 2"
+        , typeBoundary1: \upRecVal md change {-Term-} -> hole' "termPathToNode 3"
+        , contextBoundary1: \upRecVal md x change {-Term-} -> hole' "termPathToNode 4"
+        , tLet4: \upRecVal md tyBind tyBinds def {-Term-} bodyTy -> hole' "termPathToNode 5"
         , let5: \upRecVal md tBind tyBinds def ty {-body-} bodyTy ->
                   let newBI = (stepBI (Let5 md tBind.tBind tyBinds.tyBinds def.term ty.ty {-body-} bodyTy) belowInfo) in
                   termPathToNode isActive newBI upRecVal
@@ -123,7 +123,7 @@ termPathToNode isActive belowInfo termPath innerNode =
                             , innerNode
                             ]
                         }
-        , data4: \upRecVal md tbind tbinds ctrs {-body-} bodyTy -> hole' "termPathToNode isActive"
+        , data4: \upRecVal md tbind tbinds ctrs {-body-} bodyTy -> hole' "termPathToNode 6"
         }
       )
       termPath

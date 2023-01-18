@@ -165,7 +165,9 @@ type Sub
 applySubType :: Sub -> Type -> Type
 applySubType sub = case _ of
   Arrow md ty1 ty2 -> Arrow md (applySubType sub ty1) (applySubType sub ty2)
-  ty@(THole md hid) -> applySubType sub $ maybe ty identity (Map.lookup hid sub.subTHoles)
+  -- Note from Jacob: this former version of the line was causing an infinite loop
+--  ty@(THole md hid) -> applySubType sub $ maybe ty identity (Map.lookup hid sub.subTHoles)
+  ty@(THole md hid) -> maybe ty identity (Map.lookup hid sub.subTHoles)
   ty@(TNeu md id List.Nil) -> applySubType sub $ maybe ty identity (Map.lookup id sub.subTypeVars)
   TNeu md id args -> TNeu md id ((\(TypeArg md ty) -> TypeArg md (applySubType sub ty)) <$> args)
 
