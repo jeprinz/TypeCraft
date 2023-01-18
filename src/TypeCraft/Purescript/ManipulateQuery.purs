@@ -19,6 +19,7 @@ import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State)
 import TypeCraft.Purescript.Unification
 import Data.Foldable (and, traverse_)
+import TypeCraft.Purescript.Util (hole)
 
 isNonemptyQueryString :: Query -> Boolean
 isNonemptyQueryString query = not $ String.null query.string

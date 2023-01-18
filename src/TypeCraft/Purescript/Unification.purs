@@ -12,6 +12,8 @@ import Data.List as List
 import Data.Either (Either(..))
 import Data.Foldable (and, traverse_)
 import TypeCraft.Purescript.MD
+import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Util (hole')
 
 -- * unification
 type Unify a
@@ -29,8 +31,29 @@ applySubType sub = case _ of
   -- Note from Jacob: this former version of the line was causing an infinite loop
 --  ty@(THole md hid) -> applySubType sub $ maybe ty identity (Map.lookup hid sub.subTHoles)
   ty@(THole md hid) -> maybe ty identity (Map.lookup hid sub.subTHoles)
+  -- Question from Jacob: Why is there a special case for Nil?
   ty@(TNeu md id List.Nil) -> applySubType sub $ maybe ty identity (Map.lookup id sub.subTypeVars)
   TNeu md id args -> TNeu md id ((\(TypeArg md ty) -> TypeArg md (applySubType sub ty)) <$> args)
+
+applySubChange :: Sub -> Change -> Change
+applySubChange sub = case _ of
+  CArrow ty1 ty2 -> CArrow (applySubChange sub ty1) (applySubChange sub ty2)
+  ty@(CHole hid) -> maybe ty tyInject (Map.lookup hid sub.subTHoles)
+  -- Question from Jacob: Why is there a special case for Nil?
+  ty@(CNeu id List.Nil) -> applySubChange sub $ maybe ty tyInject (Map.lookup id sub.subTypeVars)
+  CNeu id args -> CNeu id (applySubChangeParam sub <$> args)
+  Replace ty1 ty2 -> Replace (applySubType sub ty1) (applySubType sub ty2)
+  Plus ty ch -> Plus (applySubType sub ty) (applySubChange sub ch)
+  Minus ty ch -> Minus (applySubType sub ty) (applySubChange sub ch)
+--data ChangeParam
+--  = ChangeParam Change
+--  | PlusParam Type
+--  | MinusParam Type
+applySubChangeParam :: Sub -> ChangeParam -> ChangeParam
+applySubChangeParam sub = case _ of
+    ChangeParam ch -> ChangeParam (applySubChange sub ch)
+    PlusParam ty -> PlusParam (applySubType sub ty)
+    MinusParam ty -> MinusParam (applySubType sub ty)
 
 emptySub :: Sub
 emptySub = { subTypeVars: Map.empty, subTHoles: Map.empty }
@@ -83,3 +106,34 @@ fillNeutral' ty id ty' = case ty of
   _ -> do
     void $ unify ty ty'
     pure $ Var defaultVarMD id List.Nil
+
+
+subTerm :: Sub -> Term -> Term
+subTerm sub =
+    let rec = subTerm sub in
+    let st = applySubType sub in
+    case _ of
+    App md t1 t2 argTy outTy -> App md (rec t1) (rec t2) (st argTy) (st outTy)
+    Lambda md tBind argTy body bodyTy -> Lambda md tBind (st argTy) (rec body) (st bodyTy)
+    Var md x tyArgs -> Var md x (map (\(TypeArg md ty) -> TypeArg md (st ty)) tyArgs)
+    Let md tBind tyBinds def defTy body bodyTy -> Let md tBind tyBinds (rec def) (st defTy) (rec body) (st bodyTy)
+    Data md tyBind tyBinds ctrs body bodyTy -> hole' "subTerm" -- Need to define subConstructor
+    TLet md tyBind tyBinds def body bodyTy -> TLet md tyBind tyBinds (st def) (rec body) (st bodyTy)
+    TypeBoundary md ch body -> TypeBoundary md (applySubChange sub ch) (rec body)
+    ContextBoundary md x ch body -> hole' "subTerm" -- ContextBoundary md x (applySubChange sub ch) (rec body)
+    Hole md -> Hole md
+    Buffer md def defTy body bodyTy -> Buffer md (rec def) (st defTy) (rec body) (st bodyTy)
+
+--data PolyChange
+--  = CForall TypeVarID PolyChange
+--  | PPlus TypeVarID PolyChange
+--  | PMinus TypeVarID PolyChange
+--  | PChange Change
+--
+--data VarChange
+--  = VarTypeChange PolyChange
+--  | VarDelete PolyType
+--  | VarInsert PolyType
+
+-- WIll also need: subTermPath
+-- Shouldn't need it for any other kind of path, since unifications can only be triggered when filling a term.
