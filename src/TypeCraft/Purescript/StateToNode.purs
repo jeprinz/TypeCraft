@@ -15,6 +15,7 @@ import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrPar
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), State, getCompletion)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeArgListToNode, typeBindListToNode, typeBindToNode, typeToNode)
 import TypeCraft.Purescript.Util (fromJust, fromJust', hole')
+import TypeCraft.Purescript.Unification (applySubType)
 
 {-
 TODO: Note from Jacob: Counterintuitvely, all cursor modes should use BISelect
@@ -97,8 +98,9 @@ cursorModeToNode cursorMode =
 
   completionToNode :: { isInline :: Boolean, isActive :: Boolean } -> Completion -> Node
   completionToNode opts cmpl = case cmpl of
-    CompletionTerm term ty -> case cursorMode.cursorLocation of
-      TermCursor ctxs _ty termPath _ ->
+    CompletionTerm term {-ty-} sub -> case cursorMode.cursorLocation of
+      TermCursor ctxs ty' termPath _ ->
+        let ty = applySubType sub ty' in
         ( if opts.isActive then
             setNodeStyle makeQueryReplaceNewActiveNodeStyle
           else

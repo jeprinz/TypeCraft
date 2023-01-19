@@ -67,7 +67,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
               when (str `kindaStartsWith` varName) do
                 case runUnify (fillNeutral pty id ty) of
                   Left _msg -> pure unit
-                  Right (tm' /\ sub) -> Writer.tell [ [ CompletionTerm tm' (applySubType sub ty) ] ]
+                  Right (tm' /\ sub) -> Writer.tell [ [ CompletionTerm tm' sub{subTypeVars = Map.empty} ] ] -- TODO: Jacob: why would there be subTypeVars here anyway? I'm confused about that. Isn't unification for holes?
         )
         (Map.toUnfoldable ctxs.mdctx :: Array (UUID /\ String))
       -- Lambda
@@ -118,7 +118,8 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
         $ Writer.tell
             [ [ CompletionTerm
                   (freshHole unit)
-                  ty
+--                  ty
+                  {subTypeVars: Map.empty, subTHoles: Map.empty}
               ]
             ]
       -- Buffer

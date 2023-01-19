@@ -18,6 +18,8 @@ import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select, State, emptyQuery, getCompletion, makeCursorMode)
 import TypeCraft.Purescript.Util (hole')
+import TypeCraft.Purescript.Grammar (tyInject)
+import TypeCraft.Purescript.Unification
 
 handleKey :: String -> State -> Maybe State
 handleKey key st = case st.mode of
@@ -43,9 +45,13 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
   TermCursor ctxs ty path tm ->
     getCompletion cursorMode.query
       >>= case _ of
-          CompletionTerm tm' ty' -> 
+          CompletionTerm tm' {-ty'-} sub ->
+            let ty' = applySubType sub ty in
+            let path' = subTermPath sub path in
             pure
-              { cursorLocation: TermCursor ctxs ty' (chTermPath Map.empty Map.empty (Replace ty ty') path) tm'
+            -- TODO: note from Jacob: always having Replace here doesn't seem right to me. Shouldn't terms only be filled in when they are the exact type (modulo unification) in the first place?
+            -- As opposed to path completions, where you do have typechanges.
+              { cursorLocation: TermCursor ctxs ty' path' tm'
               , query: emptyQuery
               }
           CompletionTermPath pathNew ch ->

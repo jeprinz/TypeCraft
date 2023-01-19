@@ -14,6 +14,7 @@ import Data.Foldable (and, traverse_)
 import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (hole')
+import Effect.Exception.Unsafe (unsafeThrow)
 
 -- * unification
 type Unify a
@@ -109,31 +110,68 @@ fillNeutral' ty id ty' = case ty of
 
 
 subTerm :: Sub -> Term -> Term
-subTerm sub =
+subTerm sub term =
     let rec = subTerm sub in
     let st = applySubType sub in
-    case _ of
+    case term of
     App md t1 t2 argTy outTy -> App md (rec t1) (rec t2) (st argTy) (st outTy)
     Lambda md tBind argTy body bodyTy -> Lambda md tBind (st argTy) (rec body) (st bodyTy)
     Var md x tyArgs -> Var md x (map (\(TypeArg md ty) -> TypeArg md (st ty)) tyArgs)
     Let md tBind tyBinds def defTy body bodyTy -> Let md tBind tyBinds (rec def) (st defTy) (rec body) (st bodyTy)
-    Data md tyBind tyBinds ctrs body bodyTy -> hole' "subTerm" -- Need to define subConstructor
+    Data md tyBind tyBinds ctrs body bodyTy -> Data md tyBind tyBinds (map (subConstructor sub) ctrs) (rec body) (st bodyTy)
     TLet md tyBind tyBinds def body bodyTy -> TLet md tyBind tyBinds (st def) (rec body) (st bodyTy)
     TypeBoundary md ch body -> TypeBoundary md (applySubChange sub ch) (rec body)
-    ContextBoundary md x ch body -> hole' "subTerm" -- ContextBoundary md x (applySubChange sub ch) (rec body)
+    ContextBoundary md x ch body -> ContextBoundary md x (subVarChange sub ch) (rec body)
     Hole md -> Hole md
     Buffer md def defTy body bodyTy -> Buffer md (rec def) (st defTy) (rec body) (st bodyTy)
 
---data PolyChange
---  = CForall TypeVarID PolyChange
---  | PPlus TypeVarID PolyChange
---  | PMinus TypeVarID PolyChange
---  | PChange Change
---
---data VarChange
---  = VarTypeChange PolyChange
---  | VarDelete PolyType
---  | VarInsert PolyType
+subTermPath :: Sub -> UpPath -> UpPath
+subTermPath sub List.Nil = List.Nil
+subTermPath sub (tooth List.: rest) = (subTermTooth sub tooth) List.: (subTermPath sub rest)
 
--- WIll also need: subTermPath
--- Shouldn't need it for any other kind of path, since unifications can only be triggered when filling a term.
+subTermTooth :: Sub -> Tooth -> Tooth
+subTermTooth sub tooth =
+    let rec = subTerm sub in
+    let st = applySubType sub in
+    case tooth of
+        App1 md {-Term-} t2 argTy bodyTy -> App1 md (rec t2) (st argTy) (st bodyTy)
+        App2 md t1 {-Term-} argTy bodyTy -> App2 md (rec t1) (st argTy) (st bodyTy)
+        Lambda3 md tBind argTy {-Term-} bodyTy -> Lambda3 md tBind (st argTy) (st bodyTy)
+        Let3 md tBind tyBinds {-Term-} defTy body bodyTy -> Let3 md tBind tyBinds (st defTy) (rec body) (st bodyTy)
+        Let5 md tBind tyBinds def defTy {-Term-} bodyTy -> Let5 md tBind tyBinds (rec def) (st defTy) (st bodyTy)
+        Buffer1 md {-Term-} defTy body bodyTy -> Buffer1 md (st defTy) (rec body) (st bodyTy)
+        Buffer3 md def defTy {-Term-} bodyTy -> Buffer3 md (rec def) (st defTy) (st bodyTy)
+        TypeBoundary1 md ch {-Term-} -> TypeBoundary1 md (applySubChange sub ch)
+        ContextBoundary1 md x vch {-Term-} -> ContextBoundary1 md x (subVarChange sub vch)
+        TLet4 md tyBind tyBinds def {-Term-} bodyTy -> TLet4 md tyBind tyBinds (st def) (st bodyTy)
+        Data4 md tyBind tyBinds ctrs {-Term-} bodyTy -> Data4 md tyBind tyBinds (map (subConstructor sub) ctrs) (st bodyTy)
+        _ -> unsafeThrow "Either wasn't a term tooth, or I forgot a case in subTermTooth"
+
+
+subPolyChange :: Sub -> PolyChange -> PolyChange
+subPolyChange sub polyChange =
+    let rec = subPolyChange sub in
+    case polyChange of
+        CForall x pc -> CForall x (rec pc)
+        PPlus x pc -> PPlus x (rec pc)
+        PMinus x pc -> PMinus x (rec pc)
+        PChange ch -> PChange (applySubChange sub ch)
+
+subPolyType :: Sub -> PolyType -> PolyType
+subPolyType sub = case _ of
+  Forall x pt -> Forall x (subPolyType sub pt)
+  PType ty -> PType (applySubType sub ty)
+
+
+subVarChange :: Sub -> VarChange -> VarChange
+subVarChange sub varChange =
+    case varChange of
+        VarTypeChange pc -> VarTypeChange (subPolyChange sub pc)
+        VarDelete pt -> VarDelete (subPolyType sub pt)
+        VarInsert pt -> VarInsert (subPolyType sub pt)
+
+subConstructor :: Sub -> Constructor -> Constructor
+subConstructor sub (Constructor md x ctrParams) = Constructor md x (map (subCtrParam sub) ctrParams)
+
+subCtrParam :: Sub -> CtrParam -> CtrParam
+subCtrParam sub (CtrParam md ty) = CtrParam md (applySubType sub ty)

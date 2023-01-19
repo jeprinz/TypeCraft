@@ -14,6 +14,7 @@ import TypeCraft.Purescript.Grammar (Change, Constructor, CtrParam, Term(..), Te
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
 import TypeCraft.Purescript.ShallowEmbed (exampleProg1, exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
 import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Unification (Sub)
 
 {-
 This file will contain possible states for the editor
@@ -51,7 +52,7 @@ type Query
 
 -- TODO: completions for other syntax kinds
 data Completion 
-  = CompletionTerm Term Type
+  = CompletionTerm Term {-Type-} Sub -- I don't think we need a Type here? Aren't terms only filled when they are the correct type up to unification? (Or if not, at least make it a typechange?)
   | CompletionTermPath UpPath Change
   | CompletionType Type
   | CompletionTypePath UpPath Change
