@@ -30,14 +30,12 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       classNames.push(node.style.case)
 
       function onClick(event: React.MouseEvent) {
-        console.log("onClick")
-
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
           editor.setState(getCursor())
           event.stopPropagation()
         } else {
-          console.log(`getCursor is undefined for this '${node.tag.case}' node`)
+          // console.log(`getCursor is undefined for this '${node.tag.case}' node`)
         }
 
         // TODO: do selection
@@ -69,19 +67,33 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         ]
       }
       */
+
+      function renderCompletion(node_: Node, i: number) {
+        return (
+          <div className={
+            ([] as string[]).concat(
+              ["query-completion"],
+              i == node.activeCompletionGroup ? ["query-completion-active"] : []).join(" ")
+          }>
+            {renderNode(node_)}
+          </div>
+        )
+      }
+
       if (node.queryString !== undefined) {
         return [
-          <div className="node query cursor">
-            <div className="query-string">{node.queryString}</div>
-            <div className="query-completions">
-              <div className="query-completions-inner">{
-                node.completions !== undefined && node.completions.length > 0 ?
-                  node.completions.map(node => <div className={([] as string[]).concat(["query-completion"],
-                    node.style.case === 'query-insert-top-active' ? ['query-insert-top-active'] :
-                      node.style.case === 'query-replace-new-active' ? ["query-replace-new-active"] : []
-                  ).join(" ")}>{renderNode(node)}</div>) :
-                  <div className="query-completion query-completion-empty">no completions</div>
-              }</div>
+          <div className="node cursor">
+            <div className="query">
+              <div className="query-inner">
+                <div className="query-string">
+                  <span className="query-string-inner">{node.queryString}</span>
+                </div>
+                <div className="query-completions">{
+                  node.completions !== undefined && node.completions.length > 0 ?
+                    node.completions.map((node, i) => renderCompletion(node, i)) :
+                    <div className="query-completion query-completion-empty">no completions</div>
+                }</div>
+              </div>
             </div>
             <div
               className={([] as string[]).concat(["node"], classNames).join(" ")}
@@ -162,7 +174,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
     const state = editor.props.backend.handleKeyboardEvent(event)(editor.state)
     if (state === undefined) {
-      console.log("[!] handleKeyboardEvent failed")
       return
     }
     editor.setState(state)

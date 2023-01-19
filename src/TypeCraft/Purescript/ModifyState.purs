@@ -8,7 +8,6 @@ import Data.Array as Array
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.String as String
-import Debug (trace, traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.ChangePath (chTermPath, chTypePath)
 import TypeCraft.Purescript.ChangeTerm (chType, chTypeParamList)

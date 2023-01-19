@@ -17,7 +17,6 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
-import Debug (trace)
 
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
 chTermBoundary :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Term

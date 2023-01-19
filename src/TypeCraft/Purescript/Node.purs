@@ -32,6 +32,7 @@ foreign import makeNode_ ::
   , label :: Nullable String -- requires: Term.Var, TermBind
   , queryString :: Nullable String -- requires: active query
   , completions :: Nullable (Array Node) -- requires: active query
+  , activeCompletion :: Nullable Int -- requires: active query
   } ->
   Node
 
@@ -50,9 +51,10 @@ makeNode x =
     , style: makeNormalNodeStyle
     , indentation: makeInlineNodeIndentation
     , isParenthesized: false
-    , label: Nullable.fromMaybe Nothing
-    , queryString: Nullable.fromMaybe Nothing
-    , completions: Nullable.fromMaybe Nothing
+    , label: Nullable.emptyNullable
+    , queryString: Nullable.emptyNullable
+    , completions: Nullable.emptyNullable
+    , activeCompletion: Nullable.emptyNullable
     , tag: toNodeTag_ x.tag
     }
 
@@ -66,7 +68,7 @@ foreign import setNodeLabel :: String -> Node -> Node
 
 foreign import setNodeQueryString :: String -> Node -> Node
 
-foreign import setNodeCompletions :: Array Node -> Node -> Node
+foreign import setNodeCompletions :: Array Node -> Number -> Node -> Node
 
 -- NodeIndentation
 foreign import data NodeIndentation :: Type
@@ -207,12 +209,10 @@ foreign import makeSelectTopNodeStyle :: NodeStyle
 foreign import makeSelectBotNodeStyle :: NodeStyle
 
 foreign import makeQueryInsertTopStyle :: NodeStyle
-foreign import makeQueryInsertTopActiveStyle :: NodeStyle
 
 foreign import makeQueryInsertBotNodeStyle :: NodeStyle
 
 foreign import makeQueryReplaceNewNodeStyle :: NodeStyle
-foreign import makeQueryReplaceNewActiveNodeStyle :: NodeStyle
 
 foreign import makeQueryReplaceOldNodeStyle :: NodeStyle
 

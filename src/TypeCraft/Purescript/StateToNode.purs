@@ -4,18 +4,18 @@ import Prelude
 import Prim hiding (Type)
 import Data.Array (foldr)
 import Data.Array as Array
+import Data.Int (toNumber)
 import Data.List (List(..))
-import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.String as String
 import Data.Tuple.Nested ((/\))
 import TypeCraft.Purescript.Grammar (freshHole)
-import TypeCraft.Purescript.Node (Node, makeCursorNodeStyle, makeQueryInsertBotNodeStyle, makeQueryInsertTopActiveStyle, makeQueryInsertTopStyle, makeQueryInvalidNodeStyle, makeQueryMetaholeNodeStyle, makeQueryReplaceNewActiveNodeStyle, makeQueryReplaceNewNodeStyle, makeSelectBotNodeStyle, makeSelectTopNodeStyle, setNodeCompletions, setNodeQueryString, setNodeStyle)
+import TypeCraft.Purescript.Node (Node, makeCursorNodeStyle, makeQueryInsertBotNodeStyle, makeQueryInsertTopStyle, makeQueryMetaholeNodeStyle, makeQueryReplaceNewNodeStyle, makeSelectBotNodeStyle, makeSelectTopNodeStyle, setNodeCompletions, setNodeQueryString, setNodeStyle)
 import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeArgListPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), State, getCompletion)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeArgListToNode, typeBindListToNode, typeBindToNode, typeToNode)
-import TypeCraft.Purescript.Util (fromJust, fromJust', hole')
 import TypeCraft.Purescript.Unification (applySubType)
+import TypeCraft.Purescript.Util (fromJust', hole')
 
 {-
 TODO: Note from Jacob: Counterintuitvely, all cursor modes should use BISelect
@@ -50,28 +50,33 @@ cursorModeToNode cursorMode =
         [ setNodeQueryString cursorMode.query.string
         , setNodeCompletions
             ( (Array.range 0 (n_completionGroups - 1) `Array.zip` cursorMode.query.completionGroups)
-                <#> \(completionGroup_i /\ cmpls) ->
-                    if completionGroup_i == cursorMode.query.completionGroup_i `mod` n_completionGroups then
-                      completionToNode { isInline: false, isActive: true }
+                <#> \(completionGroup_j /\ cmpls) ->
+                    if completionGroup_j == completionGroup_i then
+                      completionToNode { isInline: false }
                         $ fromJust' "cursorModeToNode: cmpls Array.!! cursorMode.query.completionGroupItem_i `mod` Array.length cmpls"
                         $ cmpls
-                        Array.!! cursorMode.query.completionGroupItem_i `mod` Array.length cmpls
+                        Array.!! completionGroupItem_i cmpls
                     else
-                      completionToNode { isInline: false, isActive: false }
-                        -- cmpls should never be empty, because then there wouldn't be a completionGroup for it
-                        
+                      -- cmpls should never be empty, because then there
+                      -- wouldn't be a completionGroup for it
+                      completionToNode { isInline: false }
                         $ fromJust' "cursorModeToNode: cmpls Array.!! 0"
                         $ cmpls
                         Array.!! 0
             )
+            (toNumber completionGroup_i)
         ] case getCompletion cursorMode.query of
         Nothing -> cursorModeTermToNode unit
-        Just cmpl -> completionToNode { isInline: true, isActive: true } cmpl
+        Just cmpl -> completionToNode { isInline: true } cmpl
     else
       -- if the query is empty
       cursorModeTermToNode unit
   where
   n_completionGroups = Array.length cursorMode.query.completionGroups
+
+  completionGroup_i = cursorMode.query.completionGroup_i `mod` n_completionGroups
+
+  completionGroupItem_i cmpls = cursorMode.query.completionGroupItem_i `mod` Array.length cmpls
 
   cursorModePathToNode :: Node -> Node
   cursorModePathToNode = case cursorMode.cursorLocation of
@@ -96,27 +101,21 @@ cursorModeToNode cursorMode =
       CtrParamListCursor ctxs listCtrParamPath ctrParams -> ctrParamListToNode true (AICursor listCtrParamPath) { ctxs, ctrParams }
       TypeBindListCursor ctxs listTypeBindPath tyBinds -> typeBindListToNode true (AICursor listTypeBindPath) { ctxs, tyBinds }
 
-  completionToNode :: { isInline :: Boolean, isActive :: Boolean } -> Completion -> Node
+  completionToNode :: { isInline :: Boolean } -> Completion -> Node
   completionToNode opts cmpl = case cmpl of
     CompletionTerm term {-ty-} sub -> case cursorMode.cursorLocation of
       TermCursor ctxs ty' termPath _ ->
-        let ty = applySubType sub ty' in
-        ( if opts.isActive then
-            setNodeStyle makeQueryReplaceNewActiveNodeStyle
-          else
-            setNodeStyle makeQueryReplaceNewNodeStyle
-        )
-          $ termToNode false
-              (AISelect termPath ctxs (term /\ ty) Nil)
-              { ctxs, term, ty }
+        let
+          ty = applySubType sub ty'
+        in
+          setNodeStyle makeQueryReplaceNewNodeStyle
+            $ termToNode false
+                (AISelect termPath ctxs (term /\ ty) Nil)
+                { ctxs, term, ty }
       _ -> hole' "completionToNode CompletionTerm non-TermCursor"
     CompletionTermPath termPath ch -> case cursorMode.cursorLocation of
       TermCursor ctxs ty termPath' term ->
-        ( if opts.isActive then
-            setNodeStyle makeQueryInsertTopActiveStyle
-          else
-            setNodeStyle makeQueryInsertTopStyle
-        )
+        setNodeStyle makeQueryInsertTopStyle
           $ termPathToNode false
               BITerm
               { ctxs, term, termPath, ty }
@@ -133,22 +132,14 @@ cursorModeToNode cursorMode =
       _ -> hole' "completionToNode CompletionPath non-TermCursor"
     CompletionType ty -> case cursorMode.cursorLocation of
       TypeCursor ctxs path _ty ->
-        ( if opts.isActive then
-            setNodeStyle makeQueryReplaceNewActiveNodeStyle
-          else
-            setNodeStyle makeQueryReplaceNewNodeStyle
-        )
+        setNodeStyle makeQueryReplaceNewNodeStyle
           $ typeToNode false
               (AISelect path ctxs ty Nil)
               { ctxs, ty }
       _ -> hole' "completionToNode CompletionType non-TypeCursor"
     CompletionTypePath path' ch -> case cursorMode.cursorLocation of
       TypeCursor ctxs path ty ->
-        ( if opts.isActive then
-            setNodeStyle makeQueryInsertTopActiveStyle
-          else
-            setNodeStyle makeQueryInsertTopStyle
-        )
+        setNodeStyle makeQueryInsertTopStyle
           $ typePathToNode false
               BITerm
               { ctxs, ty, typePath: path' }

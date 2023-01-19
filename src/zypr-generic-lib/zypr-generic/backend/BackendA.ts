@@ -13,7 +13,7 @@ export const makeBackend = (state: State.State): Backend.Backend => {
       language: language(),
       format: (st: State.State) => stateToNode(st),
       handleKeyboardEvent: (event) => (st) => {
-        console.log("handleKeyboardEvent.event.key", event.key)
+        // console.log("handleKeyboardEvent.event.key", event.key)
         let st_ = ModifyState.handleKey(event, st)
         if (st_ !== undefined) event.preventDefault()
         return st_

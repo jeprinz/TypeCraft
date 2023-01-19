@@ -14,7 +14,6 @@ import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.String as String
 import Data.Tuple.Nested (type (/\), (/\))
 import Data.UUID (UUID)
-import Debug (traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Grammar (Change(..), PolyType(..), Term(..), TermVarID, Tooth(..), Type(..), TypeArg(..), TypeHoleID, TypeVarID, freshHole, freshTHole, freshTermBind, freshTypeBind, tyInject)
 import TypeCraft.Purescript.Key (Key)
@@ -33,7 +32,6 @@ manipulateQuery key st cursorMode@{ query: query@{ string, completionGroup_i, co
   | key.key == "ArrowLeft" && isNonemptyQueryString query = pure query { completionGroupItem_i = query.completionGroupItem_i - 1 }
   | key.key == "ArrowRight" && isNonemptyQueryString query = pure query { completionGroupItem_i = query.completionGroupItem_i + 1 }
   | otherwise = do
-    traceM $ "manipulateQuery.key = " <> key.key
     string' <- manipulateString key string
     pure
       query

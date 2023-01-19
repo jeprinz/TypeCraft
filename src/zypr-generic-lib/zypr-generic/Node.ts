@@ -11,6 +11,7 @@ export type Node = {
     label?: string,
     queryString?: string,
     completions?: Node[],
+    activeCompletionGroup?: number,
     tag: NodeTag
 }
 
@@ -59,10 +60,8 @@ export type NodeStyle
     | { case: 'select-top' }
     | { case: 'select-bot' }
     | { case: 'query-insert-top' }
-    | { case: 'query-insert-top-active' }
     | { case: 'query-insert-bot' }
     | { case: 'query-replace-new' }
-    | { case: 'query-replace-new-active' }
     | { case: 'query-replace-old' }
     | { case: 'query-invalid' }
     | { case: 'query-metahole' }

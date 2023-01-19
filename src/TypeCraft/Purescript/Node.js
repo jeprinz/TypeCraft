@@ -84,10 +84,8 @@ export const makeCursorNodeStyle = { case: 'cursor' }
 export const makeSelectTopNodeStyle = { case: 'select-top' }
 export const makeSelectBotNodeStyle = { case: 'select-bot' }
 export const makeQueryInsertTopStyle = { case: 'query-insert-top' }
-export const makeQueryInsertTopActiveStyle = { case: 'query-insert-top-active' }
 export const makeQueryInsertBotNodeStyle = { case: 'query-insert-bot' }
 export const makeQueryReplaceNewNodeStyle = { case: 'query-replace-new' }
-export const makeQueryReplaceNewActiveNodeStyle = { case: 'query-replace-new-active' }
 export const makeQueryReplaceOldNodeStyle = { case: 'query-replace-old' }
 export const makeQueryInvalidNodeStyle = (str) => ({ case: 'query-invalid', string: str })
 export const makeQueryMetaholeNodeStyle = { case: 'query-metahole' }
@@ -102,7 +100,11 @@ export const setNodeLabel = label => node => ({ ...node, label })
 
 export const setNodeQueryString = queryString => node => ({ ...node, queryString })
 
-export const setNodeCompletions = completions => node => ({ ...node, completions })
+export const setNodeCompletions = completions => activeCompletionGroup => node => ({ ...node, completions, activeCompletionGroup })
+// export const setNodeCompletions = completions => activeCompletionGroup => node => {
+//   console.log("setNodeCompletions.activeCompletionGroup", activeCompletionGroup)
+//   return ({ ...node, completions, activeCompletionGroup })
+// }
 
 // NodeIndentation
 export const makeInlineNodeIndentation = { case: 'inline' }

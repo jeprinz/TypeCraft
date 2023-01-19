@@ -6,7 +6,6 @@ import Prelude
 import Data.Array as Array
 import Data.Maybe (Maybe(..))
 import Data.String as String
-import Debug (traceM)
 import TypeCraft.Purescript.Key (Key)
 import TypeCraft.Purescript.Util (hole, hole')
 
