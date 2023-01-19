@@ -1,15 +1,16 @@
 module TypeCraft.Purescript.TermToNode where
 
-import Data.Tuple.Nested (type (/\), (/\))
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term, TermBind(..), Tooth(..), Type, TypeArg, TypeBind, UpPath)
 import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe')
+import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
-import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, setCalculatedNodeData, setNodeIndentation, setNodeLabel, setNodeLabelMaybe, setNodeParenthesized, makeIndentNodeIndentation)
+import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term, TermBind(..), Tooth(..), Type, TypeArg, TypeBind, UpPath)
+import TypeCraft.Purescript.Node (Node, NodeTag(..), makeIndentNodeIndentation, makeNode, setCalculatedNodeData, setNodeIndentation, setNodeLabel, setNodeLabelMaybe, setNodeParenthesized)
+import TypeCraft.Purescript.Parenthesization (parenthesizeChildNode)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, ListCtrRecValue, recTerm, recType)
 import TypeCraft.Purescript.Util (hole', justWhen)
@@ -20,18 +21,22 @@ data AboveInfo syn
 
 stepAI :: forall syn. Tooth -> AboveInfo syn -> AboveInfo syn
 stepAI tooth (AICursor path) = AICursor (tooth : path)
+
 stepAI tooth (AISelect topPath ctx term middlePath) = AISelect topPath ctx term (tooth : middlePath)
 
 aIOnlyCursor :: forall syn1 syn2. AboveInfo syn1 -> AboveInfo syn2
 aIOnlyCursor (AICursor path) = AICursor path
+
 aIOnlyCursor (AISelect topPath ctx term middlePath) = AICursor (middlePath <> topPath)
 
 aIGetPath :: forall syn. AboveInfo syn -> UpPath
 aIGetPath (AICursor path) = path
+
 aIGetPath (AISelect top ctx term middle) = middle <> top
 
 indentIf :: Boolean -> Node -> Node
 indentIf false n = n
+
 indentIf true n = setNodeIndentation makeIndentNodeIndentation n
 
 -- need to track a path for the cursor, and two paths for the selction.
@@ -49,9 +54,9 @@ termToNode isActive aboveInfo term =
                 { tag: LambdaNodeTag
                 , label: Nothing
                 , kids:
-                    [ termBindToNode isActive (stepAI (Lambda1 md ty.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tBind
-                    , typeToNode isActive (stepAI (Lambda2 md tBind.tBind body.term bodyTy) (aIOnlyCursor aboveInfo)) ty
-                    , termToNode isActive (stepAI (Lambda3 md tBind.tBind ty.ty bodyTy) aboveInfo) body
+                    [ let th = Lambda1 md ty.ty body.term bodyTy in parenthesizeChildNode LambdaNodeTag th $ termBindToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) tBind
+                    , let th = Lambda2 md tBind.tBind body.term bodyTy in parenthesizeChildNode LambdaNodeTag th $ typeToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) ty
+                    , let th = Lambda3 md tBind.tBind ty.ty bodyTy in parenthesizeChildNode LambdaNodeTag th $ indentIf md.bodyIndented $ termToNode isActive (stepAI th aboveInfo) body
                     ]
                 }
           , app:
@@ -59,8 +64,8 @@ termToNode isActive aboveInfo term =
                 { tag: AppNodeTag
                 , label: Nothing
                 , kids:
-                    [ termToNode isActive (stepAI (App1 md t2.term argTy outTy) aboveInfo) t1
-                    , termToNode isActive (stepAI (App2 md t1.term argTy outTy) aboveInfo) t2
+                    [ let th = App1 md t2.term argTy outTy in parenthesizeChildNode AppNodeTag th $ termToNode isActive (stepAI th aboveInfo) t1
+                    , let th = App2 md t1.term argTy outTy in parenthesizeChildNode AppNodeTag th $ indentIf md.argIndented $ termToNode isActive (stepAI th aboveInfo) t2
                     ]
                 }
           , var:
@@ -80,11 +85,11 @@ termToNode isActive aboveInfo term =
                 { tag: LetNodeTag
                 , label: Nothing
                 , kids:
-                    [ termBindToNode isActive (stepAI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tBind
-                    , typeBindListToNode isActive (stepAI (Let2 md tBind.tBind {-List TypeBind-} def.term defTy.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tyBinds
-                    , typeToNode isActive (stepAI (Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
-                    , termToNode isActive (stepAI (Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy) aboveInfo) def
-                    , indentIf md.bodyIndented $ termToNode isActive (stepAI (Let5 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy) aboveInfo) body
+                    [ let th = Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy in parenthesizeChildNode LetNodeTag th $ indentIf md.varIndented $ termBindToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) tBind
+                    , let th = Let2 md tBind.tBind {-List TypeBind-} def.term defTy.ty body.term bodyTy in parenthesizeChildNode LetNodeTag th $ typeBindListToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) tyBinds
+                    , let th = Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy in parenthesizeChildNode LetNodeTag th $ indentIf md.typeIndented $ typeToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) defTy
+                    , let th = Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy in parenthesizeChildNode LetNodeTag th $ indentIf md.defIndented $ termToNode isActive (stepAI th aboveInfo) def
+                    , let th = Let5 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy in parenthesizeChildNode LetNodeTag th $ indentIf md.bodyIndented $ termToNode isActive (stepAI th aboveInfo) body
                     ]
                 }
           , dataa:
@@ -92,10 +97,10 @@ termToNode isActive aboveInfo term =
                 { tag: DataNodeTag
                 , label: Nothing
                 , kids:
-                    [ typeBindToNode isActive (stepAI (Data1 md tbinds.tyBinds ctrs.ctrs term.term bodyTy) (aIOnlyCursor aboveInfo)) x
-                    , typeBindListToNode isActive (stepAI (Data2 md x.tyBind ctrs.ctrs term.term bodyTy) (aIOnlyCursor aboveInfo)) tbinds
-                    , constructorListToNode isActive (stepAI (Data3 md x.tyBind tbinds.tyBinds term.term bodyTy) (aIOnlyCursor aboveInfo)) ctrs
-                    , termToNode isActive (stepAI (Data4 md x.tyBind tbinds.tyBinds ctrs.ctrs bodyTy) aboveInfo) body
+                    [ let th = Data1 md tbinds.tyBinds ctrs.ctrs term.term bodyTy in parenthesizeChildNode DataNodeTag th $ typeBindToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) x
+                    , let th = Data2 md x.tyBind ctrs.ctrs term.term bodyTy in parenthesizeChildNode DataNodeTag th $ typeBindListToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) tbinds
+                    , let th = Data3 md x.tyBind tbinds.tyBinds term.term bodyTy in parenthesizeChildNode DataNodeTag th $ constructorListToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) ctrs
+                    , let th = Data4 md x.tyBind tbinds.tyBinds ctrs.ctrs bodyTy in parenthesizeChildNode DataNodeTag th $ termToNode isActive (stepAI th aboveInfo) body
                     ]
                 }
           , tlet: \md x tbinds def body bodyTy -> hole' "termToNode"
@@ -104,7 +109,7 @@ termToNode isActive aboveInfo term =
                 { tag: TypeBoundaryNodeTag
                 , label: Nothing
                 , kids:
-                    [ termToNode isActive (stepAI (TypeBoundary1 md ch) aboveInfo) t
+                    [ let th = TypeBoundary1 md ch in parenthesizeChildNode TypeBoundaryNodeTag th $ termToNode isActive (stepAI th aboveInfo) t
                     , changeToNode { ch, ctxs: term.ctxs }
                     ]
                 }
@@ -112,7 +117,7 @@ termToNode isActive aboveInfo term =
               \md x c t ->
                 { tag: ContextBoundaryNodeTag
                 , label: Nothing
-                , kids: [ termToNode isActive (stepAI (ContextBoundary1 md x c) aboveInfo) t ]
+                , kids: [ let th = ContextBoundary1 md x c in parenthesizeChildNode ContextBoundaryNodeTag th $ termToNode isActive (stepAI th aboveInfo) t ]
                 }
           , hole:
               \md ->
@@ -125,9 +130,9 @@ termToNode isActive aboveInfo term =
                 { tag: BufferNodeTag
                 , label: Nothing
                 , kids:
-                    [ termToNode isActive (stepAI (Buffer1 md defTy.ty body.term bodyTy) aboveInfo) def
-                    , typeToNode isActive (stepAI (Buffer2 md def.term body.term bodyTy) (aIOnlyCursor aboveInfo)) defTy
-                    , termToNode isActive (stepAI (Buffer3 md def.term defTy.ty bodyTy) aboveInfo) body
+                    [ let th = Buffer1 md defTy.ty body.term bodyTy in parenthesizeChildNode BufferNodeTag th $ termToNode isActive (stepAI th aboveInfo) def
+                    , let th = Buffer2 md def.term body.term bodyTy in parenthesizeChildNode BufferNodeTag th $ typeToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) defTy
+                    , let th = Buffer3 md def.term defTy.ty bodyTy in parenthesizeChildNode BufferNodeTag th $ termToNode isActive (stepAI th aboveInfo) body
                     ]
                 }
           }
@@ -156,8 +161,8 @@ typeToNode isActive aboveInfo ty =
               \md ty1 ty2 ->
                 { tag: ArrowNodeTag
                 , kids:
-                    [ typeToNode isActive (stepAI (Arrow1 md ty2.ty) aboveInfo) ty1
-                    , typeToNode isActive (stepAI (Arrow2 md ty1.ty) aboveInfo) ty2
+                    [ let th = Arrow1 md ty2.ty in typeToNode isActive (stepAI th aboveInfo) ty1
+                    , let th = Arrow2 md ty1.ty in indentIf md.codIndented $ typeToNode isActive (stepAI th aboveInfo) ty2
                     ]
                 }
           , tHole:
