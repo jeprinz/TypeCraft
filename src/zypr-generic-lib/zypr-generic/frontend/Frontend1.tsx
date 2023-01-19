@@ -32,7 +32,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       function onClick(event: React.MouseEvent) {
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
-          editor.setState(getCursor())
+          editor.setState(getCursor(editor.state))
           event.stopPropagation()
         } else {
           // console.log(`getCursor is undefined for this '${node.tag.case}' node`)
