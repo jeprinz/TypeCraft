@@ -101,8 +101,12 @@ fillNeutral pty id ty = case pty of
   Forall _ pty' -> fillNeutral pty' id ty -- TODO: Jacob: I think that this need to actually put in the type arguments?
   PType ty' -> fillNeutral' ty' id ty
 
-fillNeutral' :: Type -> TermVarID -> Type -> Unify Term
-fillNeutral' ty id ty' = case ty of
+{-
+NOTE: when creating a variable to place into a new neutral form, if the type is a hole, you can prioritize as many or as few
+arguments. fillNeutral'' prioritizes many arguments, and fillNeutral' prioritizes few.
+-}
+fillNeutral'' :: Type -> TermVarID -> Type -> Unify Term
+fillNeutral'' ty id ty' = case ty of
   Arrow _ ty1 ty2 ->
     (\tm -> App defaultAppMD tm (freshHole unit) ty1 ty2)
       <$> fillNeutral' ty2 id ty'
@@ -110,6 +114,19 @@ fillNeutral' ty id ty' = case ty of
     void $ unify ty' ty
     pure $ Var defaultVarMD id List.Nil
 
+fillNeutral' :: Type -> TermVarID -> Type -> Unify Term
+fillNeutral' ty id ty' =
+    case runUnify (unify ty' ty) of
+    Left msg ->
+        case ty of
+        Arrow _ ty1 ty2 -> do
+            tm <- fillNeutral' ty2 id ty'
+            pure $ App defaultAppMD tm (freshHole unit) ty1 ty2
+        _ -> Except.throwError msg
+    Right (_ /\ sub) -> do
+        State.modify_ (\_ -> sub)
+        pure $ Var defaultVarMD id List.Nil -- TODO: this is where we need to not just have Nil but actually use the type parameters. Probably have the Var get passed as argument from fillNeutral.
+--runUnify :: forall a. Unify a -> Either String (a /\ Sub)
 
 subTerm :: Sub -> Term -> Term
 subTerm sub term =
