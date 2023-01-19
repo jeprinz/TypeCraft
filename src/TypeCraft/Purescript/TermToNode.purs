@@ -2,6 +2,7 @@ module TypeCraft.Purescript.TermToNode where
 
 import Prelude
 import Prim hiding (Type)
+
 import Data.List (List(..), (:))
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe')
@@ -9,7 +10,7 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term, TermBind(..), Tooth(..), Type, TypeArg, TypeBind, UpPath)
-import TypeCraft.Purescript.Node (Node, NodeTag(..), makeIndentNodeIndentation, makeNode, setCalculatedNodeData, setNodeIndentation, setNodeLabel, setNodeLabelMaybe, setNodeParenthesized)
+import TypeCraft.Purescript.Node (Node, NodeTag(..), makeIndentNodeIndentation, makeNewlineNodeIndentation, makeNode, setCalculatedNodeData, setNodeIndentation, setNodeLabel, setNodeLabelMaybe, setNodeParenthesized)
 import TypeCraft.Purescript.Parenthesization (parenthesizeChildNode)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, ListCtrRecValue, recTerm, recType)
@@ -21,22 +22,18 @@ data AboveInfo syn
 
 stepAI :: forall syn. Tooth -> AboveInfo syn -> AboveInfo syn
 stepAI tooth (AICursor path) = AICursor (tooth : path)
-
 stepAI tooth (AISelect topPath ctx term middlePath) = AISelect topPath ctx term (tooth : middlePath)
 
 aIOnlyCursor :: forall syn1 syn2. AboveInfo syn1 -> AboveInfo syn2
 aIOnlyCursor (AICursor path) = AICursor path
-
 aIOnlyCursor (AISelect topPath ctx term middlePath) = AICursor (middlePath <> topPath)
 
 aIGetPath :: forall syn. AboveInfo syn -> UpPath
 aIGetPath (AICursor path) = path
-
 aIGetPath (AISelect top ctx term middle) = middle <> top
 
 indentIf :: Boolean -> Node -> Node
 indentIf false n = n
-
 indentIf true n = setNodeIndentation makeIndentNodeIndentation n
 
 -- need to track a path for the cursor, and two paths for the selction.
@@ -56,7 +53,8 @@ termToNode isActive aboveInfo term =
                 , kids:
                     [ let th = Lambda1 md ty.ty body.term bodyTy in parenthesizeChildNode LambdaNodeTag th $ termBindToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) tBind
                     , let th = Lambda2 md tBind.tBind body.term bodyTy in parenthesizeChildNode LambdaNodeTag th $ typeToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) ty
-                    , let th = Lambda3 md tBind.tBind ty.ty bodyTy in parenthesizeChildNode LambdaNodeTag th $ indentIf md.bodyIndented $ termToNode isActive (stepAI th aboveInfo) body
+                    -- , let th = Lambda3 md tBind.tBind ty.ty bodyTy in parenthesizeChildNode LambdaNodeTag th $ indentIf md.bodyIndented true $ termToNode isActive (stepAI th aboveInfo) body
+                    , let th = Lambda3 md tBind.tBind ty.ty bodyTy in parenthesizeChildNode LambdaNodeTag th $ setNodeIndentation makeNewlineNodeIndentation $ termToNode isActive (stepAI th aboveInfo) body
                     ]
                 }
           , app:
