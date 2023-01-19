@@ -73,13 +73,13 @@ chTerm kctx ctx c t =
                     VarInsert _ -> unsafeThrow "shouldn't get here"
                     VarTypeChange _ -> unsafeThrow "not implemented yet"
             (CArrow c1 c2) /\ (Lambda md tBind@(TermBind _ x) ty t bodyTy) ->
-                if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen" else
-                if not (bodyTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen" else
+                if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen 1" else
+                if not (bodyTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen 2" else
                 let c2' /\ t' = chTerm kctx (insert x (VarTypeChange (PChange c1)) ctx) c2 t in
                 (CArrow (tyInject (snd (getEndpoints c1))) c2') /\ Lambda md tBind (snd (getEndpoints c1)) t' (snd (getEndpoints c2))
             (Minus ty1 c) /\ (Lambda md tBind@(TermBind _ x) ty2 t bodyTy) ->
-                if not (ty1 == ty2) then unsafeThrow "shouldn't happen" else
-                if not (bodyTy == fst (getEndpoints c)) then unsafeThrow "shouldn't happen" else
+                if not (ty1 == ty2) then unsafeThrow "shouldn't happen 3" else
+                if not (bodyTy == fst (getEndpoints c)) then unsafeThrow "shouldn't happen 4" else
                 let c2' /\ t' = chTerm kctx (insert x (VarDelete (PType ty2)) ctx) c t in
                 (CArrow (tyInject ty1) c2') /\ t'
             (Minus ty c) /\ t ->
@@ -90,9 +90,9 @@ chTerm kctx ctx c t =
                 let ctx' = insert x (VarInsert (PType ty)) ctx in
                 let c' /\ t' = chTerm kctx ctx' c t in
                 (CArrow (tyInject ty) c') /\ Lambda defaultLambdaMD tBind ty t' (snd (getEndpoints c'))
-            c /\ Let md tBind@(TermBind _ x) binds t1 ty t2 tybody ->
+            c /\ Let md tBind@(TermBind _ x) binds t1 ty t2 tyBody ->
                 -- TODO: need to include the binds into the kctx for some things I think?
-                if not (fst (getEndpoints c) == ty) then unsafeThrow "shouldn't happen" else
+                if not (fst (getEndpoints c) == tyBody) then unsafeThrow "shouldn't happen 5" else
                 let ctx' = addLetToCCtx ctx tBind binds ty in
                 let c1 /\ t1'= chTerm kctx ctx' (tyInject ty) t1 in
                 let c2 /\ t2' = chTerm kctx ctx' c t2 in
@@ -103,7 +103,7 @@ chTerm kctx ctx c t =
                 let c2 /\ t2' = chTerm kctx ctx c t2 in
                 c2 /\ Buffer md t1' (snd (getEndpoints c1)) t2' (snd (getEndpoints c2))
             c /\ TLet md x params ty t bodyType ->
-                if not (fst (getEndpoints c) == bodyType) then unsafeThrow "shouldn't happen" else
+                if not (fst (getEndpoints c) == bodyType) then unsafeThrow "shouldn't happen 6" else
                 let ty' /\ tyChange = chType kctx ty in
 --                let c' /\ t' = chTerm (ctxKindCons kctx x (TVarTypeChange tyChange)) ctx c t in
                 let c' /\ t' = chTerm (ctxKindCons kctx x (TVarKindChange (kindInject (tyBindsWrapKind params Type)))) ctx c t in
@@ -187,6 +187,6 @@ chTypeArgsNeu (PChange ch) Nil = ch /\ Nil
 chTypeArgsNeu (CForall x ch) (arg : args) = hole' "chTypeArgsNeu"
 chTypeArgsNeu (PMinus x ch) (arg : args) = hole' "chTypeArgsNeu"
 chTypeArgsNeu (PPlus x ch) args = hole' "chTypeArgsNeu"
-chTypeArgsNeu _ _ = unsafeThrow "shouldn't happen"
+chTypeArgsNeu _ _ = unsafeThrow "shouldn't happen 7"
 -- TODO: there is something nontrivial to think about here. It should track a context so it knows which arguments got deleted etc.
 -- also if a type argument gets affected by the KindChangeCtx, then that needs to be reflected as well...
