@@ -90,13 +90,16 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
               ]
             ]
       -- App
-      when (str `kindaStartsWithAny` [ " ", "$" ])
-        $ Writer.tell
-            [ [ CompletionTermPath -- ({} ?)
-                  (List.singleton $ App1 defaultAppMD (freshHole unit) (freshTHole unit) (freshTHole unit))
-                  (Minus (freshTHole unit) (tyInject ty))
-              ]
-            ]
+      when (str `kindaStartsWithAny` [ " ", "$" ]) $
+        case ty of -- TODO: should really be if the type UNIFIES with an Arrow, instead of IS an arrow...
+            Arrow _ ty1 ty2 ->
+                Writer.tell
+                    [ [ CompletionTermPath -- ({} ?)
+                          (List.singleton $ App1 defaultAppMD (freshHole unit) ty1 ty2)
+                          (Minus ty1 (tyInject ty2))
+                      ]
+                    ]
+            _ -> pure unit
       -- TLet
       when (str `kindaStartsWith` "tlet")
         $ Writer.tell
