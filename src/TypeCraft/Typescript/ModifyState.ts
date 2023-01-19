@@ -6,7 +6,15 @@ type CursorLocation = any
 
 type Select = any
 
-export function handleKey(key: string, st: State): State | undefined {
+export type Key = {
+  key: string,
+  altKey: boolean,
+  ctrlKey: boolean,
+  metaKey: boolean,
+  shiftKey: boolean
+}
+
+export function handleKey(key: Key, st: State): State | undefined {
   return Nullable.fromMaybe(ModifyState.handleKey(key)(st))
 }
 

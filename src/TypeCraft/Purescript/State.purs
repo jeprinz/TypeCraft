@@ -3,18 +3,18 @@ module TypeCraft.Purescript.State where
 import Data.Tuple.Nested
 import Prelude
 import Prim hiding (Type)
-
 import Data.Array as Array
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..))
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
+import Data.String as String
 import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
 import TypeCraft.Purescript.Grammar (Change, Constructor, CtrParam, Term(..), TermBind(..), Type(..), TypeArg, TypeBind, UpPath)
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
 import TypeCraft.Purescript.ShallowEmbed (exampleProg1, exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
-import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Unification (Sub)
+import TypeCraft.Purescript.Util (hole)
 
 {-
 This file will contain possible states for the editor
@@ -23,6 +23,7 @@ This file will contain possible states for the editor
 type State
   = { mode :: Mode
     , history :: Array Mode
+    , future :: Array Mode
     }
 
 data Mode
@@ -50,8 +51,11 @@ type Query
     , completionGroups :: Array (Array Completion)
     }
 
+isEmptyQuery :: Query -> Boolean
+isEmptyQuery { string } = String.null string
+
 -- TODO: completions for other syntax kinds
-data Completion 
+data Completion
   = CompletionTerm Term {-Type-} Sub -- I don't think we need a Type here? Aren't terms only filled when they are the correct type up to unification? (Or if not, at least make it a typechange?)
   | CompletionTermPath UpPath Change
   | CompletionType Type
@@ -82,21 +86,20 @@ makeCursorMode cursorLocation =
     , query: emptyQuery
     }
 
-makeState :: Mode -> State
-makeState mode =
-  { mode
-  , history: []
-  }
-
 initState :: State
 initState =
-  makeState
-    $ CursorMode
-        { cursorLocation: TermCursor emptyAllContext ty Nil tm
-        , query: emptyQuery
-        }
+  { mode
+  , history: [ mode ]
+  , future: []
+  }
   where
   ty /\ tm = exampleProg1
+
+  mode =
+    CursorMode
+      { cursorLocation: TermCursor emptyAllContext ty Nil tm
+      , query: emptyQuery
+      }
 
 data Clipboard
   = EmptyClip -- add more later, not priority yet

@@ -62,7 +62,7 @@ data TypeBind
 freshTypeBind :: Maybe String -> TypeBind
 freshTypeBind mb_varName =
   TypeBind
-    { varName: maybe "~" identity mb_varName }
+    { varName: maybe "" identity mb_varName }
     (unsafePerformEffect genUUID)
 
 data TermBind
@@ -71,7 +71,7 @@ data TermBind
 freshTermBind :: Maybe String -> TermBind
 freshTermBind mb_varName =
   TermBind
-    { varName: maybe "~" identity mb_varName }
+    { varName: maybe "" identity mb_varName }
     (unsafePerformEffect genUUID)
 
 data CtrParam

@@ -62,7 +62,7 @@ export type NodeStyle
     | { case: 'query-insert-top-active' }
     | { case: 'query-insert-bot' }
     | { case: 'query-replace-new' }
-    | { case: 'query-replace-new-isActive' }
+    | { case: 'query-replace-new-active' }
     | { case: 'query-replace-old' }
     | { case: 'query-invalid' }
     | { case: 'query-metahole' }

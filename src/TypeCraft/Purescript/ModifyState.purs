@@ -2,41 +2,51 @@ module TypeCraft.Purescript.ModifyState where
 
 import Data.Tuple.Nested
 import Prelude
-
-import Data.Array ((:))
+import Data.Array ((:), uncons)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import Debug (trace)
+import Debug (trace, traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.ChangePath (chTermPath, chTypePath)
 import TypeCraft.Purescript.ChangeTerm (chType, chTypeParamList)
 import TypeCraft.Purescript.Context (ctxInject, kCtxInject)
 import TypeCraft.Purescript.Context (kCtxInject)
 import TypeCraft.Purescript.CursorMovement (stepCursorBackwards, stepCursorForwards)
-import TypeCraft.Purescript.Grammar (Change(..), TermBind(..), TypeBind(..))
+import TypeCraft.Purescript.Grammar (Change(..), TermBind(..), TypeBind(..), freshHole, freshTHole)
+import TypeCraft.Purescript.Grammar (tyInject)
+import TypeCraft.Purescript.Key (Key)
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
-import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select, State, emptyQuery, getCompletion, makeCursorMode)
+import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select, State, emptyQuery, getCompletion, isEmptyQuery, makeCursorMode)
+import TypeCraft.Purescript.Unification (applySubType, subTermPath)
 import TypeCraft.Purescript.Util (hole')
-import TypeCraft.Purescript.Grammar (tyInject)
-import TypeCraft.Purescript.Unification
 
-handleKey :: String -> State -> Maybe State
+handleKey :: Key -> State -> Maybe State
 handleKey key st = case st.mode of
   CursorMode cursorMode -> case cursorMode.cursorLocation of
     TypeBindCursor ctxs path (TypeBind md tyVarId)
-      | Just varName <- manipulateString key md.varName -> pure $ setMode (CursorMode cursorMode { cursorLocation = TypeBindCursor ctxs path (TypeBind md { varName = varName } tyVarId) }) st
+      | Just varName <- manipulateString key md.varName -> pure $ (checkpoint st) { mode = CursorMode cursorMode { cursorLocation = TypeBindCursor ctxs path (TypeBind md { varName = varName } tyVarId) } }
     TermBindCursor ctxs path (TermBind md tmVarId)
-      | Just varName <- manipulateString key md.varName -> pure $ setMode (CursorMode cursorMode { cursorLocation = TermBindCursor ctxs path (TermBind md { varName = varName } tmVarId) }) st
+      | Just varName <- manipulateString key md.varName -> pure $ (checkpoint st) { mode = CursorMode cursorMode { cursorLocation = TermBindCursor ctxs path (TermBind md { varName = varName } tmVarId) } }
     CtrParamListCursor ctxs path ctrs -> hole' "handleKey CtrParamListCursor"
     _
-      | Just query <- manipulateQuery key st cursorMode -> pure st { mode = CursorMode cursorMode { query = query } }
-      | key == "ArrowLeft" -> moveCursorPrev st
-      | key == "ArrowRight" -> moveCursorNext st
-      | key == "Escape" -> pure st { mode = CursorMode cursorMode { query = emptyQuery } }
-      | key == "Enter" -> do
+      | Just query <- manipulateQuery key st cursorMode -> do
+          -- not the we don't `checkpoint` here, since every little modification
+          -- of the query string and selection shouldn't by undoable
+          pure st { mode = CursorMode cursorMode { query = query } }
+      | key.ctrlKey && key.key == "z" -> undo st
+      | key.ctrlKey && key.key == "Z" -> redo st
+      | key.key == "ArrowLeft" -> moveCursorPrev st
+      | key.key == "ArrowRight" -> moveCursorNext st
+      | key.key == "Escape" -> pure st { mode = CursorMode cursorMode { query = emptyQuery } }
+      | key.key == "Enter" -> do
         cursorMode' <- submitQuery cursorMode
-        pure $ setMode (CursorMode cursorMode') st
+        -- note that we don't `checkpoint` here, since if the user redos after
+        -- submitting a query, the previous state should not be right before the
+        -- query was submitted, but rather undoing the querying submission and
+        -- also clearing the query
+        pure $ st { mode = CursorMode cursorMode' }
+      | key.key == "Backspace" -> delete st
       | otherwise -> Nothing
   SelectMode selectMode -> hole' "handleKey: SelectMode"
 
@@ -46,14 +56,18 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
     getCompletion cursorMode.query
       >>= case _ of
           CompletionTerm tm' {-ty'-} sub ->
-            let ty' = applySubType sub ty in
-            let path' = subTermPath sub path in
-            pure
-            -- TODO: note from Jacob: always having Replace here doesn't seem right to me. Shouldn't terms only be filled in when they are the exact type (modulo unification) in the first place?
-            -- As opposed to path completions, where you do have typechanges.
-              { cursorLocation: TermCursor ctxs ty' path' tm'
-              , query: emptyQuery
-              }
+            let
+              ty' = applySubType sub ty
+            in
+              let
+                path' = subTermPath sub path
+              in
+                pure
+                  -- TODO: note from Jacob: always having Replace here doesn't seem right to me. Shouldn't terms only be filled in when they are the exact type (modulo unification) in the first place?
+                  -- As opposed to path completions, where you do have typechanges.
+                  { cursorLocation: TermCursor ctxs ty' path' tm'
+                  , query: emptyQuery
+                  }
           CompletionTermPath pathNew ch ->
             let
               path' = chTermPath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) ch path
@@ -63,48 +77,42 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
                 , query: emptyQuery
                 }
           _ -> unsafeThrow "tried to submit a non-CompletionTerm* completion at a TermCursor"
-  TypeCursor ctxs path ty -> 
-    getCompletion cursorMode.query >>= case _ of 
-      CompletionType ty' -> 
-        let path' = chTypePath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) (Replace ty ty') path in 
-        pure {
-          cursorLocation: TypeCursor ctxs path' ty'
-          , query: emptyQuery
-        }
-      CompletionTypePath pathNew ch -> 
-        let path' = chTypePath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) ch path in 
-        pure {
-          cursorLocation: TypeCursor ctxs (pathNew <> path') ty,
-          query: emptyQuery
-        }
-      _ -> unsafeThrow "tried to submit a non-CompletionType* completion at a TypeCursor"
+  TypeCursor ctxs path ty ->
+    getCompletion cursorMode.query
+      >>= case _ of
+          CompletionType ty' ->
+            let
+              path' = chTypePath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) (Replace ty ty') path
+            in
+              pure
+                { cursorLocation: TypeCursor ctxs path' ty'
+                , query: emptyQuery
+                }
+          CompletionTypePath pathNew ch ->
+            let
+              path' = chTypePath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) ch path
+            in
+              pure
+                { cursorLocation: TypeCursor ctxs (pathNew <> path') ty
+                , query: emptyQuery
+                }
+          _ -> unsafeThrow "tried to submit a non-CompletionType* completion at a TypeCursor"
   _ -> Nothing -- TODO: submit queries at other kinds of cursors?
 
--- caches old mode in history
-setMode :: Mode -> State -> State
-setMode mode st =
-  st
-    { mode = mode
-    , history = st.mode : st.history
-    }
+checkpoint :: State -> State
+checkpoint st = st { history = st.mode : st.history }
 
 setCursor :: CursorLocation -> State -> Maybe State
-setCursor cursorLocation st =
-  Just
-    $ setMode (makeCursorMode cursorLocation) st
+setCursor cursorLocation st = pure $ (checkpoint st) { mode = makeCursorMode cursorLocation }
 
 moveCursorPrev :: State -> Maybe State
 moveCursorPrev st = case st.mode of
-  CursorMode { cursorLocation } ->
-    Just
-      $ setMode (makeCursorMode (stepCursorBackwards cursorLocation)) st
+  CursorMode { cursorLocation } -> pure $ (checkpoint st) { mode = makeCursorMode (stepCursorBackwards cursorLocation) }
   _ -> Nothing -- TODO: escape select
 
 moveCursorNext :: State -> Maybe State
 moveCursorNext st = case st.mode of
-  CursorMode { cursorLocation } ->
-    Just
-      $ setMode (makeCursorMode (stepCursorForwards cursorLocation)) st
+  CursorMode { cursorLocation } -> pure $ (checkpoint st) { mode = makeCursorMode (stepCursorForwards cursorLocation) }
   _ -> Nothing -- TODO: escape select
 
 moveSelectPrev :: State -> Maybe State
@@ -122,10 +130,16 @@ requireCursorMode st = case st.mode of
   _ -> Nothing
 
 undo :: State -> Maybe State
-undo = hole' "undo"
+undo st = do
+  traceM "undo"
+  { head, tail } <- uncons st.history
+  pure st { mode = head, history = tail, future = st.mode : st.future }
 
 redo :: State -> Maybe State
-redo = hole' "redo"
+redo st = do
+  traceM "redo"
+  { head, tail } <- uncons st.future
+  pure st { mode = head, history = st.mode : st.history, future = tail }
 
 cut :: State -> Maybe State
 cut = hole' "cut"
@@ -137,7 +151,18 @@ paste :: State -> Maybe State
 paste = hole' "paste"
 
 delete :: State -> Maybe State
-delete = hole' "delete"
+delete st = case st.mode of
+  CursorMode cursorMode -> case cursorMode.cursorLocation of
+    TermCursor ctxs ty path _tm -> do
+      let
+        cursorLocation' = TermCursor ctxs ty path (freshHole unit)
+      pure st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
+    TypeCursor ctxs path _ty -> do
+      let
+        cursorLocation' = TypeCursor ctxs path (freshTHole unit)
+      pure st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
+    _ -> Nothing
+  _ -> Nothing
 
 escape :: State -> Maybe State
 escape = hole' "escape"

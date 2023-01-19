@@ -18,13 +18,14 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "build-spago": "spago build --purs-args \"-o src/TypeCraft/Purescript/output\"",
+    "build-backend": "spago build --purs-args \"-o src/TypeCraft/Purescript/output\"",
+    "build-frontend": "react-scripts build",
+    "build": "npm run build-backend && npm run build-frontend",
     "serve": "serve -s build",
-    "launch": "npm run build-spago && npm run build && npm run serve",
-    "launch-frontend": "npm run build && npm run serve"
+    "launch-frontend": "npm run build && npm run serve",
+    "launch": "npm run build && npm run serve"
   },
   "eslintConfig": {
     "extends": [

@@ -26,6 +26,7 @@
 
 .query {
   display: inline;
+  
 }
 
 .query-string {
@@ -60,6 +61,10 @@
 
 .query-completion {
   box-shadow: 0 0 0 1px blue;
+}
+.query-completion-empty {
+  color: red;
+  font-style: italic;
 }
 
 /* punctuation */

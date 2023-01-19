@@ -175,51 +175,50 @@ getLastChild cursor =
         Nothing -> cursor
         Just child -> getLastChild child
 
-moveSelectLeft :: Select -> Maybe State
-moveSelectLeft(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 false) =
+moveSelectLeft :: Select -> Maybe Mode
+moveSelectLeft (TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 false)  =
     case topPath of
     Nil -> Nothing
     (tooth : topPath') ->
         let middlePath' = middlePath <> (tooth : Nil) in
         case parent (TermCursor ctxs1 ty1 topPath term1) of
             Just (TermCursor ctxs1' ty1' topPath' term1' /\ _) ->
-                Just $ makeState $ SelectMode $
-                    {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 false}
+                Just $ SelectMode {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 false}
             _ -> unsafeThrow "Shouldn't happen moveSelectLeft" -- This shouldn't happen because there can be nothing above a term other than more terms!
-moveSelectLeft(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 true) =
+moveSelectLeft(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 true)  =
     case  (goLeftUntilSort GSTerm (TermCursor ctxs2 ty2 middlePath term2)) of
-        Just (TermCursor ctxs2' ty2' middlePath' term2') -> Just $ makeState $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' true}
-        Nothing -> Just $ makeState $ makeCursorMode $ TermCursor ctxs1 ty1 topPath term1 -- enter cursor mode
+        Just (TermCursor ctxs2' ty2' middlePath' term2') -> Just $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' true} 
+        Nothing -> Just $ makeCursorMode $ TermCursor ctxs1 ty1 topPath term1 -- enter cursor mode
         Just _ -> unsafeThrow "Shouldn't happen"
-moveSelectLeft(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root) = hole' "moveSelectTopUp"
-moveSelectLeft(CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root) = hole' "moveSelectTopUp"
-moveSelectLeft(CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root) = hole' "moveSelectTopUp"
-moveSelectLeft(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 root) = hole' "moveSelectTopUp"
-moveSelectLeft(TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root) = hole' "moveSelectTopUp"
+moveSelectLeft(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root)  = hole' "moveSelectTopUp"
+moveSelectLeft(CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root)  = hole' "moveSelectTopUp"
+moveSelectLeft(CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root)  = hole' "moveSelectTopUp"
+moveSelectLeft(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 root)  = hole' "moveSelectTopUp"
+moveSelectLeft(TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root)  = hole' "moveSelectTopUp"
 
-moveSelectRight :: Select -> Maybe State
-moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 false) =
+moveSelectRight :: Select -> Maybe Mode
+moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 false)  =
     case middlePath of
     Nil -> unsafeThrow "Shouldn't be an empty selection"
-    (tooth : Nil) -> Just $ makeState $ makeCursorMode $ TermCursor ctxs2 ty2 (tooth : topPath) term2 -- in this case, we exit select mode and enter cursor mode
+    (tooth : Nil) -> Just $ makeCursorMode $ TermCursor ctxs2 ty2 (tooth : topPath) term2 -- in this case, we exit select mode and enter cursor mode
     (tooth : middlePath') ->
 --        let topPath' = tooth : topPath in
         let children = getCursorChildren (TermCursor ctxs1 ty1 topPath term1) in
         let particularChild = fromJust $ find (\cursor -> head' (getPath cursor) == tooth) children in -- get the child who's top tooth is equal to "tooth"
         case particularChild of
             TermCursor ctxs1' ty1' topPath' term1' ->
-                Just $ makeState $ SelectMode $
+                Just $ SelectMode
                     {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 true}
             _ -> unsafeThrow "SHouldn't happen"
-moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 true) = hole' "moveSelectTopUp"
+moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 true)  = hole' "moveSelectTopUp"
     case  (goRightUntilSort GSTerm (TermCursor ctxs2 ty2 middlePath term2)) of
-        TermCursor ctxs2' ty2' middlePath' term2' -> Just $ makeState $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' true}
+        TermCursor ctxs2' ty2' middlePath' term2' -> Just $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' true}
         _ -> unsafeThrow "Shouldn't happen"
-moveSelectRight(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root) = hole' "moveSelectTopUp"
-moveSelectRight(CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root) = hole' "moveSelectTopUp"
-moveSelectRight(CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root) = hole' "moveSelectTopUp"
-moveSelectRight(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 root) = hole' "moveSelectTopUp"
-moveSelectRight(TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root) = hole' "moveSelectTopUp"
+moveSelectRight(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root)  = hole' "moveSelectTopUp"
+moveSelectRight(CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root)  = hole' "moveSelectTopUp"
+moveSelectRight(CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root)  = hole' "moveSelectTopUp"
+moveSelectRight(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 root)  = hole' "moveSelectTopUp"
+moveSelectRight(TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root)  = hole' "moveSelectTopUp"
 
 getMiddlePath :: Select -> UpPath
 getMiddlePath(TermSelect _ _ _ _ middlePath _ _ _ _) = middlePath

@@ -69,30 +69,38 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         ]
       }
       */
-      let result = []
       if (node.queryString !== undefined) {
-        result.push(
-          <div className="query">
+        return [
+          <div className="node query cursor">
             <div className="query-string">{node.queryString}</div>
             <div className="query-completions">
               <div className="query-completions-inner">{
-                node.completions !== undefined ?
-                  node.completions.map(node => <div className="query-completion">{renderNode(node)}</div>) :
+                node.completions !== undefined && node.completions.length > 0 ?
+                  node.completions.map(node => <div className={([] as string[]).concat(["query-completion"],
+                    node.style.case === 'query-insert-top-active' ? ['query-insert-top-active'] :
+                      node.style.case === 'query-replace-new-active' ? ["query-replace-new-active"] : []
+                  ).join(" ")}>{renderNode(node)}</div>) :
                   <div className="query-completion query-completion-empty">no completions</div>
               }</div>
             </div>
+            <div
+              className={([] as string[]).concat(["node"], classNames).join(" ")}
+              onClick={onClick}
+            >
+              {kids}
+            </div>
           </div>
-        )
+        ]
+      } else {
+        return [
+          <div
+            className={([] as string[]).concat(["node"], classNames).join(" ")}
+            onClick={onClick}
+          >
+            {kids}
+          </div>
+        ]
       }
-      result.push(
-        <div
-          className={([] as string[]).concat(["node"], classNames).join(" ")}
-          onClick={onClick}
-        >
-          {kids}
-        </div>
-      )
-      return result
     }
 
     function renderNode(node: Node): JSX.Element[] {
@@ -152,7 +160,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
   }
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
-    if (event.altKey || event.ctrlKey || event.metaKey) return
     const state = editor.props.backend.handleKeyboardEvent(event)(editor.state)
     if (state === undefined) {
       console.log("[!] handleKeyboardEvent failed")

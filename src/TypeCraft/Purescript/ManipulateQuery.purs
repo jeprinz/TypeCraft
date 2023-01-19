@@ -1,37 +1,39 @@
 module TypeCraft.Purescript.ManipulateQuery where
 
-import Data.Tuple.Nested (type (/\), (/\))
 import Prelude
 import Prim hiding (Type)
+import TypeCraft.Purescript.Unification
+
 import Control.Monad.Writer as Writer
 import Data.Array (any)
 import Data.Either (Either(..))
+import Data.Foldable (and, traverse_)
 import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.String as String
+import Data.Tuple.Nested (type (/\), (/\))
 import Data.UUID (UUID)
 import Debug (traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Grammar (Change(..), PolyType(..), Term(..), TermVarID, Tooth(..), Type(..), TypeArg(..), TypeHoleID, TypeVarID, freshHole, freshTHole, freshTermBind, freshTypeBind, tyInject)
+import TypeCraft.Purescript.Key (Key)
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultBufferMD, defaultLambdaMD, defaultLetMD, defaultTLetMD, defaultTypeBoundaryMD, defaultVarMD)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State)
-import TypeCraft.Purescript.Unification
-import Data.Foldable (and, traverse_)
 import TypeCraft.Purescript.Util (hole)
 
 isNonemptyQueryString :: Query -> Boolean
 isNonemptyQueryString query = not $ String.null query.string
 
-manipulateQuery :: String -> State -> CursorMode -> Maybe Query
+manipulateQuery :: Key -> State -> CursorMode -> Maybe Query
 manipulateQuery key st cursorMode@{ query: query@{ string, completionGroup_i, completionGroupItem_i } }
-  | key == "ArrowUp" && isNonemptyQueryString query = pure query { completionGroup_i = completionGroup_i - 1 }
-  | key == "ArrowDown" && isNonemptyQueryString query = pure query { completionGroup_i = completionGroup_i + 1 }
-  | key == "ArrowLeft" && isNonemptyQueryString query = pure query { completionGroupItem_i = query.completionGroupItem_i - 1 }
-  | key == "ArrowRight" && isNonemptyQueryString query = pure query { completionGroupItem_i = query.completionGroupItem_i + 1 }
+  | key.key == "ArrowUp" && isNonemptyQueryString query = pure query { completionGroup_i = completionGroup_i - 1 }
+  | key.key == "ArrowDown" && isNonemptyQueryString query = pure query { completionGroup_i = completionGroup_i + 1 }
+  | key.key == "ArrowLeft" && isNonemptyQueryString query = pure query { completionGroupItem_i = query.completionGroupItem_i - 1 }
+  | key.key == "ArrowRight" && isNonemptyQueryString query = pure query { completionGroupItem_i = query.completionGroupItem_i + 1 }
   | otherwise = do
-    traceM $ "manipulateQuery.key = " <> key
+    traceM $ "manipulateQuery.key = " <> key.key
     string' <- manipulateString key string
     pure
       query

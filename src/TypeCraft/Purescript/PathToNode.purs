@@ -2,30 +2,31 @@ module TypeCraft.Purescript.PathToNode where
 
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.PathRec
-
+import TypeCraft.Purescript.PathRec (ListCtrParamPathRecValue, ListCtrPathRecValue, ListTypeArgPathRecValue, ListTypeBindPathRecValue, TermBindPathRecValue, TermPathRecValue, TypePathRecValue, recListTypeBindPath, recTermBindPath, recTermPath, recTypePath)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
-import Debug (trace)
 import TypeCraft.Purescript.Context (AllContext)
-import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, TermBind, Tooth(..), Type, TypeArg, TypeBind, UpPath)
+import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, Tooth(..), Type, TypeArg, TypeBind, UpPath)
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode, setCalculatedNodeData)
-import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, makeState)
+import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), termBindToNode, termToNode, typeToNode)
 import TypeCraft.Purescript.TermToNode (typeBindListToNode)
 import TypeCraft.Purescript.Util (hole', justWhen)
-import TypeCraft.Purescript.Util (hole)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
   | BISelect DownPath term AllContext ty -- middle path, then bottom term. ctx and ty are the type and context of term.
 
---stepBI :: forall gsort1 gsort2. Tooth -> BelowInfo gsort1 -> BelowInfo gsort2
-----stepBI tooth (BITerm syn) = BITerm (step syn)
-----stepBI tooth (BISelect path syn) = BISelect (tooth : path) syn
---stepBI = hole
+{-
+stepBI :: forall gsort1 gsort2. Tooth -> BelowInfo gsort1 -> BelowInfo gsort2
+stepBI tooth (BITerm syn) = BITerm (step syn)
+stepBI tooth (BISelect path syn) = BISelect (tooth : path) syn
+stepBI = hole
+-}
+
 -- TODO: this function is the sketchies thing about my whole setup!!!!!
 -- TODO: TODO: think about this!
+-- TODO: @jacob think about this
 stepBI :: forall syn synty. Tooth -> BelowInfo syn synty -> BelowInfo syn synty
 stepBI tooth BITerm = BITerm
 stepBI tooth (BISelect middle bottom ctxs ty) = BISelect (tooth : middle) bottom ctxs ty
@@ -40,20 +41,19 @@ makeTermNode isActive belowInfo termPath preNode =
       makeNode
         { kids: setCalculatedNodeData preNode.tag <$> preNode.kids
         , getCursor:
-            justWhen isActive \_ _ ->
-              trace ("here termPathToNode isActive" <> show termPath.termPath <> " \nand term is: " <> show termPath.term) \_ ->
-              makeState $ makeCursorMode $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term
+            justWhen isActive \_ ->
+              _ {mode = makeCursorMode $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term}
         , getSelect:
             case belowInfo of
               BITerm -> Nothing
-              BISelect middlePath term ctxs ty -> justWhen isActive \_ _ -> makeState $ SelectMode $
-                {select: TermSelect termPath.termPath termPath.ctxs termPath.ty termPath.term middlePath ctxs ty term true}
+              BISelect middlePath term ctxs ty -> justWhen isActive \_ ->  
+                _ {mode = SelectMode $ {select: TermSelect termPath.termPath termPath.ctxs termPath.ty termPath.term middlePath ctxs ty term true}}
         , tag: preNode.tag
         }
 
 -- The MDType is for the top of the path (which is the end of the list)
 termPathToNode :: Boolean -> BelowInfo Term Type -> TermPathRecValue -> (Node -> Node)
-termPathToNode isActive _ { termPath: Nil } node = node
+termPathToNode _isActive _ { termPath: Nil } node = node
 termPathToNode isActive belowInfo termPath innerNode =
   let
     term = termPath.term
@@ -144,9 +144,8 @@ typePathToNode isActive belowInfo typePath innerNode =
                 BITerm -> typePath.ty
                 BISelect middlePath term _ _ -> typePath.ty -- TODO: combineDownPathTerm middlePath term
             in
-              justWhen isActive \_ _ ->
-                trace "here typePathNode" \_ ->
-                makeState $ makeCursorMode $ TypeCursor typePath.ctxs typePath.typePath belowType
+              justWhen isActive \_ ->
+                _ {mode = makeCursorMode $ TypeCursor typePath.ctxs typePath.typePath belowType}
         , getSelect: Nothing
         , tag: partialNode.tag
         }
@@ -262,7 +261,6 @@ termBindPathToNode isActive termBindPath innerNode =
           \termPath md tyBinds def defTy body bodyTy ->
             let newBI = BITerm in -- (stepBI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) BITerm) in
             termPathToNode isActive newBI termPath
---                $ hole' "termPathBindToNode"
               $ makeTermNode isActive newBI termPath {
                     kids: [ innerNode
                     , typeBindListToNode isActive (AICursor (Let2 md tBind {-List TypeBind-} def.term defTy.ty body.term bodyTy : termPath.termPath)) tyBinds
@@ -280,9 +278,6 @@ termBindPathToNode isActive termBindPath innerNode =
       }
       termBindPath
 
--- recTermBindPath
---   ?a
---   {ctxs, tBind: ?a, termBindPath: up}
 ctrListPathToNode :: Boolean -> BelowInfo (List Constructor) Unit -> ListCtrPathRecValue -> Node -> Node
 ctrListPathToNode belowInfo listCtrPath innerNode = (hole' "ctrListPathToNode")
 

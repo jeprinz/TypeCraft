@@ -23,8 +23,8 @@ foreign import data Node :: Type
 
 foreign import makeNode_ ::
   { kids :: Array Node
-  , getCursor :: Nullable (Unit -> State)
-  , getSelect :: Nullable (Unit -> State)
+  , getCursor :: Nullable (State -> State)
+  , getSelect :: Nullable (State -> State)
   , style :: NodeStyle
   , indentation :: NodeIndentation
   , isParenthesized :: Boolean
@@ -37,8 +37,8 @@ foreign import makeNode_ ::
 
 makeNode ::
   { kids :: Array Node
-  , getCursor :: Maybe (Unit -> State)
-  , getSelect :: Maybe (Unit -> State)
+  , getCursor :: Maybe (State -> State)
+  , getSelect :: Maybe (State -> State)
   , tag :: NodeTag
   } ->
   Node
