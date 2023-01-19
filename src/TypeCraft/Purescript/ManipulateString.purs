@@ -21,6 +21,7 @@ isIgnoreKey key =
             [ "Tab"
             , "Enter"
             , "Escape"
+            , "Shift"
             , "ArrowLeft"
             , "ArrowRight"
             , "ArrowUp"

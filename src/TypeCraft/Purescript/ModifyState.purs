@@ -2,9 +2,12 @@ module TypeCraft.Purescript.ModifyState where
 
 import Data.Tuple.Nested
 import Prelude
+
 import Data.Array ((:), uncons)
+import Data.Array as Array
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
+import Data.String as String
 import Debug (trace, traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.ChangePath (chTermPath, chTypePath)
@@ -25,27 +28,26 @@ handleKey :: Key -> State -> Maybe State
 handleKey key st = case st.mode of
   CursorMode cursorMode -> case cursorMode.cursorLocation of
     TypeBindCursor ctxs path (TypeBind md tyVarId)
-      | Just varName <- manipulateString key md.varName -> pure $ (checkpoint st) { mode = CursorMode cursorMode { cursorLocation = TypeBindCursor ctxs path (TypeBind md { varName = varName } tyVarId) } }
+      | Just varName <- manipulateString key md.varName -> pure $ st { mode = CursorMode cursorMode { cursorLocation = TypeBindCursor ctxs path (TypeBind md { varName = varName } tyVarId) } }
     TermBindCursor ctxs path (TermBind md tmVarId)
-      | Just varName <- manipulateString key md.varName -> pure $ (checkpoint st) { mode = CursorMode cursorMode { cursorLocation = TermBindCursor ctxs path (TermBind md { varName = varName } tmVarId) } }
+      | Just varName <- manipulateString key md.varName -> pure $ st { mode = CursorMode cursorMode { cursorLocation = TermBindCursor ctxs path (TermBind md { varName = varName } tmVarId) } }
     CtrParamListCursor ctxs path ctrs -> hole' "handleKey CtrParamListCursor"
     _
       | Just query <- manipulateQuery key st cursorMode -> do
-          -- not the we don't `checkpoint` here, since every little modification
-          -- of the query string and selection shouldn't by undoable
-          pure st { mode = CursorMode cursorMode { query = query } }
-      | key.ctrlKey && key.key == "z" -> undo st
-      | key.ctrlKey && key.key == "Z" -> redo st
+        -- not the we don't `checkpoint` here, since every little modification
+        -- of the query string and selection shouldn't by undoable
+        pure $ st { mode = CursorMode cursorMode { query = query } }
+      | (key.ctrlKey || key.metaKey) && key.key == "z" -> undo st
+      | (key.ctrlKey || key.metaKey) && key.key == "Z" -> redo st
       | key.key == "ArrowLeft" -> moveCursorPrev st
       | key.key == "ArrowRight" -> moveCursorNext st
-      | key.key == "Escape" -> pure st { mode = CursorMode cursorMode { query = emptyQuery } }
+      | key.key == "Escape" -> pure $ st { mode = CursorMode cursorMode { query = emptyQuery } }
       | key.key == "Enter" -> do
         cursorMode' <- submitQuery cursorMode
-        -- note that we don't `checkpoint` here, since if the user redos after
-        -- submitting a query, the previous state should not be right before the
-        -- query was submitted, but rather undoing the querying submission and
-        -- also clearing the query
-        pure $ st { mode = CursorMode cursorMode' }
+        -- checkpoints the pre-submission mode with a cleared query string
+        pure
+          $ (checkpoint st { mode = CursorMode cursorMode { query { string = "" } } })
+              { mode = CursorMode cursorMode' }
       | key.key == "Backspace" -> delete st
       | otherwise -> Nothing
   SelectMode selectMode -> hole' "handleKey: SelectMode"
@@ -103,16 +105,18 @@ checkpoint :: State -> State
 checkpoint st = st { history = st.mode : st.history }
 
 setCursor :: CursorLocation -> State -> Maybe State
-setCursor cursorLocation st = pure $ (checkpoint st) { mode = makeCursorMode cursorLocation }
+setCursor cursorLocation st = pure $ st { mode = makeCursorMode cursorLocation }
 
+-- doesn't `checkpoint`
 moveCursorPrev :: State -> Maybe State
 moveCursorPrev st = case st.mode of
-  CursorMode { cursorLocation } -> pure $ (checkpoint st) { mode = makeCursorMode (stepCursorBackwards cursorLocation) }
+  CursorMode { cursorLocation } -> pure $ st { mode = makeCursorMode (stepCursorBackwards cursorLocation) }
   _ -> Nothing -- TODO: escape select
 
+-- doesn't `checkpoint`
 moveCursorNext :: State -> Maybe State
 moveCursorNext st = case st.mode of
-  CursorMode { cursorLocation } -> pure $ (checkpoint st) { mode = makeCursorMode (stepCursorForwards cursorLocation) }
+  CursorMode { cursorLocation } -> pure $ st { mode = makeCursorMode (stepCursorForwards cursorLocation) }
   _ -> Nothing -- TODO: escape select
 
 moveSelectPrev :: State -> Maybe State
@@ -131,15 +135,16 @@ requireCursorMode st = case st.mode of
 
 undo :: State -> Maybe State
 undo st = do
-  traceM "undo"
   { head, tail } <- uncons st.history
-  pure st { mode = head, history = tail, future = st.mode : st.future }
+  if Array.length st.history > 1 then
+    pure $ st { mode = head, history = tail, future = st.mode : st.future }
+  else
+    pure $ st { mode = head }
 
 redo :: State -> Maybe State
 redo st = do
-  traceM "redo"
   { head, tail } <- uncons st.future
-  pure st { mode = head, history = st.mode : st.history, future = tail }
+  pure $ st { mode = head, history = st.mode : st.history, future = tail }
 
 cut :: State -> Maybe State
 cut = hole' "cut"
@@ -156,11 +161,12 @@ delete st = case st.mode of
     TermCursor ctxs ty path _tm -> do
       let
         cursorLocation' = TermCursor ctxs ty path (freshHole unit)
-      pure st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
-    TypeCursor ctxs path _ty -> do
+      pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
+    TypeCursor ctxs path ty -> do
       let
-        cursorLocation' = TypeCursor ctxs path (freshTHole unit)
-      pure st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
+        ty' = (freshTHole unit)
+        cursorLocation' = TypeCursor ctxs (chTypePath Map.empty Map.empty (Replace ty ty') path) ty'
+      pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
     _ -> Nothing
   _ -> Nothing
 
