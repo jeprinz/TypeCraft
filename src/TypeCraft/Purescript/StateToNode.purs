@@ -82,7 +82,7 @@ cursorModeToNode cursorMode =
   cursorModePathToNode = case cursorMode.cursorLocation of
     TermCursor ctxs ty termPath term -> termPathToNode true (BISelect Nil term ctxs ty) { ctxs, term, termPath, ty }
     TypeCursor ctxs typePath ty -> typePathToNode true BITerm { ctxs, ty, typePath }
-    TypeBindCursor ctxs upPath tyBind -> typeBindPathToNode true ctxs BITerm upPath
+    TypeBindCursor ctxs typeBindPath tyBind -> typeBindPathToNode true {ctxs, typeBindPath, tyBind}
     TermBindCursor ctxs termBindPath tBind -> termBindPathToNode true { ctxs, tBind, termBindPath }
     TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListPathToNode true BITerm { ctxs, listTypeArgPath, tyArgs } -- BITerm upPath
     CtrListCursor ctxs listCtrPath ctrs -> ctrListPathToNode true BITerm { ctxs, ctrs, listCtrPath }

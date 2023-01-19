@@ -15,6 +15,7 @@ import TypeCraft.Purescript.Parenthesization (parenthesizeChildNode)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, ListCtrRecValue, recTerm, recType)
 import TypeCraft.Purescript.Util (hole', justWhen)
+import TypeCraft.Purescript.Grammar (TypeBind(..))
 
 data AboveInfo syn
   = AICursor UpPath
@@ -101,7 +102,16 @@ termToNode isActive aboveInfo term =
                     , let th = Data4 md x.tyBind tbinds.tyBinds ctrs.ctrs bodyTy in parenthesizeChildNode DataNodeTag th $ termToNode isActive (stepAI th aboveInfo) body
                     ]
                 }
-          , tlet: \md x tbinds def body bodyTy -> hole' "termToNode"
+          , tlet: \md tyBind tyBinds def body bodyTy ->
+                { tag: TLetNodeTag
+                , label: Nothing
+                , kids: [
+                    typeBindToNode isActive (stepAI (TLet1 md {-tyBind-} tyBinds.tyBinds def.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tyBind
+                    , typeBindListToNode isActive (stepAI (TLet2 md tyBind.tyBind {-tyBinds-} def.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tyBinds
+                    , typeToNode isActive (stepAI (TLet3 md tyBind.tyBind tyBinds.tyBinds {-def-} body.term bodyTy) (aIOnlyCursor aboveInfo)) def
+                    , termToNode isActive (stepAI (TLet4 md tyBind.tyBind tyBinds.tyBinds def.ty {-body-} bodyTy) aboveInfo) body
+                ]
+                }
           , typeBoundary:
               \md ch t ->
                 { tag: TypeBoundaryNodeTag
@@ -206,7 +216,15 @@ typeArgToNode :: Boolean -> AboveInfo TypeArg -> TypeArgRecValue -> Node
 typeArgToNode isActive aboveInfo tyArg = hole' "typeArgToNode"
 
 typeBindToNode :: Boolean -> AboveInfo TypeBind -> TypeBindRecValue -> Node
-typeBindToNode isActive aboveInfo tyBind = hole' "typeBindToNode"
+typeBindToNode isActive aboveInfo { ctxs, tyBind: tyBind@(TypeBind md x) } =
+  setNodeLabel md.varName
+    $ makeNode
+        { kids: []
+        , getCursor:
+            justWhen isActive \_ -> _ { mode = makeCursorMode $ TypeBindCursor ctxs (aIGetPath aboveInfo) tyBind }
+        , getSelect: Nothing
+        , tag: TypeBindNodeTag
+        }
 
 typeBindListToNode :: Boolean -> AboveInfo (List TypeBind) -> ListTypeBindRecValue -> Node
 typeBindListToNode isActive aboveInfo tyBinds =  -- TODO: write actual implementation

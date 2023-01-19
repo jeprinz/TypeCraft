@@ -12,6 +12,11 @@ import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), mak
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), termBindToNode, termToNode, typeToNode)
 import TypeCraft.Purescript.TermToNode (typeBindListToNode)
 import TypeCraft.Purescript.Util (hole', justWhen)
+import TypeCraft.Purescript.TermToNode (typeBindToNode)
+import TypeCraft.Purescript.TermRec (TypeBindRecValue)
+import TypeCraft.Purescript.PathRec (recTypeBindPath)
+import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.PathRec (TypeBindPathRecValue)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
@@ -121,7 +126,19 @@ termPathToNode isActive belowInfo termPath innerNode =
         , buffer3: \upRecVal md buf bufTy {-Term-} bodyTy -> hole' "termPathToNode 2"
         , typeBoundary1: \upRecVal md change {-Term-} -> hole' "termPathToNode 3"
         , contextBoundary1: \upRecVal md x change {-Term-} -> hole' "termPathToNode 4"
-        , tLet4: \upRecVal md tyBind tyBinds def {-Term-} bodyTy -> hole' "termPathToNode 5"
+        , tLet4: \upRecVal md tyBind tyBinds def {-Term-} bodyTy ->
+            let newBI = stepBI (TLet4 md tyBind tyBinds.tyBinds def.ty bodyTy) belowInfo
+            in
+                termPathToNode isActive newBI upRecVal
+                  $ makeTermNode isActive newBI upRecVal
+                      { tag: TLetNodeTag
+                      , kids: [
+                        typeBindToNode isActive (AICursor (TLet1 md {-tyBind-} tyBinds.tyBinds def.ty term bodyTy : upRecVal.termPath)) {ctxs: upRecVal.ctxs, tyBind}
+                        , typeBindListToNode isActive (AICursor (TLet2 md tyBind {-tyBinds-} def.ty term bodyTy : upRecVal.termPath)) tyBinds
+                        , typeToNode isActive (AICursor (TLet3 md tyBind tyBinds.tyBinds {-def-} term bodyTy : upRecVal.termPath)) def
+                        , innerNode
+                      ]
+                      }
         , let5:
             \upRecVal md tBind tyBinds def ty {-body-} bodyTy ->
               let
@@ -197,7 +214,18 @@ typePathToNode isActive belowInfo typePath innerNode =
                       , tag: LetNodeTag
                       }
         , buffer2: \termPath md def {-Type-} body bodyTy -> (hole' "typePathToNode isActive")
-        , tLet3: \termPath md tyBind tyBinds {-Type-} body bodyTy -> (hole' "typePathToNode isActive")
+        , tLet3: \termPath md tyBind tyBinds {-Type-} body bodyTy ->
+            let newBI = BITerm in
+                termPathToNode isActive newBI termPath
+                  $ makeTermNode isActive newBI termPath
+                      { tag: TLetNodeTag
+                      , kids: [
+                        typeBindToNode isActive (AICursor (TLet1 md {-tyBind-} tyBinds.tyBinds ty body.term bodyTy : termPath.termPath)) tyBind
+                        , typeBindListToNode isActive (AICursor (TLet2 md tyBind.tyBind {-tyBinds-} ty body.term bodyTy : termPath.termPath)) tyBinds
+                        , innerNode
+                        , termToNode isActive (AICursor (TLet4 md tyBind.tyBind tyBinds.tyBinds ty {-body-} bodyTy : termPath.termPath)) body
+                      ]
+                      }
         , ctrParam1: \ctrParamPath md {-Type-} -> (hole' "typePathToNode isActive")
         , typeArg1: \typeArgPath md {-Type-} -> (hole' "typePathToNode isActive")
         , arrow1:
@@ -256,8 +284,29 @@ ctrParamPathToNode isActive ctxs belowInfo up innerNode = (hole' "ctrParamPathTo
 typeArgPathToNode :: Boolean -> AllContext -> BelowInfo TypeArg Unit -> UpPath -> Node -> Node
 typeArgPathToNode isActive ctxs belowInfo up innerNode = (hole' "typeArgPathToNode isActive")
 
-typeBindPathToNode :: Boolean -> AllContext -> BelowInfo TypeBind Unit -> UpPath -> Node -> Node
-typeBindPathToNode isActive ctxs belowInfo up innerNode = (hole' "typeBindPathToNode isActive")
+typeBindPathToNode :: Boolean -> TypeBindPathRecValue -> Node -> Node
+typeBindPathToNode isActive { typeBindPath: Nil } innerNode = innerNode
+
+typeBindPathToNode isActive typeBindPath innerNode =
+  let
+    tyBind = typeBindPath.tyBind
+  in
+    recTypeBindPath {
+        tLet1 : \termPath md {-tyBind-} tyBinds def body bodyTy ->
+            let newBI = BITerm in
+                termPathToNode isActive newBI termPath
+                  $ makeTermNode isActive newBI termPath
+                      { tag: TLetNodeTag
+                      , kids: [
+                        innerNode
+                        , typeBindListToNode isActive (AICursor (TLet2 md tyBind {-tyBinds-} def.ty body.term bodyTy : termPath.termPath)) tyBinds
+                        , typeToNode isActive (AICursor (TLet3 md tyBind tyBinds.tyBinds {-def-} body.term bodyTy : termPath.termPath)) def
+                        , termToNode isActive (AICursor (TLet4 md tyBind tyBinds.tyBinds def.ty {-body-} bodyTy : termPath.termPath)) body
+                      ]
+                      }
+        , data1 : \termPath md {-tyBind-} tyBinds ctrs body bodyTy -> hole' "typeBindPathToNode"
+        , typeBindListCons1 : \listTypeBindPath {-tyBind-} tyBind -> hole' "typeBindPathToNode"
+    } typeBindPath
 
 {-
 typePathToNode isActive :: Boolean -> BelowInfo Type Unit -> TypePathRecValue -> Node -> Node
@@ -326,7 +375,18 @@ typeBindListPathToNode isActive belowInfo typeBindListPath innerNode =
   in
     recListTypeBindPath
       ( { data2: \termPath md tyBind ctrs body bodyTy -> hole' "termBindPathToNode isActive"
-        , tLet2: \termPath md tyBind def body bodyTy -> hole' "termBindPathToNode isActive"
+        , tLet2: \termPath md tyBind {-tyBinds-} def body bodyTy ->
+            let newBI = BITerm in
+                termPathToNode isActive newBI termPath
+                  $ makeTermNode isActive newBI termPath
+                      { tag: TLetNodeTag
+                      , kids: [
+                        typeBindToNode isActive (AICursor (TLet1 md {-tyBind-} tyBinds def.ty body.term bodyTy : termPath.termPath)) tyBind
+                        , innerNode
+                        , typeToNode isActive (AICursor (TLet3 md tyBind.tyBind tyBinds {-def-} body.term bodyTy : termPath.termPath)) def
+                        , termToNode isActive (AICursor (TLet4 md tyBind.tyBind tyBinds def.ty {-body-} bodyTy : termPath.termPath)) body
+                      ]
+                      }
         , typeBindListCons2: \listTypeBindPath tyBind -> hole' "termBindPathToNode isActive"
         , let2:
             \termPath md tBind def defTy body bodyTy ->
