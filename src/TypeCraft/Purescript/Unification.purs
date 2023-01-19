@@ -65,9 +65,11 @@ runUnify m = case State.runState (Except.runExceptT m) emptySub of
   Left msg /\ _ -> Left msg
   Right a /\ sub -> Right (a /\ sub)
 
+-- NOTE: output substitution substitutes holes in ty2 for things in ty1
 -- either (const Nothing) pure $ Except.runExcept (State.runStateT m emptySub)
 unify :: Type -> Type -> Unify Type
 unify ty1 ty2 = case ty1 /\ ty2 of
+  THole _ hid1 /\ THole _ hid2 | hid1 == hid2 -> pure ty1 -- need this case, otherwise unifying a hole with itself would fail occurs check!
   THole _ hid /\ _ -> do
     checkOccurs hid ty2
     State.modify_ (\sub -> sub { subTHoles = Map.insert hid ty2 sub.subTHoles })
@@ -96,7 +98,7 @@ checkOccurs hid ty = go ty
 -- second type
 fillNeutral :: PolyType -> TermVarID -> Type -> Unify Term
 fillNeutral pty id ty = case pty of
-  Forall _ pty' -> fillNeutral pty' id ty
+  Forall _ pty' -> fillNeutral pty' id ty -- TODO: Jacob: I think that this need to actually put in the type arguments?
   PType ty' -> fillNeutral' ty' id ty
 
 fillNeutral' :: Type -> TermVarID -> Type -> Unify Term
@@ -105,7 +107,7 @@ fillNeutral' ty id ty' = case ty of
     (\tm -> App defaultAppMD tm (freshHole unit) ty1 ty2)
       <$> fillNeutral' ty2 id ty'
   _ -> do
-    void $ unify ty ty'
+    void $ unify ty' ty
     pure $ Var defaultVarMD id List.Nil
 
 

@@ -69,7 +69,7 @@ recTerm args {ctxs, ty: (Arrow _ ty1 ty2), term : (Lambda md bind@(TermBind xmd 
             {ctxs: ctxs', ty: ty2, term : body}
             ty2
 recTerm args {ctxs, ty: tyOut, term : (App md t1 t2 tyArg tyOut')}
-    = if not (tyOut == tyOut') then unsafeThrow "dynamic type error: shouldn't happen1" else
+    = if not (tyOut == tyOut') then unsafeThrow ("dynamic type error: shouldn't happen1. tyOut is: " <> show tyOut <> ", and tyOut' is: " <> show tyOut') else
         args.app md {ctxs, ty: Arrow defaultArrowMD tyArg tyOut, term: t1}
         {ctxs, ty: tyArg, term: t2}
         tyArg tyOut
