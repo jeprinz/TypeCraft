@@ -8,6 +8,9 @@ import TypeCraft.Purescript.Grammar (Term(..), Tooth(..))
 import TypeCraft.Purescript.Node (Node, NodeTag(..), getNodeTag, setNodeParenthesized)
 import TypeCraft.Purescript.Util (hole)
 
+-- Example: let case
+--letThing :: LetMD -> Node -> Node -> Node -> Node -> Node -> Array Node
+
 parenthesizeChildNode :: NodeTag -> Tooth -> Node -> Node
 parenthesizeChildNode tagParent tooth nodeChild =
   flip setNodeParenthesized nodeChild case tagParent /\ tooth /\ getNodeTag nodeChild of
