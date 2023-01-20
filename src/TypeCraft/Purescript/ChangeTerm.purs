@@ -105,7 +105,8 @@ chTerm kctx ctx c t =
                 if not (fst (getEndpoints c) == bodyType) then unsafeThrow "shouldn't happen 6" else
                 let ty' /\ tyChange = chType kctx ty in
 --                let c' /\ t' = chTerm (ctxKindCons kctx x (TVarTypeChange tyChange)) ctx c t in
-                let c' /\ t' = chTerm (ctxKindCons kctx x (TVarKindChange (kindInject (tyBindsWrapKind params Type)))) ctx c t in
+                let typeAliasChange = hole' "chTerm" in
+                let c' /\ t' = chTerm (ctxKindCons kctx x (TVarKindChange (kindInject (tyBindsWrapKind params Type)) (Just typeAliasChange))) ctx c t in
                 c' /\ TLet md x params ty' t' (snd (getEndpoints c')) -- TODO: what if c references x? Then it is out of scope above.
             c /\ Hole md -> (tyInject (snd (getEndpoints c))) /\ Hole md
             cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
@@ -130,9 +131,12 @@ chType kctx (THole md x) = THole md x /\ CHole x
 chType kctx startType@(TNeu md x args) =
     case lookup x kctx of
     Nothing -> unsafeThrow "shouldn't get here! all variables should be bound in the context!"
-    Just (TVarKindChange kindChange) ->
-        let args' /\ cargs = chTypeArgs kctx kindChange args in
-        TNeu md x args' /\ CNeu x cargs
+    Just (TVarKindChange kindChange taCh) ->
+        case taCh of
+        Nothing ->
+            let args' /\ cargs = chTypeArgs kctx kindChange args in
+            TNeu md x args' /\ CNeu x cargs
+        Just taCh -> hole' "chType" -- if the type variable was that of a type alias, we must deal with the possiblity that the type alias was changed
     Just TVarDelete ->
         let x = freshTypeHoleID unit in
         let newType = THole defaultHoleMD x in

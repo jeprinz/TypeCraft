@@ -7,7 +7,7 @@ import TypeCraft.Purescript.Grammar
 
 import Data.List (List(..), (:))
 import Data.Map.Internal (Map, delete, empty, filterKeys, insert, lookup)
-import Data.Map.Internal (empty, lookup, insert, union)
+import Data.Map.Internal (empty, lookup, insert, union, mapMaybeWithKey)
 import Data.Maybe (Maybe(..))
 import Data.Set (Set)
 import Data.Set (member)
@@ -20,6 +20,7 @@ import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.MD (TypeBindMD)
 import TypeCraft.Purescript.MD (defaultArrowMD)
 import TypeCraft.Purescript.Util (hole')
+import TypeCraft.Purescript.Util (hole)
 
 {-
 This file defines term contexts and type contexts!
@@ -39,7 +40,13 @@ type TypeAliasContext = Map TypeVarID (List TypeBind /\ Type) -- The array is th
 -- TODO: TODO: TODO: I need to combine these and instead have Map TermVarID (K)
 type ChangeCtx = Map TermVarID VarChange
 
-data TVarChange = TVarKindChange KindChange | TVarDelete -- Do I need TVarInsert? Does TVarDelete need more parameters?
+data TypeAliasChange
+  = TAForall TypeVarID TypeAliasChange
+  | TAPlus TypeVarID TypeAliasChange
+  | TAMinus TypeVarID TypeAliasChange
+  | TAChange Change
+
+data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange) | TVarDelete -- Do I need TVarInsert? Does TVarDelete need more parameters?
 type KindChangeCtx = Map TypeVarID TVarChange
 ctxKindCons :: KindChangeCtx -> TypeBind -> TVarChange -> KindChangeCtx
 ctxKindCons kctx (TypeBind _ x) c = insert x c kctx
@@ -53,8 +60,17 @@ addLetToCCtx ctx tBind@(TermBind _ x) tyBinds ty =
 removeLetFromCCtx :: CAllContext -> TermBind -> CAllContext
 removeLetFromCCtx (kctx /\ ctx) (TermBind _ x) = kctx /\ delete x ctx
 
-kCtxInject :: TypeContext -> KindChangeCtx
-kCtxInject kctx = map (\k -> TVarKindChange (kindInject k)) kctx
+kCtxInject :: TypeContext -> TypeAliasContext -> KindChangeCtx
+kCtxInject kctx actx = mapMaybeWithKey (\x kind
+        -> Just $ TVarKindChange (kindInject kind)
+            (case lookup x actx of
+                Nothing -> Nothing
+                Just (tyBinds /\ def) ->
+                    let bindsToTAC :: List TypeBind -> TypeAliasChange
+                        bindsToTAC Nil = TAChange (tyInject def)
+                        bindsToTAC ((TypeBind _ x) : tyBinds) = TAForall x (bindsToTAC tyBinds)
+                    in Just (bindsToTAC tyBinds))
+    ) kctx
 
 ctxInject :: TermContext -> ChangeCtx
 ctxInject ctx = map (\ty -> VarTypeChange (pTyInject ty)) ctx

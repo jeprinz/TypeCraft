@@ -71,7 +71,7 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
                   }
           CompletionTermPath pathNew ch ->
             let
-              path' = chTermPath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) ch path
+              path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
             in
               pure
                 { cursorLocation: TermCursor ctxs ty (pathNew <> path') tm
@@ -83,7 +83,7 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
       >>= case _ of
           CompletionType ty' ->
             let
-              path' = chTypePath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) (Replace ty ty') path
+              path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path
             in
               pure
                 { cursorLocation: TypeCursor ctxs path' ty'
@@ -91,7 +91,7 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
                 }
           CompletionTypePath pathNew ch ->
             let
-              path' = chTypePath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) ch path
+              path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
             in
               pure
                 { cursorLocation: TypeCursor ctxs (pathNew <> path') ty
@@ -164,7 +164,7 @@ delete st = case st.mode of
     TypeCursor ctxs path ty -> do
       let
         ty' = (freshTHole unit)
-        cursorLocation' = TypeCursor ctxs (chTypePath (kCtxInject ctxs.kctx) (ctxInject ctxs.ctx) (Replace ty ty') path) ty'
+        cursorLocation' = TypeCursor ctxs (chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path) ty'
       pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
     _ -> Nothing
   _ -> Nothing
