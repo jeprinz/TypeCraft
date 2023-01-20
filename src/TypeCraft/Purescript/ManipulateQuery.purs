@@ -65,7 +65,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             Nothing -> unsafeThrow $ "the entry '" <> show (id /\ varName) <> "' was found in the ctxs.mdctx, but not in the ctxs.ctx: '" <> show ctxs.ctx <> "'"
             Just pty ->
               when (str `kindaStartsWith` varName) do
-                case runUnify (fillNeutral pty id ty) of
+                case runUnify (fillNeutral ctxs.actx pty id ty) of
                   Left _msg -> pure unit
                   Right (tm' /\ sub) -> Writer.tell [ [ CompletionTerm tm' sub{subTypeVars = Map.empty} ] ] -- TODO: Jacob: why would there be subTypeVars here anyway? I'm confused about that. Isn't unification for holes?
         )

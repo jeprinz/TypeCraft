@@ -29,6 +29,7 @@ This file defines term contexts and type contexts!
 --------------------------------------------------------------------------------
 type TermContext = Map TermVarID PolyType
 type TypeContext = Map TypeVarID Kind
+type TypeAliasContext = Map TypeVarID (List TypeBind /\ Type) -- The array is the free variables in the Type.
 
 --------------------------------------------------------------------------------
 -------------- Change contexts ------------------------------------------------
@@ -38,7 +39,7 @@ type TypeContext = Map TypeVarID Kind
 -- TODO: TODO: TODO: I need to combine these and instead have Map TermVarID (K)
 type ChangeCtx = Map TermVarID VarChange
 
-data TVarChange = TVarKindChange KindChange | TVarDelete -- | TVarTypeChange Change
+data TVarChange = TVarKindChange KindChange | TVarDelete -- Do I need TVarInsert? Does TVarDelete need more parameters?
 type KindChangeCtx = Map TypeVarID TVarChange
 ctxKindCons :: KindChangeCtx -> TypeBind -> TVarChange -> KindChangeCtx
 ctxKindCons kctx (TypeBind _ x) c = insert x c kctx
@@ -79,6 +80,7 @@ type AllContext = {
     mdkctx :: MDTypeContext
     , mdctx :: MDTermContext
     , kctx :: TypeContext
+    , actx :: TypeAliasContext -- a stands for alias
     , ctx :: TermContext
 }
 
@@ -87,6 +89,7 @@ emptyAllContext = {
     mdkctx: empty,
     mdctx: empty,
     kctx: empty,
+    actx: empty,
     ctx: empty
 }
 
@@ -143,7 +146,14 @@ removeDataFromCtx ctxs tyBind@(TypeBind xmd x) tyBinds ctrs =
 
 addTLetToCtx :: AllContext -> TypeBind -> (List TypeBind) -> Type -> AllContext
 addTLetToCtx ctxs tyBind@(TypeBind xmd x) tyBinds def =
-    ctxs{kctx = insert x (bindsToKind tyBinds) ctxs.kctx, mdkctx = insert x xmd.varName ctxs.mdkctx}
+    ctxs
+        {kctx = insert x (bindsToKind tyBinds) ctxs.kctx
+        , mdkctx = insert x xmd.varName ctxs.mdkctx
+        , actx = insert x (tyBinds /\ def) ctxs.actx
+        }
+
+removeTLetFromCtx :: AllContext -> TypeBind -> AllContext
+removeTLetFromCtx ctxs (TypeBind _ x) = ctxs{kctx= delete x ctxs.kctx, mdkctx= delete x ctxs.mdkctx, actx = delete x ctxs.actx}
 
 addLetToCtx :: AllContext -> TermBind -> List TypeBind -> Type -> AllContext
 addLetToCtx ctxs tBind@(TermBind xmd x) tyBinds defTy

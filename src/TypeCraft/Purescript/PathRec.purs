@@ -93,11 +93,11 @@ recTermPath args {ctxs, ty, term, termPath: (TypeBoundary1 md c {-Term-}) : up} 
 recTermPath args {ctxs, ty, term, termPath: (ContextBoundary1 md x c) : up} =
     let ctxs' = ctxs{ctx = alterCtxVarChange ctxs.ctx x (invertVarChange c)} in
     args.contextBoundary1 {ctxs: ctxs', ty: ty, term: ContextBoundary md x c term, termPath: up} md x c
-recTermPath args {ctxs, ty, term, termPath: (TLet4 md tybind@(TypeBind _ x) tyBinds def {-Term-} bodyTy) : up} =
+recTermPath args {ctxs, ty, term, termPath: (TLet4 md tyBind@(TypeBind _ x) tyBinds def {-Term-} bodyTy) : up} =
     if not (bodyTy == ty) then unsafeThrow "dynamic type error detected 7" else
-    let ctxs' = ctxs {mdkctx = delete x ctxs.mdkctx, kctx = delete x ctxs.kctx} in
-    args.tLet4 {ctxs: ctxs', ty: bodyTy, term: TLet md tybind tyBinds def term bodyTy, termPath: up}
-        md tybind {ctxs, tyBinds} {ctxs: ctxs', ty: def} bodyTy
+    let ctxs' = removeTLetFromCtx ctxs tyBind in
+    args.tLet4 {ctxs: ctxs', ty: bodyTy, term: TLet md tyBind tyBinds def term bodyTy, termPath: up}
+        md tyBind {ctxs, tyBinds} {ctxs: ctxs', ty: def} bodyTy
 recTermPath args {ctxs, ty, term, termPath: (Data4 md tyBind@(TypeBind _ x) tyBinds ctrs {-Term-} bodyTy) : up} =
     let ctxs' = removeDataFromCtx ctxs tyBind tyBinds ctrs in
     args.data4 {ctxs: ctxs', ty: bodyTy, term: Data md tyBind tyBinds ctrs term bodyTy, termPath: up}
@@ -131,7 +131,7 @@ recTypePath args {ctxs, ty, typePath: (Let4 md tBind@(TermBind xmd x) tyBinds de
         {ctxs: ctxs', ty: ty, term: def}
         {ctxs: ctxs', ty: bodyTy, term: body} bodyTy
 recTypePath args {ctxs, ty, typePath: (TLet3 md tyBind@(TypeBind _ x) tyBinds {-Type-} body bodyTy) : termPath} =
-    let ctxs' = ctxs{kctx= delete x ctxs.kctx, mdkctx= delete x ctxs.mdkctx} in
+    let ctxs' = addTLetToCtx ctxs tyBind tyBinds ty in
     args.tLet3 {ctxs: ctxs', ty: bodyTy, term: TLet md tyBind tyBinds ty body bodyTy, termPath}
         md {ctxs: ctxs', tyBind}
         {ctxs: ctxs', tyBinds}
@@ -180,7 +180,7 @@ type TypeBindPathRec a = {
 
 recTypeBindPath :: forall a. TypeBindPathRec a -> TypeBindPathRecValue -> a
 recTypeBindPath args {ctxs, tyBind: tyBind@(TypeBind xmd x), typeBindPath: (TLet1 md {-TypeBind-} tyBinds def body bodyTy) : termPath} =
-    let ctxs' = ctxs{kctx = insert x (bindsToKind tyBinds) ctxs.kctx, mdkctx = insert x xmd.varName ctxs.mdkctx} in
+    let ctxs' = addTLetToCtx ctxs tyBind tyBinds def in
     args.tLet1 {ctxs, ty: bodyTy, term: TLet md tyBind tyBinds def body bodyTy, termPath}
         md {ctxs, tyBinds}
         {ctxs, ty: def}

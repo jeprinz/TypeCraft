@@ -15,6 +15,7 @@ import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (hole')
 import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.Context (TypeAliasContext)
 
 -- * unification
 type Unify a
@@ -65,6 +66,9 @@ runUnify m = case State.runState (Except.runExceptT m) emptySub of
   Left msg /\ _ -> Left msg
   Right a /\ sub -> Right (a /\ sub)
 
+normThenUnify :: TypeAliasContext -> Type -> Type -> Unify Type
+normThenUnify actx ty1 ty2 = unify (normalizeType actx ty1) (normalizeType actx ty2)
+
 -- NOTE: output substitution substitutes holes in ty2 for things in ty1
 -- either (const Nothing) pure $ Except.runExcept (State.runStateT m emptySub)
 unify :: Type -> Type -> Unify Type
@@ -96,31 +100,31 @@ checkOccurs hid ty = go ty
 
 -- create neutral form from variable of first type that can fill the hole of the
 -- second type
-fillNeutral :: PolyType -> TermVarID -> Type -> Unify Term
-fillNeutral pty id ty = case pty of
-  Forall _ pty' -> fillNeutral pty' id ty -- TODO: Jacob: I think that this need to actually put in the type arguments?
-  PType ty' -> fillNeutral' ty' id ty
+fillNeutral :: TypeAliasContext -> PolyType -> TermVarID -> Type -> Unify Term
+fillNeutral actx pty id ty = case pty of
+  Forall _ pty' -> fillNeutral actx pty' id ty -- TODO: Jacob: I think that this need to actually put in the type arguments?
+  PType ty' -> fillNeutral' actx ty' id ty
 
 {-
 NOTE: when creating a variable to place into a new neutral form, if the type is a hole, you can prioritize as many or as few
 arguments. fillNeutral'' prioritizes many arguments, and fillNeutral' prioritizes few.
 -}
-fillNeutral'' :: Type -> TermVarID -> Type -> Unify Term
-fillNeutral'' ty id ty' = case ty of
+fillNeutral'' :: TypeAliasContext -> Type -> TermVarID -> Type -> Unify Term
+fillNeutral'' actx ty id ty' = case ty of
   Arrow _ ty1 ty2 ->
     (\tm -> App defaultAppMD tm (freshHole unit) ty1 ty2)
-      <$> fillNeutral' ty2 id ty'
+      <$> fillNeutral' actx ty2 id ty'
   _ -> do
-    void $ unify ty' ty
+    void $ normThenUnify actx ty' ty
     pure $ Var defaultVarMD id List.Nil
 
-fillNeutral' :: Type -> TermVarID -> Type -> Unify Term
-fillNeutral' ty id ty' =
-    case runUnify (unify ty' ty) of
+fillNeutral' :: TypeAliasContext -> Type -> TermVarID -> Type -> Unify Term
+fillNeutral' actx ty id ty' =
+    case runUnify (normThenUnify actx ty' ty) of
     Left msg ->
         case ty of
         Arrow _ ty1 ty2 -> do
-            tm <- fillNeutral' ty2 id ty'
+            tm <- fillNeutral' actx ty2 id ty'
             pure $ App defaultAppMD tm (freshHole unit) ty1 ty2
         _ -> Except.throwError msg
     Right (_ /\ sub) -> do
@@ -194,3 +198,16 @@ subConstructor sub (Constructor md x ctrParams) = Constructor md x (map (subCtrP
 
 subCtrParam :: Sub -> CtrParam -> CtrParam
 subCtrParam sub (CtrParam md ty) = CtrParam md (applySubType sub ty)
+
+normalizeType :: TypeAliasContext -> Type -> Type
+normalizeType actx ty =
+    case ty of
+    Arrow md ty1 ty2 -> Arrow md (normalizeType actx ty1) (normalizeType actx ty2)
+    THole md x -> THole md x
+    TNeu md x args -> case Map.lookup x actx of
+        Nothing -> TNeu md x (map (\(TypeArg md ty) -> TypeArg md (normalizeType actx ty)) args)
+        Just (tyBinds /\ def) ->
+            let types = map (\(TypeArg _ ty) -> ty) args in
+            let ids = map (\(TypeBind _ id) -> id) tyBinds in
+            let sub = Map.fromFoldable (List.zip ids types) in
+            normalizeType actx (applySubType {subTypeVars: sub, subTHoles: Map.empty} def)
