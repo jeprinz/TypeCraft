@@ -83,6 +83,7 @@ unify ty1 ty2 = case ty1 /\ ty2 of
     State.modify_ (\sub -> sub { subTHoles = Map.insert hid ty2 sub.subTHoles })
     pure ty2
   Arrow md tyA1 tyB1 /\ Arrow _ tyA2 tyB2 -> Arrow md <$> unify tyA1 tyA2 <*> unify tyB1 tyB2
+  -- TODO: handle type arguments
   _
     | ty1 == ty2 -> pure ty1
     | otherwise -> Except.throwError $ "types do not unify: (" <> show ty1 <> ") ~ (" <> show ty2 <> ")"
