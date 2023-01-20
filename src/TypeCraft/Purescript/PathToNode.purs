@@ -149,7 +149,7 @@ termPathToNode isActive belowInfo termPath innerNode =
                       { tag: LetNodeTag
                       , kids:
                           [ termBindToNode isActive (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term ty.ty term bodyTy : upRecVal.termPath)) tBind
-                          , typeBindListToNode isActive (AICursor (Let2 md tBind.tBind {-List TypeBind-} def.term ty.ty term bodyTy : termPath.termPath)) tyBinds
+                          , typeBindListToNode isActive (AICursor (Let2 md tBind.tBind {-List TypeBind-} def.term ty.ty term bodyTy : upRecVal.termPath)) tyBinds
                           , typeToNode isActive (AICursor (Let4 md tBind.tBind tyBinds.tyBinds def.term {-Type-} term bodyTy : upRecVal.termPath)) ty
                           , termToNode isActive (AICursor ((Let3 md tBind.tBind tyBinds.tyBinds {-def-} ty.ty term bodyTy) : upRecVal.termPath)) def
                           , innerNode
