@@ -21,6 +21,7 @@ import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultBufferMD, d
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State)
 import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.MD (defaultGADTMD)
 
 isNonemptyQueryString :: Query -> Boolean
 isNonemptyQueryString query = not $ String.null query.string
@@ -107,6 +108,14 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionTermPath
                   (List.singleton $ TLet4 defaultTLetMD (freshTypeBind Nothing) List.Nil (freshTHole unit) ty)
                   (tyInject ty)
+              ]
+            ]
+      -- Data
+      when (str `kindaStartsWith` "data")
+        $ Writer.tell
+            [ [ CompletionTermPath
+                (List.singleton $ Data4 defaultGADTMD (freshTypeBind Nothing) List.Nil List.Nil ty)
+                (tyInject ty)
               ]
             ]
       -- TypeBoundary

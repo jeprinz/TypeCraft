@@ -96,9 +96,9 @@ termToNode isActive aboveInfo term =
                 { tag: DataNodeTag
                 , label: Nothing
                 , kids:
-                    [ let th = Data1 md tbinds.tyBinds ctrs.ctrs term.term bodyTy in parenthesizeChildNode DataNodeTag th $ typeBindToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) x
-                    , let th = Data2 md x.tyBind ctrs.ctrs term.term bodyTy in parenthesizeChildNode DataNodeTag th $ typeBindListToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) tbinds
-                    , let th = Data3 md x.tyBind tbinds.tyBinds term.term bodyTy in parenthesizeChildNode DataNodeTag th $ constructorListToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) ctrs
+                    [ let th = Data1 md tbinds.tyBinds ctrs.ctrs body.term bodyTy in parenthesizeChildNode DataNodeTag th $ typeBindToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) x
+                    , let th = Data2 md x.tyBind ctrs.ctrs body.term bodyTy in parenthesizeChildNode DataNodeTag th $ typeBindListToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) tbinds
+                    , let th = Data3 md x.tyBind tbinds.tyBinds body.term bodyTy in parenthesizeChildNode DataNodeTag th $ constructorListToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) ctrs
                     , let th = Data4 md x.tyBind tbinds.tyBinds ctrs.ctrs bodyTy in parenthesizeChildNode DataNodeTag th $ termToNode isActive (stepAI th aboveInfo) body
                     ]
                 }
@@ -253,7 +253,13 @@ typeArgListToNode :: Boolean -> AboveInfo (List TypeArg) -> ListTypeArgRecValue 
 typeArgListToNode isActive aboveInfo tyArgs = hole' "typeArgListToNode"
 
 constructorListToNode :: Boolean -> AboveInfo (List Constructor) -> ListCtrRecValue -> Node
-constructorListToNode isActive aboveInfo ctrs = hole' "constructorListToNode"
+constructorListToNode isActive aboveInfo ctrs = -- TODO: This is just a placeholder implementation of this function
+  makeNode
+    { tag: ConstructorListNilNodeTag
+    , kids: []
+    , getCursor: justWhen isActive \_ -> _ { mode = makeCursorMode $ CtrListCursor ctrs.ctxs (aIGetPath aboveInfo) ctrs.ctrs }
+    , getSelect: Nothing
+    }
 
 type ChangeRecValue
   = { ctxs :: AllContext, ch :: Change }

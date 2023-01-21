@@ -36,7 +36,7 @@ type LetMD
     }
 
 type GADTMD
-  = { varName :: String }
+  = {}
 
 type TermBindMD
   = { varName :: String }
@@ -125,3 +125,6 @@ defaultLetMD =
 -- termbind
 defaultTermBindMD :: TermBindMD
 defaultTermBindMD = { varName: "placeholder" }
+
+defaultGADTMD :: GADTMD
+defaultGADTMD = {}
