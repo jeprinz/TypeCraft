@@ -95,11 +95,7 @@ export const setNodeStyle = style => node => ({ ...node, style })
 // TODO: even if i explicitly use the other kinds of indent, always sets
 // indentation to be "inline" wehen it gets here... wtf
 
-// export const setNodeIndentation = indentation => node => ({ ...node, indentation })
-export const setNodeIndentation = indentation => node => {
-  console.log("setNodeIndentation.indentation.case", indentation.case)
-  return ({ ...node, indentation })
-}
+export const setNodeIndentation = indentation => node => ({ ...node, indentation })
 
 export const setNodeParenthesized = isParenthesized => node => ({ ...node, isParenthesized })
 
@@ -108,10 +104,6 @@ export const setNodeLabel = label => node => ({ ...node, label })
 export const setNodeQueryString = queryString => node => ({ ...node, queryString })
 
 export const setNodeCompletions = completions => activeCompletionGroup => node => ({ ...node, completions, activeCompletionGroup })
-// export const setNodeCompletions = completions => activeCompletionGroup => node => {
-//   console.log("setNodeCompletions.activeCompletionGroup", activeCompletionGroup)
-//   return ({ ...node, completions, activeCompletionGroup })
-// }
 
 // NodeIndentation
 export const makeInlineNodeIndentation = { case: 'inline' }
