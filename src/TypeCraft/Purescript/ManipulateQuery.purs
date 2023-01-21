@@ -45,6 +45,7 @@ kindaStartsWith :: String -> String -> Boolean
 kindaStartsWith str pre =
   and
     [ String.length str > 0 -- string can't be empty
+    , String.length pre > 0 -- prefix can't be empty
     , isJust $ String.stripPrefix (String.Pattern (String.take (String.length str) pre)) str
     ]
 
