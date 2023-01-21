@@ -163,8 +163,24 @@ chListCtrParamPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> U
 --    CtrParamListCons2 CtrParam {-List CtrParam-}
 chListCtrParamPath _ _ _ _ = hole' "chListCtrParamPath"
 
+data ListTypeArgChange = ListTypeArgChangeNil | ListTypeArgChangeCons Change ListTypeArgChange
+
+chListTypeArgPath :: KindChangeCtx -> ChangeCtx -> ListTypeArgChange -> UpPath -> UpPath
 --    TypeArgListCons2 (TypeArg) {-List TypeArg-}
 --    TNeu1 TNeuMD TypeVarID {-List TypeArg-}
+chListTypeArgPath = hole' "chListTypeArgPath"
 
+
+
+data ListTypeBindChange = ListTypeBindChangeCons TypeBind ListTypeBindChange
+    | ListTypeBindChangePlus TypeBind ListTypeBindChange
+    | ListTypeBindChangeMinus TypeBind ListTypeBindChange
+    | ListTypeBindChangeNil
+
+-- This function should enable adding type parameters to lets
+chListTypeBindPath :: KindChangeCtx -> ChangeCtx -> ListTypeBindChange -> UpPath -> UpPath
 --    TLet2 TLetMD TypeBind {-List TypeBind-} Type Term Type
 --    TypeBindListCons2 (TypeBind) {-List TypeBind-}
+--    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
+--    Let2 LetMD TermBind {-List TypeBind-} Term Type Term Type
+chListTypeBindPath = hole' "chTypeBindPath"
