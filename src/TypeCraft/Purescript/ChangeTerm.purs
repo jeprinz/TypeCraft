@@ -17,6 +17,7 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
+import Debug (trace)
 
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
 chTermBoundary :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Term
@@ -109,7 +110,7 @@ chTerm kctx ctx c t =
                 let c' /\ t' = chTerm (ctxKindCons kctx x (TVarKindChange (kindInject (tyBindsWrapKind params Type)) (Just typeAliasChange))) ctx c t in
                 c' /\ TLet md x params ty' t' (snd (getEndpoints c')) -- TODO: what if c references x? Then it is out of scope above.
             c /\ Hole md -> (tyInject (snd (getEndpoints c))) /\ Hole md
-            cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
+            cin /\ t -> trace "got here!!!" \_ -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD (invert cin) t
         )
     in
         doInsertArgs cRes tRes

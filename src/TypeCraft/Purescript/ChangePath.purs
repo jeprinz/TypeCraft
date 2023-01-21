@@ -45,7 +45,7 @@ chTermPath kctx ctx (Minus t c) (App1 md {-here-} arg argTy outTy : up) =
     Buffer3 defaultBufferMD arg argTy {-Term-} outTy : up'
 -- TODO: App2 case, other App1 cases with other TypeChanges
 --    App2 AppMD Term {-Term-} Type Type -- TODO: this case goes along with the polymorphism change stuff
-chTermPath kctx ctx ch  (Let3 md tBind@(TermBind _ x) tyBinds {-Term = here-} ty body bodyTy : termPath) =
+chTermPath kctx ctx ch (Let3 md tBind@(TermBind _ x) tyBinds {-Term = here-} ty body bodyTy : termPath) =
     if not (ty == fst (getEndpoints ch)) then unsafeThrow "shouldn't happen" else
     let ctx' = insert x (VarTypeChange (tyBindsWrapChange tyBinds ch)) ctx in
     let c2 /\ body' = chTerm kctx ctx' (tyInject bodyTy) body in
