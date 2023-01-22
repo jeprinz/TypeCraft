@@ -10,7 +10,7 @@ import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, Toot
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), termBindToNode, termToNode, typeToNode)
-import TypeCraft.Purescript.TermToNode (typeBindListToNode, constructorListToNode, stepAIKidsTerm)
+import TypeCraft.Purescript.TermToNode (typeBindListToNode, constructorListToNode, stepKidsTerm)
 import TypeCraft.Purescript.Util (hole', justWhen)
 import TypeCraft.Purescript.TermToNode (typeBindToNode)
 import TypeCraft.Purescript.PathRec (recTypeBindPath)
@@ -124,7 +124,7 @@ termPathToNode isActive belowInfo termPath innerNode =
                          , innerNode
                          ]
                             -- TODO:HERE
-                            -- stepAIKidsTerm term [
+                            -- stepKidsTerm term [
                             --     \indentation _ -> setNodeIndentation indentation innerNode
                             -- ]
                       }

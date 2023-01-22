@@ -2,13 +2,14 @@ module TypeCraft.Purescript.TermToNode where
 
 import Prelude
 import Prim hiding (Type)
+
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term(..), TermBind(..), Tooth(..), Type(..), TypeArg, TypeBind(..), UpPath)
-import TypeCraft.Purescript.Node (Node, NodeIndentation, NodeTag(..), makeIndentNodeIndentation, makeInlineNodeIndentation, makeNewlineNodeIndentation, makeNode, setNodeIndentation, setNodeIsParenthesized, setNodeLabel, termToNodeTag, typeToNodeTag)
+import TypeCraft.Purescript.Node (Node, NodeIndentation, NodeTag(..), getNodeTag, makeIndentNodeIndentation, makeInlineNodeIndentation, makeNewlineNodeIndentation, makeNode, setNodeIndentation, setNodeIsParenthesized, setNodeLabel, termToNodeTag, typeToNodeTag)
 import TypeCraft.Purescript.State (CursorLocation(..), Select(..), makeCursorMode, makeSelectMode)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListCtrRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, CtrParamRecValue, recTerm, recType)
 import TypeCraft.Purescript.Util (hole', justWhen)
@@ -49,7 +50,7 @@ arrangeNodeKids ::
   { isActive :: Boolean
   , aboveInfo :: AboveInfo a
   , tag :: NodeTag
-  , stepAIKids :: Array PreNode -> Array Node
+  , stepKids :: Array PreNode -> Array Node
   , makeCursor :: Unit -> CursorLocation
   , makeSelect :: UpPath → AllContext → a → UpPath -> Select
   } ->
@@ -57,7 +58,7 @@ arrangeNodeKids ::
   Node
 arrangeNodeKids args kids =
   makeNode
-    { kids: args.stepAIKids kids -- TODO: make sure that parentheses happen  ((\k th -> parenthesizeChildNode args.tag th (k ind th)) <$> kids)
+    { kids: args.stepKids kids -- TODO: make sure that parentheses happen  ((\k th -> parenthesizeChildNode args.tag th (k ind th)) <$> kids)
     , getCursor: justWhen args.isActive \_ -> _ { mode = makeCursorMode $ args.makeCursor unit }
     , getSelect:
         case args.aboveInfo of
@@ -70,56 +71,56 @@ arrangeKid :: forall a rc. AboveInfo a -> (AboveInfo a -> rc -> Node) -> rc -> P
 arrangeKid ai k rc th = k (stepAI th ai) rc
 
 -- | Term
-stepAIKidsTerm :: Term -> Array PreNode -> Array Node
-stepAIKidsTerm term kids = case term of
+stepKidsTerm :: Term -> Array PreNode -> Array Node
+stepKidsTerm term kids = case term of
   App md apl arg ty1 ty2
     | [ k_apl, k_arg ] <- kids ->
-      [ setNodeIndentation inline $ k_apl (App1 md arg ty1 ty2)
+      [ k_apl (App1 md arg ty1 ty2)
       , setNodeIndentation (indentIf md.argIndented) $ k_arg (App1 md apl ty1 ty2)
       ]
   Lambda md bnd sig body ty
     | [ k_bnd, k_ty, k_body ] <- kids ->
-      [ setNodeIndentation inline $ k_bnd (Lambda1 md sig body ty)
-      , setNodeIndentation inline $ k_ty (Lambda2 md bnd body ty)
+      [ k_bnd (Lambda1 md sig body ty)
+      , k_ty (Lambda2 md bnd body ty)
       , setNodeIndentation (indentIf md.bodyIndented) $ k_body (Lambda3 md bnd sig ty)
       ]
   Var md x args
     | [] <- kids -> []
   Let md bnd bnds imp sig bod ty
     | [ k_bnd, k_bnds, k_imp, k_sig, k_bod ] <- kids ->
-      [ setNodeIndentation inline $ k_bnd (Let1 md bnds imp sig bod ty)
-      , setNodeIndentation inline $ k_bnds (Let2 md bnd imp sig bod ty)
+      [ k_bnd (Let1 md bnds imp sig bod ty)
+      , k_bnds (Let2 md bnd imp sig bod ty)
       , setNodeIndentation (indentIf md.defIndented) $ k_imp (Let3 md bnd bnds sig bod ty)
       , setNodeIndentation (indentIf md.typeIndented) $ k_sig (Let4 md bnd bnds imp bod ty)
       , setNodeIndentation (newlineIf md.bodyIndented) $ k_bod (Let5 md bnd bnds imp sig ty)
       ]
   Data md bnd bnds ctrs bod ty
     | [ k_bnd, k_bnds, k_ctrs, k_bod ] <- kids ->
-      [ setNodeIndentation inline $ k_bnd (Data1 md bnds ctrs bod ty)
-      , setNodeIndentation inline $ k_bnds (Data2 md bnd ctrs bod ty)
-      , setNodeIndentation inline $ k_ctrs (Data3 md bnd bnds bod ty)
-      , setNodeIndentation inline $ k_bod (Data4 md bnd bnds ctrs ty)
+      [ k_bnd (Data1 md bnds ctrs bod ty)
+      , k_bnds (Data2 md bnd ctrs bod ty)
+      , k_ctrs (Data3 md bnd bnds bod ty)
+      , k_bod (Data4 md bnd bnds ctrs ty)
       ]
   TLet md bnd bnds sig bod ty
     | [ k_bnd, k_bnds, k_sig, k_bod ] <- kids ->
-      [ setNodeIndentation inline $ k_bnd (TLet1 md bnds sig bod ty)
-      , setNodeIndentation inline $ k_bnds (TLet2 md bnd sig bod ty)
-      , setNodeIndentation inline $ k_sig (TLet3 md bnd bnds bod ty)
-      , setNodeIndentation inline $ k_bod (TLet4 md bnd bnds sig ty)
+      [ k_bnd (TLet1 md bnds sig bod ty)
+      , k_bnds (TLet2 md bnd sig bod ty)
+      , k_sig (TLet3 md bnd bnds bod ty)
+      , k_bod (TLet4 md bnd bnds sig ty)
       ]
   TypeBoundary md ch bod
-    | [ k_bod ] <- kids -> [ setNodeIndentation inline $ k_bod (TypeBoundary1 md ch) ]
+    | [ k_bod ] <- kids -> [ k_bod (TypeBoundary1 md ch) ]
   ContextBoundary md x ch bod
-    | [ k_bod ] <- kids -> [ setNodeIndentation inline $ k_bod (ContextBoundary1 md x ch) ]
+    | [ k_bod ] <- kids -> [ k_bod (ContextBoundary1 md x ch) ]
   Hole md
     | [] <- kids -> []
   Buffer md imp sig bod ty
     | [ k_imp, k_sig, k_bod ] <- kids ->
-      [ setNodeIndentation inline $ k_imp (Buffer1 md sig bod ty)
-      , setNodeIndentation inline $ k_sig (Buffer2 md imp bod ty)
-      , setNodeIndentation inline $ k_bod (Buffer3 md imp sig ty)
+      [ k_imp (Buffer1 md sig bod ty)
+      , k_sig (Buffer2 md imp bod ty)
+      , k_bod (Buffer3 md imp sig ty)
       ]
-  _ -> unsafeThrow "stepAIKidsTerm: wrong number of kids"
+  _ -> unsafeThrow "stepKidsTerm: wrong number of kids"
 
 arrangeTerm ::
   { isActive :: Boolean
@@ -133,7 +134,7 @@ arrangeTerm args =
     { isActive: args.isActive
     , aboveInfo: args.aboveInfo
     , tag: termToNodeTag args.term.term
-    , stepAIKids: stepAIKidsTerm args.term.term
+    , stepKids: stepKidsTerm args.term.term
     , makeCursor: \_ -> TermCursor args.term.ctxs args.term.ty (aIGetPath args.aboveInfo) args.term.term
     , makeSelect: \topPath topCtx (topTerm /\ topTy) midPath -> TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term false
     }
@@ -218,18 +219,18 @@ termToNode isActive aboveInfo term =
   ai = aIOnlyCursor aboveInfo
 
 -- | Type
-stepAIKidsType :: Type -> Array PreNode -> Array Node
-stepAIKidsType ty kids = case ty of
+stepKidsType :: Type -> Array PreNode -> Array Node
+stepKidsType ty kids = case ty of
   Arrow md ty1 ty2
     | [ k_ty1, k_ty2 ] <- kids ->
-      [ setNodeIndentation inline $ k_ty1 (Arrow1 md ty2)
+      [ let node = k_ty1 (Arrow1 md ty2) in setNodeIsParenthesized (getNodeTag node == ArrowNodeTag) node
       , setNodeIndentation (indentIf md.codIndented) $ k_ty2 (Arrow2 md ty1)
       ]
   TNeu md x args
-    | [ k_args ] <- kids -> [ setNodeIndentation inline $ k_args (TNeu1 md x) ]
+    | [ k_args ] <- kids -> [ k_args (TNeu1 md x) ]
   THole md id
     | [] <- kids -> []
-  _ -> unsafeThrow "stepAIKidsType: wrong number of kids"
+  _ -> unsafeThrow "stepKidsType: wrong number of kids"
 
 arrangeType ::
   { isActive :: Boolean
@@ -243,7 +244,7 @@ arrangeType args =
     { isActive: args.isActive
     , aboveInfo: args.aboveInfo
     , tag: typeToNodeTag args.ty.ty
-    , stepAIKids: stepAIKidsType args.ty.ty
+    , stepKids: stepKidsType args.ty.ty
     , makeCursor: \_ -> TypeCursor args.ty.ctxs (aIGetPath args.aboveInfo) args.ty.ty
     , makeSelect: \topPath topCtx topTy midPath -> TypeSelect topPath topCtx topTy midPath args.ty.ctxs args.ty.ty false
     }
