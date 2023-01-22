@@ -10,17 +10,12 @@ import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, Toot
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), termBindToNode, termToNode, typeToNode)
-import TypeCraft.Purescript.TermToNode (typeBindListToNode)
+import TypeCraft.Purescript.TermToNode (typeBindListToNode, constructorListToNode, stepAIKidsTerm)
 import TypeCraft.Purescript.Util (hole', justWhen)
 import TypeCraft.Purescript.TermToNode (typeBindToNode)
-import TypeCraft.Purescript.TermRec (TypeBindRecValue)
 import TypeCraft.Purescript.PathRec (recTypeBindPath)
-import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.PathRec (TypeBindPathRecValue)
-import TypeCraft.Purescript.TermToNode (constructorListToNode)
-import TypeCraft.Purescript.TermToNode (PreNode)
 import TypeCraft.Purescript.Node (setNodeIndentation)
-import TypeCraft.Purescript.TermToNode (stepAIKidsTerm)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
@@ -124,13 +119,14 @@ termPathToNode isActive belowInfo termPath innerNode =
                   $ makeTermNode isActive newBI upRecVal
                       { tag: LambdaNodeTag
                       , kids:
---                          [ termBindToNode isActive (AICursor (Lambda1 md argTy.ty term bodyTy : upRecVal.termPath)) tBind
---                          , typeToNode isActive (AICursor (Lambda2 md tBind.tBind term bodyTy : upRecVal.termPath)) argTy
---                          , innerNode
---                          ]
-                            stepAIKidsTerm term [
-                                \indentation _ -> setNodeIndentation indentation innerNode
-                            ]
+                         [ termBindToNode isActive (AICursor (Lambda1 md argTy.ty term bodyTy : upRecVal.termPath)) tBind
+                         , typeToNode isActive (AICursor (Lambda2 md tBind.tBind term bodyTy : upRecVal.termPath)) argTy
+                         , innerNode
+                         ]
+                            -- TODO:HERE
+                            -- stepAIKidsTerm term [
+                            --     \indentation _ -> setNodeIndentation indentation innerNode
+                            -- ]
                       }
         , buffer1: \upRecVal md {-Term-} bufTy body bodyTy -> hole' "termPathToNode 1"
         , buffer3: \upRecVal md buf bufTy {-Term-} bodyTy -> hole' "termPathToNode 2"
