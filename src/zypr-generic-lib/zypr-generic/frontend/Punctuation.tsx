@@ -28,3 +28,11 @@ export const vertical = makePunc(["vertical"], "|")
 export const rewrite = makePunc(["rewrite"], "⟿")
 export const plus = makePunc(["plus"], "⊕")
 export const minus = makePunc(["minus"], "⊖")
+
+export const newline = (<br className="newline"/>)
+
+export function indent(n: number): JSX.Element {
+  let indentSteps: JSX.Element[] = []
+  for (let i = 0; i < n; i++) indentSteps.push(<div className="indent-step"></div>)
+  return (<div className="indent">{indentSteps}</div>)
+}

@@ -97,7 +97,7 @@ export const setNodeStyle = style => node => ({ ...node, style })
 
 export const setNodeIndentation = indentation => node => ({ ...node, indentation })
 
-export const setNodeParenthesized = isParenthesized => node => ({ ...node, isParenthesized })
+export const setNodeIsParenthesized = isParenthesized => node => ({ ...node, isParenthesized })
 
 export const setNodeLabel = label => node => ({ ...node, label })
 
@@ -107,5 +107,5 @@ export const setNodeCompletions = completions => activeCompletionGroup => node =
 
 // NodeIndentation
 export const makeInlineNodeIndentation = { case: 'inline' }
-export const makeNewlineNodeIndentation = { case: 'newline' }
 export const makeIndentNodeIndentation = { case: 'indent' }
+export const makeNewlineNodeIndentation = { case: 'newline' }

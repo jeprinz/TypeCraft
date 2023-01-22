@@ -13,10 +13,11 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.Grammar (Kind(..), Term(..))
 import TypeCraft.Purescript.Nullable (Nullable)
 import TypeCraft.Purescript.Nullable as Nullable
 import TypeCraft.Purescript.State (State)
-import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Util (hole, hole')
 
 -- Node
 foreign import data Node :: Type
@@ -62,7 +63,7 @@ foreign import setNodeStyle :: NodeStyle -> Node -> Node
 
 foreign import setNodeIndentation :: NodeIndentation -> Node -> Node
 
-foreign import setNodeParenthesized :: Boolean -> Node -> Node
+foreign import setNodeIsParenthesized :: Boolean -> Node -> Node
 
 foreign import setNodeLabel :: String -> Node -> Node
 
@@ -192,10 +193,26 @@ toNodeTag_ = case _ of
   PlusNodeTag -> makeNodeTag_ "plus"
   MinusNodeTag -> makeNodeTag_ "minus"
 
-foreign import getNodeTag_ :: Node -> NodeTag_ 
+foreign import getNodeTag_ :: Node -> NodeTag_
 
 getNodeTag :: Node -> NodeTag
 getNodeTag = getNodeTag_ >>> fromNodeTag_ >>> readNodeTag
+
+termToNodeTag :: Term -> NodeTag
+termToNodeTag = case _ of
+  App _ _ _ _ _ -> AppNodeTag
+  Lambda _ _ _ _ _ -> LambdaNodeTag
+  Var _ _ _ -> VarNodeTag
+  Let _ _ _ _ _ _ _ -> LetNodeTag
+  Data _ _ _ _ _ _ -> DataNodeTag
+  TLet _ _ _ _ _ _ -> TLetNodeTag
+  TypeBoundary _ _ _ -> TypeBoundaryNodeTag
+  ContextBoundary _ _ _ _ -> ContextBoundaryNodeTag
+  Hole _ -> HoleNodeTag
+  Buffer _ _ _ _ _ -> BufferNodeTag
+
+typeToNodeTag :: Type -> NodeTag
+typeToNodeTag = hole
 
 -- NodeStyle
 foreign import data NodeStyle :: Type
@@ -229,10 +246,10 @@ setIndentNodeIndentationIf =
     identity
 
 calculateNodeIndentation :: NodeTag -> NodeTag -> NodeIndentation
-calculateNodeIndentation parentTag childTag = makeInlineNodeIndentation
+calculateNodeIndentation parentTag childTag = hole' "calculateNodeIndentation"
 
 calculateNodeIsParenthesized :: NodeTag -> NodeTag -> Boolean
-calculateNodeIsParenthesized parentTag childTag = false
+calculateNodeIsParenthesized parentTag childTag = hole' "calculateNodeIsParenthesized"
 
 setCalculatedNodeData :: NodeTag -> Node -> Node
 setCalculatedNodeData parentTag childNode =
@@ -244,7 +261,7 @@ setCalculatedNodeData parentTag childNode =
     isParenthesized = calculateNodeIsParenthesized parentTag childTag
   in
     childNode
-      # setNodeParenthesized isParenthesized
+      # setNodeIsParenthesized isParenthesized
       >>> setNodeIndentation indentation
 
 setNodeLabelMaybe :: Maybe String -> Node -> Node

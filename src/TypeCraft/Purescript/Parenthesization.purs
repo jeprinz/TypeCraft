@@ -5,7 +5,7 @@ import Prelude
 
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Grammar (Term(..), Tooth(..))
-import TypeCraft.Purescript.Node (Node, NodeTag(..), getNodeTag, setNodeParenthesized)
+import TypeCraft.Purescript.Node (Node, NodeTag(..), getNodeTag, setNodeIsParenthesized)
 import TypeCraft.Purescript.Util (hole)
 
 -- Example: let case
@@ -13,7 +13,7 @@ import TypeCraft.Purescript.Util (hole)
 
 parenthesizeChildNode :: NodeTag -> Tooth -> Node -> Node
 parenthesizeChildNode tagParent tooth nodeChild =
-  flip setNodeParenthesized nodeChild case tagParent /\ tooth /\ getNodeTag nodeChild of
+  flip setNodeIsParenthesized nodeChild case tagParent /\ tooth /\ getNodeTag nodeChild of
     -- Term
     AppNodeTag /\ App1 _ _ _ _ /\ AppNodeTag -> false
     AppNodeTag /\ App1 _ _ _ _ /\ _ -> true

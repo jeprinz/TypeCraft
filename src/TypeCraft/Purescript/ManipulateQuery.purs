@@ -3,7 +3,6 @@ module TypeCraft.Purescript.ManipulateQuery where
 import Prelude
 import Prim hiding (Type)
 import TypeCraft.Purescript.Unification
-
 import Control.Monad.Writer as Writer
 import Data.Array (any)
 import Data.Either (Either(..))
@@ -42,19 +41,20 @@ manipulateQuery key st cursorMode@{ query: query@{ string, completionGroup_i, co
         }
 
 kindaStartsWith :: String -> String -> Boolean
-kindaStartsWith str pre =
+kindaStartsWith str pat =
   and
-    [ String.length str > 0 -- string can't be empty
-    , String.length pre > 0 -- prefix can't be empty
-    , isJust $ String.stripPrefix (String.Pattern (String.take (String.length str) pre)) str
+    [ len_str > 0 -- string can't be empty
+    , len_pat > 0 -- patfix can't be empty
+    , len_pat >= len_str 
+    , isJust $ String.stripPrefix (String.Pattern str) pat
     ]
+  where
+  len_str = String.length str
+
+  len_pat = String.length pat
 
 kindaStartsWithAny :: String -> Array String -> Boolean
-kindaStartsWithAny str pres =
-  and
-    [ String.length str > 0 -- string can't be empty
-    , any (isJust <<< \pre -> String.stripPrefix (String.Pattern (String.take (String.length str) pre)) str) pres
-    ]
+kindaStartsWithAny str pats = String.length str > 0 && any (str `kindaStartsWith` _) pats
 
 calculateCompletionsGroups :: String -> State -> CursorMode -> Array (Array Completion)
 calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
@@ -68,7 +68,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
               when (str `kindaStartsWith` varName) do
                 case runUnify (fillNeutral ctxs.actx pty id ty) of
                   Left _msg -> pure unit
-                  Right (tm' /\ sub) -> Writer.tell [ [ CompletionTerm tm' sub{subTypeVars = Map.empty} ] ] -- TODO: Jacob: why would there be subTypeVars here anyway? I'm confused about that. Isn't unification for holes?
+                  Right (tm' /\ sub) -> Writer.tell [ [ CompletionTerm tm' sub { subTypeVars = Map.empty } ] ] -- TODO: Jacob: why would there be subTypeVars here anyway? I'm confused about that. Isn't unification for holes?
         )
         (Map.toUnfoldable ctxs.mdctx :: Array (UUID /\ String))
       -- Lambda
@@ -91,15 +91,15 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
               ]
             ]
       -- App
-      when (str `kindaStartsWithAny` [ " ", "$" ]) $
-        case ty of -- TODO: should really be if the type UNIFIES with an Arrow, instead of IS an arrow...
+      when (str `kindaStartsWithAny` [ " ", "$" ])
+        $ case ty of -- TODO: should really be if the type UNIFIES with an Arrow, instead of IS an arrow...
             Arrow _ ty1 ty2 ->
-                Writer.tell
-                    [ [ CompletionTermPath -- ({} ?)
-                          (List.singleton $ App1 defaultAppMD (freshHole unit) ty1 ty2)
-                          (Minus ty1 (tyInject ty2))
-                      ]
-                    ]
+              Writer.tell
+                [ [ CompletionTermPath -- ({} ?)
+                      (List.singleton $ App1 defaultAppMD (freshHole unit) ty1 ty2)
+                      (Minus ty1 (tyInject ty2))
+                  ]
+                ]
             _ -> pure unit
       -- TLet
       when (str `kindaStartsWith` "tlet")
@@ -122,8 +122,8 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
         $ Writer.tell
             [ [ CompletionTerm
                   (freshHole unit)
---                  ty
-                  {subTypeVars: Map.empty, subTHoles: Map.empty}
+                  --                  ty
+                  { subTypeVars: Map.empty, subTHoles: Map.empty }
               ]
             ]
       -- Buffer

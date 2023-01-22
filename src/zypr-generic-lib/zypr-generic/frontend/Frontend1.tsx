@@ -7,16 +7,6 @@ import { showList } from '../../../TypeCraft/Purescript/output/Data.List.Types';
 import { showTooth } from '../../../TypeCraft/Purescript/output/TypeCraft.Purescript.Grammar';
 import { showCursorLocation } from '../../../TypeCraft/Purescript/output/TypeCraft.Purescript.State';
 
-function renderNewline(): JSX.Element {
-  return (<br className="newline"/>)
-}
-
-function renderIndent(n: number): JSX.Element {
-  let indentSteps: JSX.Element[] = []
-  for (let i = 0; i < n; i++) indentSteps.push(<div className="indent-step"></div>)
-  return (<div className="indent"></div>)
-}
-
 export default function makeFrontend(backend: Backend): JSX.Element {
   function render(editor: Editor): JSX.Element[] {
 
@@ -38,11 +28,11 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           break
         // newline and indent
         case 'indent':
-          kids = [renderNewline(), renderIndent(indentationLevel), kids].flat()
+          kids = [Punc.newline, Punc.indent(indentationLevel), kids].flat()
           break
         // newline but no indent
         case 'newline':
-          kids = [renderNewline(), kids].flat()
+          kids = [Punc.newline, kids].flat()
           break
       }
 

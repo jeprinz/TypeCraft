@@ -2,20 +2,16 @@ module TypeCraft.Purescript.TermToNode where
 
 import Prelude
 import Prim hiding (Type)
-
 import Data.List (List(..), (:))
-import Data.Map as Map
-import Data.Maybe (Maybe(..), fromMaybe')
+import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
-import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term, TermBind(..), Tooth(..), Type, TypeArg, TypeBind, UpPath)
-import TypeCraft.Purescript.Node (Node, NodeTag(..), makeIndentNodeIndentation, makeNewlineNodeIndentation, makeNode, setCalculatedNodeData, setNodeIndentation, setNodeLabel, setNodeLabelMaybe, setNodeParenthesized)
-import TypeCraft.Purescript.Parenthesization (parenthesizeChildNode)
-import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode)
+import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term(..), TermBind(..), Tooth(..), Type, TypeArg, TypeBind(..), UpPath)
+import TypeCraft.Purescript.Node (Node, NodeTag(..), calculateNodeIndentation, calculateNodeIsParenthesized, getNodeTag, makeNode, setNodeIndentation, setNodeIsParenthesized, setNodeLabel, termToNodeTag)
+import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, makeSelectMode)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, ListCtrRecValue, recTerm, recType)
 import TypeCraft.Purescript.Util (hole', justWhen)
-import TypeCraft.Purescript.Grammar (TypeBind(..))
 
 data AboveInfo syn
   = AICursor UpPath
@@ -23,142 +19,170 @@ data AboveInfo syn
 
 stepAI :: forall syn. Tooth -> AboveInfo syn -> AboveInfo syn
 stepAI tooth (AICursor path) = AICursor (tooth : path)
-stepAI tooth (AISelect topPath ctx term middlePath) = AISelect topPath ctx term (tooth : middlePath)
+
+stepAI tooth (AISelect topPath ctx term midPath) = AISelect topPath ctx term (tooth : midPath)
 
 aIOnlyCursor :: forall syn1 syn2. AboveInfo syn1 -> AboveInfo syn2
 aIOnlyCursor (AICursor path) = AICursor path
-aIOnlyCursor (AISelect topPath ctx term middlePath) = AICursor (middlePath <> topPath)
+
+aIOnlyCursor (AISelect topPath ctx term midPath) = AICursor (midPath <> topPath)
 
 aIGetPath :: forall syn. AboveInfo syn -> UpPath
 aIGetPath (AICursor path) = path
+
 aIGetPath (AISelect top ctx term middle) = middle <> top
 
-indentIf :: Boolean -> Node -> Node
-indentIf false n = n
-indentIf true n = setNodeIndentation makeIndentNodeIndentation n
+-- | step kids
+stepAITermKids :: forall a. Term -> Array (Tooth -> a) -> Array a
+stepAITermKids term kids = case term of
+  App md apl arg ty1 ty2
+    | [ k_apl, k_arg ] <- kids -> [ k_apl (App1 md arg ty1 ty2), k_arg (App1 md apl ty1 ty2) ]
+  Lambda md bnd sig body ty
+    | [ k_bnd, k_ty, k_body ] <- kids -> [ k_bnd (Lambda1 md sig body ty), k_ty (Lambda2 md bnd body ty), k_body (Lambda3 md bnd sig ty) ]
+  Var md x args
+    | [] <- kids -> []
+  Let md bnd bnds imp sig bod ty
+    | [ k_bnd, k_bnds, k_imp, k_sig, k_bod ] <- kids -> [ k_bnd (Let1 md bnds imp sig bod ty), k_bnds (Let2 md bnd imp sig bod ty), k_imp (Let3 md bnd bnds sig bod ty), k_sig (Let4 md bnd bnds imp bod ty), k_bod (Let5 md bnd bnds imp sig ty) ]
+  Data md bnd bnds ctrs bod ty
+    | [ k_bnd, k_bnds, k_ctrs, k_bod ] <- kids -> [ k_bnd (Data1 md bnds ctrs bod ty), k_bnds (Data2 md bnd ctrs bod ty), k_ctrs (Data3 md bnd bnds bod ty), k_bod (Data4 md bnd bnds ctrs ty) ]
+  TLet md bnd bnds sig bod ty
+    | [ k_bnd, k_bnds, k_sig, k_bod ] <- kids -> [ k_bnd (TLet1 md bnds sig bod ty), k_bnds (TLet2 md bnd sig bod ty), k_sig (TLet3 md bnd bnds bod ty), k_bod (TLet4 md bnd bnds sig ty) ]
+  TypeBoundary md ch bod
+    | [ k_bod ] <- kids -> [ k_bod (TypeBoundary1 md ch) ]
+  ContextBoundary md x ch bod
+    | [ k_bod ] <- kids -> [ k_bod (ContextBoundary1 md x ch) ]
+  Hole md
+    | [] <- kids -> []
+  Buffer md imp sig bod ty
+    | [ k_imp, k_sig, k_bod ] <- kids -> [ k_imp (Buffer1 md sig bod ty), k_sig (Buffer2 md imp bod ty), k_bod (Buffer3 md imp sig ty) ]
+  _ -> unsafeThrow "stepAITermKids: malformed input"
 
--- need to track a path for the cursor, and two paths for the selction.
--- also, might consider deriving the cursor path from those two in that case?
--- TODO: put TermPath into TermRecValue, and then don't need the TermPath argument here!
--- Problem: what if I really did just have a term, without a TermPath though? I should still be able to recurse over that.
--- So what is the right design here?
+-- updates the stuff of a node kid based on its parent
+setNodeKidStuff :: NodeTag -> Node -> Node
+setNodeKidStuff parentTag childNode =
+  setNodeIndentation (calculateNodeIndentation parentTag (getNodeTag childNode))
+    $ setNodeIsParenthesized (calculateNodeIsParenthesized parentTag (getNodeTag childNode))
+    $ childNode
+
+-- | arrange kids
+arrangeNodeKids ::
+  forall a.
+  { isActive :: Boolean
+  , aboveInfo :: AboveInfo a
+  , tag :: NodeTag
+  , stepAIKids :: Array (Tooth -> Node) -> Array Node
+  , makeCursor :: Unit -> CursorLocation
+  , makeSelect :: UpPath → AllContext → a → UpPath -> Select
+  } ->
+  Array (Tooth -> Node) ->
+  Node
+arrangeNodeKids args kids =
+  makeNode
+    { kids: setNodeKidStuff args.tag <$> args.stepAIKids kids
+    , getCursor: justWhen args.isActive \_ -> _ { mode = makeCursorMode $ args.makeCursor unit }
+    , getSelect:
+        case args.aboveInfo of
+          AICursor _path -> Nothing
+          AISelect topPath topCtx a midPath -> justWhen args.isActive \_ -> _ { mode = makeSelectMode $ args.makeSelect topPath topCtx a midPath }
+    , tag: args.tag
+    }
+
+arrangeKid :: forall a rc. AboveInfo a -> (AboveInfo a -> rc -> Node) -> rc -> Tooth -> Node
+arrangeKid ai k rc th = k (stepAI th ai) rc
+
+arrangeTerm ::
+  { isActive :: Boolean
+  , aboveInfo :: AboveInfo (Term /\ Type)
+  , term :: TermRecValue
+  } ->
+  Array (Tooth -> Node) ->
+  Node
+arrangeTerm args =
+  arrangeNodeKids
+    { isActive: args.isActive
+    , aboveInfo: args.aboveInfo
+    , tag: termToNodeTag args.term.term
+    , stepAIKids: stepAITermKids args.term.term
+    , makeCursor: \_ -> TermCursor args.term.ctxs args.term.ty (aIGetPath args.aboveInfo) args.term.term
+    , makeSelect: \topPath topCtx (topTerm /\ topTy) midPath -> TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term false
+    }
+
+--- need to track a path for the cursor, and two paths for the selction. also,
+-- might consider deriving the cursor path from those two in that case?
+--
+-- TODO: put TermPath into TermRecValue, and then don't need the TermPath
+-- argument here! Problem: what if I really did just have a term, without a
+-- TermPath though? I should still be able to recurse over that. So what is the
+-- right design here?
 termToNode :: Boolean -> AboveInfo (Term /\ Type) -> TermRecValue -> Node
 termToNode isActive aboveInfo term =
-  let
-    nodeInfo =
-      recTerm
-        ( { lambda:
-              \md tBind ty body bodyTy ->
-                { tag: LambdaNodeTag
-                , label: Nothing
-                , kids:
-                    [ let th = Lambda1 md ty.ty body.term bodyTy in parenthesizeChildNode LambdaNodeTag th $ termBindToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) tBind
-                    , let th = Lambda2 md tBind.tBind body.term bodyTy in parenthesizeChildNode LambdaNodeTag th $ typeToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) ty
-                    -- , let th = Lambda3 md tBind.tBind ty.ty bodyTy in parenthesizeChildNode LambdaNodeTag th $ indentIf md.bodyIndented true $ termToNode isActive (stepAI th aboveInfo) body
-                    , let th = Lambda3 md tBind.tBind ty.ty bodyTy in parenthesizeChildNode LambdaNodeTag th $ setNodeIndentation makeNewlineNodeIndentation $ termToNode isActive (stepAI th aboveInfo) body
-                    ]
-                }
-          , app:
-              \md t1 t2 argTy outTy ->
-                { tag: AppNodeTag
-                , label: Nothing
-                , kids:
-                    [ let th = App1 md t2.term argTy outTy in parenthesizeChildNode AppNodeTag th $ termToNode isActive (stepAI th aboveInfo) t1
-                    , let th = App2 md t1.term argTy outTy in parenthesizeChildNode AppNodeTag th $ indentIf md.argIndented $ termToNode isActive (stepAI th aboveInfo) t2
-                    ]
-                }
-          , var:
-              \md x targs ->
-                let
-                  label =
-                    fromMaybe'
-                      (\_ -> unsafeThrow $ "variable index not found: " <> show x)
-                      $ Map.lookup x term.ctxs.mdctx
-                in
-                  { tag: VarNodeTag
-                  , label: Just label
-                  , kids: []
-                  }
-          , lett:
-              \md tBind tyBinds def defTy body bodyTy ->
-                { tag: LetNodeTag
-                , label: Nothing
-                , kids:
-                    [ let th = Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy in parenthesizeChildNode LetNodeTag th $ indentIf md.varIndented $ termBindToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) tBind
-                    , let th = Let2 md tBind.tBind {-List TypeBind-} def.term defTy.ty body.term bodyTy in parenthesizeChildNode LetNodeTag th $ typeBindListToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) tyBinds
-                    , let th = Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy in parenthesizeChildNode LetNodeTag th $ indentIf md.typeIndented $ typeToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) defTy
-                    , let th = Let3 md tBind.tBind tyBinds.tyBinds defTy.ty body.term bodyTy in parenthesizeChildNode LetNodeTag th $ indentIf md.defIndented $ termToNode isActive (stepAI th aboveInfo) def
-                    , let th = Let5 md tBind.tBind tyBinds.tyBinds def.term defTy.ty bodyTy in parenthesizeChildNode LetNodeTag th $ indentIf md.bodyIndented $ termToNode isActive (stepAI th aboveInfo) body
-                    ]
-                }
-          , dataa:
-              \md x tbinds ctrs body bodyTy ->
-                { tag: DataNodeTag
-                , label: Nothing
-                , kids:
-                    [ let th = Data1 md tbinds.tyBinds ctrs.ctrs term.term bodyTy in parenthesizeChildNode DataNodeTag th $ typeBindToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) x
-                    , let th = Data2 md x.tyBind ctrs.ctrs term.term bodyTy in parenthesizeChildNode DataNodeTag th $ typeBindListToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) tbinds
-                    , let th = Data3 md x.tyBind tbinds.tyBinds term.term bodyTy in parenthesizeChildNode DataNodeTag th $ constructorListToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) ctrs
-                    , let th = Data4 md x.tyBind tbinds.tyBinds ctrs.ctrs bodyTy in parenthesizeChildNode DataNodeTag th $ termToNode isActive (stepAI th aboveInfo) body
-                    ]
-                }
-          , tlet: \md tyBind tyBinds def body bodyTy ->
-                { tag: TLetNodeTag
-                , label: Nothing
-                , kids: [
-                    typeBindToNode isActive (stepAI (TLet1 md {-tyBind-} tyBinds.tyBinds def.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tyBind
-                    , typeBindListToNode isActive (stepAI (TLet2 md tyBind.tyBind {-tyBinds-} def.ty body.term bodyTy) (aIOnlyCursor aboveInfo)) tyBinds
-                    , typeToNode isActive (stepAI (TLet3 md tyBind.tyBind tyBinds.tyBinds {-def-} body.term bodyTy) (aIOnlyCursor aboveInfo)) def
-                    , termToNode isActive (stepAI (TLet4 md tyBind.tyBind tyBinds.tyBinds def.ty {-body-} bodyTy) aboveInfo) body
-                ]
-                }
-          , typeBoundary:
-              \md ch t ->
-                { tag: TypeBoundaryNodeTag
-                , label: Nothing
-                , kids:
-                    [ let th = TypeBoundary1 md ch in parenthesizeChildNode TypeBoundaryNodeTag th $ termToNode isActive (stepAI th aboveInfo) t
-                    , changeToNode { ch, ctxs: term.ctxs }
-                    ]
-                }
-          , contextBoundary:
-              \md x c t ->
-                { tag: ContextBoundaryNodeTag
-                , label: Nothing
-                , kids: [ let th = ContextBoundary1 md x c in parenthesizeChildNode ContextBoundaryNodeTag th $ termToNode isActive (stepAI th aboveInfo) t ]
-                }
-          , hole:
-              \md ->
-                { tag: HoleNodeTag
-                , label: Nothing
-                , kids: []
-                }
-          , buffer:
-              \md def defTy body bodyTy ->
-                { tag: BufferNodeTag
-                , label: Nothing
-                , kids:
-                    [ let th = Buffer1 md defTy.ty body.term bodyTy in parenthesizeChildNode BufferNodeTag th $ termToNode isActive (stepAI th aboveInfo) def
-                    , let th = Buffer2 md def.term body.term bodyTy in parenthesizeChildNode BufferNodeTag th $ typeToNode isActive (stepAI th (aIOnlyCursor aboveInfo)) defTy
-                    , let th = Buffer3 md def.term defTy.ty bodyTy in parenthesizeChildNode BufferNodeTag th $ termToNode isActive (stepAI th aboveInfo) body
-                    ]
-                }
-          }
-        )
-        term
-  in
-    -- pieces that are the same for every syntactic form are done here:
-    setNodeLabelMaybe nodeInfo.label
-      $ makeNode
-          { kids: setCalculatedNodeData nodeInfo.tag <$> nodeInfo.kids
-          , getCursor:
-              justWhen isActive \_ -> _ { mode = makeCursorMode $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term }
-          , getSelect:
-              case aboveInfo of
-                AICursor _path -> Nothing
-                AISelect topPath topCtx (topTerm /\ topTy) middlePath -> justWhen isActive \_ -> _ { mode = SelectMode { select: TermSelect topPath topCtx topTy topTerm middlePath term.ctxs term.ty term.term false } }
-          , tag: nodeInfo.tag
-          }
+  recTerm
+    ( { lambda:
+          \md tBind ty body _bodyTy ->
+            arrangeTerm args
+              [ arrangeKid ai (termBindToNode isActive) tBind
+              , arrangeKid ai (typeToNode isActive) ty
+              , arrangeKid ai (termToNode isActive) body
+              ]
+      , app:
+          \md t1 t2 _argTy _outTy ->
+            arrangeTerm args
+              [ arrangeKid ai (termToNode isActive) t1
+              , arrangeKid ai (termToNode isActive) t2
+              ]
+      , var: \md x targs -> arrangeTerm args []
+      , lett:
+          \md tBind tyBinds def defTy body bodyTy ->
+            arrangeTerm args
+              [ arrangeKid ai (termBindToNode isActive) tBind
+              , arrangeKid ai (typeBindListToNode isActive) tyBinds
+              , arrangeKid ai (termToNode isActive) def
+              , arrangeKid ai (typeToNode isActive) defTy
+              , arrangeKid ai (termToNode isActive) body
+              ]
+      , dataa:
+          \md x tbinds ctrs body bodyTy ->
+            arrangeTerm args
+              [ arrangeKid ai (typeBindToNode isActive) x
+              , arrangeKid ai (typeBindListToNode isActive) tbinds
+              , arrangeKid ai (constructorListToNode isActive) ctrs
+              , arrangeKid ai (termToNode isActive) body
+              ]
+      , tlet:
+          \md tyBind tyBinds def body bodyTy ->
+            arrangeTerm args
+              [ arrangeKid ai (typeBindToNode isActive) tyBind
+              , arrangeKid ai (typeBindListToNode isActive) tyBinds
+              , arrangeKid ai (typeToNode isActive) def
+              , arrangeKid ai (termToNode isActive) body
+              ]
+      , typeBoundary:
+          \md ch t ->
+            arrangeTerm args
+              [ arrangeKid ai (termToNode isActive) t
+              , arrangeKid ai (const changeToNode) { ch, ctxs: term.ctxs }
+              ]
+      , contextBoundary:
+          \md x c t ->
+            arrangeTerm args
+              [ arrangeKid ai (termToNode isActive) t
+              ]
+      , hole: \md -> arrangeTerm args []
+      , buffer:
+          \md def defTy body bodyTy ->
+            arrangeTerm args
+              [ arrangeKid ai (termToNode isActive) def
+              , arrangeKid ai (typeToNode isActive) defTy
+              , arrangeKid ai (termToNode isActive) body
+              ]
+      }
+    )
+    term
+  where
+  args = { isActive, aboveInfo, term }
+
+  ai :: forall a. AboveInfo a
+  ai = aIOnlyCursor aboveInfo
 
 typeToNode :: Boolean -> AboveInfo Type -> TypeRecValue -> Node
 typeToNode isActive aboveInfo ty =
@@ -170,7 +194,7 @@ typeToNode isActive aboveInfo ty =
                 { tag: ArrowNodeTag
                 , kids:
                     [ let th = Arrow1 md ty2.ty in typeToNode isActive (stepAI th aboveInfo) ty1
-                    , let th = Arrow2 md ty1.ty in indentIf md.codIndented $ typeToNode isActive (stepAI th aboveInfo) ty2
+                    , let th = Arrow2 md ty1.ty in typeToNode isActive (stepAI th aboveInfo) ty2
                     ]
                 }
           , tHole:
@@ -194,7 +218,7 @@ typeToNode isActive aboveInfo ty =
       , getSelect:
           case aboveInfo of
             AICursor path -> Nothing -- TODO: impl select
-            AISelect topPath topCtx topTy middlePath -> justWhen isActive \_ -> _ { mode = SelectMode $ { select: TypeSelect topPath topCtx topTy middlePath ty.ctxs ty.ty false } }
+            AISelect topPath topCtx topTy midPath -> justWhen isActive \_ -> _ { mode = SelectMode $ { select: TypeSelect topPath topCtx topTy midPath ty.ctxs ty.ty false } }
       , tag: nodeInfo.tag
       }
 
@@ -277,7 +301,7 @@ changeToNode val = case val.ch of
       , kids: []
       }
   Replace ty1 ty2 ->
-    setNodeParenthesized true
+    setNodeIsParenthesized true
       $ makeChangeNode
           { tag: ReplaceNodeTag
           , kids:

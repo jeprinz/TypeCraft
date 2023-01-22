@@ -86,6 +86,9 @@ makeCursorMode cursorLocation =
     , query: emptyQuery
     }
 
+makeSelectMode :: Select -> Mode
+makeSelectMode select = SelectMode { select }
+
 initState :: State
 initState =
   { mode
