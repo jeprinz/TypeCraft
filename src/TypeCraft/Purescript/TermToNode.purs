@@ -93,7 +93,7 @@ stepAIKidsTerm term kids = case term of
     | [] <- kids -> []
   Buffer md imp sig bod ty
     | [ k_imp, k_sig, k_bod ] <- kids -> [ k_imp inline (Buffer1 md sig bod ty), k_sig inline (Buffer2 md imp bod ty), k_bod inline (Buffer3 md imp sig ty) ]
-  _ -> unsafeThrow "stepAIKidsTerm: malformed input"
+  _ -> unsafeThrow "stepAIKidsTerm: wrong number of kids"
 
 arrangeTerm ::
   { isActive :: Boolean
@@ -195,9 +195,13 @@ termToNode isActive aboveInfo term =
 -- | Type
 stepAIKidsType :: Type -> Array PreNode -> Array Node
 stepAIKidsType ty kids = case ty of
-  Arrow md ty1 ty2 -> hole
-  TNeu md id args -> hole
-  THole md id -> hole
+  Arrow md ty1 ty2
+    | [ k_ty1, k_ty2 ] <- kids -> [ k_ty1 inline (Arrow1 md ty2), k_ty2 (indentIf md.codIndented) (Arrow2 md ty1) ]
+  TNeu md x args
+    | [ k_args ] <- kids -> [ k_args inline (TNeu1 md x) ]
+  THole md id
+    | [] <- kids -> []
+  _ -> unsafeThrow "stepAIKidsType: wrong number of kids"
 
 arrangeType ::
   { isActive :: Boolean
