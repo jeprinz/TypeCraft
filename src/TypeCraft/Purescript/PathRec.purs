@@ -35,7 +35,7 @@ type TermPathRec a = {
     , let5 :: TermPathRecValue -> LetMD -> TermBindRecValue -> ListTypeBindRecValue -> TermRecValue -> TypeRecValue -> Type -> a
     , app1 :: TermPathRecValue -> AppMD -> TermRecValue -> Type -> Type -> a
     , app2 :: TermPathRecValue -> AppMD -> TermRecValue -> Type -> Type -> a
-    , lambda3 :: TermPathRecValue -> LambdaMD -> TermBind -> TypeRecValue -> Type -> a
+    , lambda3 :: TermPathRecValue -> LambdaMD -> TermBindRecValue -> TypeRecValue -> Type -> a
     , buffer1 :: TermPathRecValue -> BufferMD -> TypeRecValue -> TermRecValue -> Type -> a
     , buffer3 :: TermPathRecValue -> BufferMD -> TermRecValue -> TypeRecValue -> Type -> a
     , typeBoundary1 :: TermPathRecValue -> TypeBoundaryMD -> Change -> a
@@ -71,11 +71,11 @@ recTermPath args {ctxs, ty, term, termPath: (App2 md t1 {-Term-} argTy outTy) : 
     args.app2 {ctxs, ty: outTy, term: App md t1 term argTy outTy, termPath: up} md
         {ctxs, ty: Arrow defaultArrowMD argTy outTy, term: t1}
         argTy outTy
-recTermPath args {ctxs, ty, term, termPath: (Lambda3 md tbind@(TermBind _ x) argTy {-Term-} bodyTy) : up} =
+recTermPath args {ctxs, ty, term, termPath: (Lambda3 md tBind@(TermBind _ x) argTy {-Term-} bodyTy) : up} =
     if not (bodyTy == ty) then unsafeThrow "dynamic type error detected 4" else
     let ctxs' = ctxs{mdctx= delete x ctxs.mdctx, ctx= delete x ctxs.ctx} in
-    args.lambda3 {ctxs: ctxs', ty: Arrow defaultArrowMD argTy bodyTy, term: Lambda md tbind argTy term bodyTy, termPath: up}
-        md tbind {ctxs: ctxs', ty: argTy}
+    args.lambda3 {ctxs: ctxs', ty: Arrow defaultArrowMD argTy bodyTy, term: Lambda md tBind argTy term bodyTy, termPath: up}
+        md {ctxs, tBind} {ctxs: ctxs', ty: argTy}
         bodyTy
 recTermPath args {ctxs, ty, term, termPath: (Buffer1 md {-Term-} bufTy body bodyTy) : up} =
     if not (bufTy == ty) then unsafeThrow "dynamic type error detected 5" else

@@ -2,16 +2,17 @@ module TypeCraft.Purescript.TermToNode where
 
 import Prelude
 import Prim hiding (Type)
+
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
-import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term(..), TermBind(..), Tooth(..), Type(..), TypeArg, TypeBind(..), UpPath)
+import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam(..), Term(..), TermBind(..), Tooth(..), Type(..), TypeArg, TypeBind(..), UpPath)
 import TypeCraft.Purescript.Node (Node, NodeIndentation, NodeTag(..), makeIndentNodeIndentation, makeInlineNodeIndentation, makeNewlineNodeIndentation, makeNode, setCalculatedNodeIsParenthesized, setNodeIndentation, setNodeIsParenthesized, setNodeLabel, termToNodeTag, typeToNodeTag)
 import TypeCraft.Purescript.State (CursorLocation(..), Select(..), makeCursorMode, makeSelectMode)
-import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, ListCtrRecValue, recTerm, recType)
-import TypeCraft.Purescript.Util (hole, hole', justWhen)
+import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListCtrRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, CtrParamRecValue, recTerm, recType)
+import TypeCraft.Purescript.Util (hole', justWhen)
 
 data AboveInfo syn
   = AICursor UpPath
@@ -125,66 +126,65 @@ arrangeTerm args =
 termToNode :: Boolean -> AboveInfo (Term /\ Type) -> TermRecValue -> Node
 termToNode isActive aboveInfo term =
   recTerm
-    ( { lambda:
-          \md tBind ty body _bodyTy ->
-            arrangeTerm args
-              [ arrangeKid ai (termBindToNode isActive) tBind
-              , arrangeKid ai (typeToNode isActive) ty
-              , arrangeKid ai (termToNode isActive) body
-              ]
-      , app:
-          \md t1 t2 _argTy _outTy ->
-            arrangeTerm args
-              [ arrangeKid ai (termToNode isActive) t1
-              , arrangeKid ai (termToNode isActive) t2
-              ]
-      , var: \md x targs -> arrangeTerm args []
-      , lett:
-          \md tBind tyBinds def defTy body _bodyTy ->
-            arrangeTerm args
-              [ arrangeKid ai (termBindToNode isActive) tBind
-              , arrangeKid ai (typeBindListToNode isActive) tyBinds
-              , arrangeKid ai (termToNode isActive) def
-              , arrangeKid ai (typeToNode isActive) defTy
-              , arrangeKid ai (termToNode isActive) body
-              ]
-      , dataa:
-          \md x tbinds ctrs body _bodyTy ->
-            arrangeTerm args
-              [ arrangeKid ai (typeBindToNode isActive) x
-              , arrangeKid ai (typeBindListToNode isActive) tbinds
-              , arrangeKid ai (constructorListToNode isActive) ctrs
-              , arrangeKid ai (termToNode isActive) body
-              ]
-      , tlet:
-          \md tyBind tyBinds def body _bodyTy ->
-            arrangeTerm args
-              [ arrangeKid ai (typeBindToNode isActive) tyBind
-              , arrangeKid ai (typeBindListToNode isActive) tyBinds
-              , arrangeKid ai (typeToNode isActive) def
-              , arrangeKid ai (termToNode isActive) body
-              ]
-      , typeBoundary:
-          \md ch t ->
-            arrangeTerm args
-              [ arrangeKid ai (termToNode isActive) t
-              , arrangeKid ai (const changeToNode) { ch, ctxs: term.ctxs }
-              ]
-      , contextBoundary:
-          \md x c t ->
-            arrangeTerm args
-              [ arrangeKid ai (termToNode isActive) t
-              ]
-      , hole: \md -> arrangeTerm args []
-      , buffer:
-          \md def defTy body _bodyTy ->
-            arrangeTerm args
-              [ arrangeKid ai (termToNode isActive) def
-              , arrangeKid ai (typeToNode isActive) defTy
-              , arrangeKid ai (termToNode isActive) body
-              ]
-      }
-    )
+    { lambda:
+        \md tBind ty body _bodyTy ->
+          arrangeTerm args
+            [ arrangeKid ai (termBindToNode isActive) tBind
+            , arrangeKid ai (typeToNode isActive) ty
+            , arrangeKid ai (termToNode isActive) body
+            ]
+    , app:
+        \md t1 t2 _argTy _outTy ->
+          arrangeTerm args
+            [ arrangeKid ai (termToNode isActive) t1
+            , arrangeKid ai (termToNode isActive) t2
+            ]
+    , var: \md x targs -> arrangeTerm args []
+    , lett:
+        \md tBind tyBinds def defTy body _bodyTy ->
+          arrangeTerm args
+            [ arrangeKid ai (termBindToNode isActive) tBind
+            , arrangeKid ai (typeBindListToNode isActive) tyBinds
+            , arrangeKid ai (termToNode isActive) def
+            , arrangeKid ai (typeToNode isActive) defTy
+            , arrangeKid ai (termToNode isActive) body
+            ]
+    , dataa:
+        \md x tbinds ctrs body _bodyTy ->
+          arrangeTerm args
+            [ arrangeKid ai (typeBindToNode isActive) x
+            , arrangeKid ai (typeBindListToNode isActive) tbinds
+            , arrangeKid ai (constructorListToNode isActive) ctrs
+            , arrangeKid ai (termToNode isActive) body
+            ]
+    , tlet:
+        \md tyBind tyBinds def body _bodyTy ->
+          arrangeTerm args
+            [ arrangeKid ai (typeBindToNode isActive) tyBind
+            , arrangeKid ai (typeBindListToNode isActive) tyBinds
+            , arrangeKid ai (typeToNode isActive) def
+            , arrangeKid ai (termToNode isActive) body
+            ]
+    , typeBoundary:
+        \md ch t ->
+          arrangeTerm args
+            [ arrangeKid ai (termToNode isActive) t
+            , arrangeKid ai (const changeToNode) { ch, ctxs: term.ctxs }
+            ]
+    , contextBoundary:
+        \md x c t ->
+          arrangeTerm args
+            [ arrangeKid ai (termToNode isActive) t
+            ]
+    , hole: \md -> arrangeTerm args []
+    , buffer:
+        \md def defTy body _bodyTy ->
+          arrangeTerm args
+            [ arrangeKid ai (termToNode isActive) def
+            , arrangeKid ai (typeToNode isActive) defTy
+            , arrangeKid ai (termToNode isActive) body
+            ]
+    }
     term
   where
   args = { isActive, aboveInfo, term }
@@ -243,14 +243,16 @@ typeToNode isActive aboveInfo ty =
   ai :: forall a. AboveInfo a
   ai = aIOnlyCursor aboveInfo
 
--- | ListCtr
+-- ListCtr
 ctrListToNode :: Boolean -> AboveInfo Constructor -> ListCtrRecValue -> Node
 ctrListToNode isActive aboveInfo ctrs = hole' "ctrListToNode"
 
--- | Ctr
+-- Constructor
 ctrToNode :: Boolean -> AboveInfo Constructor -> Constructor -> Node
 ctrToNode isActive aboveInfo ctr = hole' "ctrToNode"
 
+-- CtrParam
+--
 --ctrParamToNode :: AllContext -> AboveInfo -> UpPath -> CtrParam -> Node
 --ctrParamToNode ctxs aboveInfo up (CtrParam md ty) = makeNode {
 --    dat: makeNodeData {indentation: hole, isParenthesized: false, label: "CtrParam"}
@@ -258,8 +260,17 @@ ctrToNode isActive aboveInfo ctr = hole' "ctrToNode"
 --    , getCursor: Nothing
 --    , getSelect: Nothing
 --    , style: makeNormalNodeStyle
---}
--- | TypeArg
+arrangeCtrParam :: { isActive :: Boolean, aboveInfo :: AboveInfo CtrParam, ctrParam :: CtrParamRecValue } -> Array PreNode -> Node
+arrangeCtrParam = hole' "arrangeCtrParam"
+
+ctrParamToNode :: Boolean -> AboveInfo CtrParam -> CtrParam -> Node
+ctrParamToNode = hole' "ctrParamToNode"
+
+-- TypeArg
+
+arrangeTypeArg :: { isActive :: Boolean, aboveInfo :: AboveInfo TypeArg, tyArg :: TypeArgRecValue } -> Array PreNode -> Node
+arrangeTypeArg = hole' "arrangeTypeArg"
+
 typeArgToNode :: Boolean -> AboveInfo TypeArg -> TypeArgRecValue -> Node
 typeArgToNode isActive aboveInfo tyArg = hole' "typeArgToNode"
 
