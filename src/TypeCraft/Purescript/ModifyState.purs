@@ -164,7 +164,7 @@ delete st = case st.mode of
     TypeCursor ctxs path ty -> do
       let
         ty' = (freshTHole unit)
-        cursorLocation' = TypeCursor ctxs (chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path) ty'
+        cursorLocation' = TypeCursor ctxs (chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty' ty) path) ty'
       pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
     _ -> Nothing
   _ -> Nothing

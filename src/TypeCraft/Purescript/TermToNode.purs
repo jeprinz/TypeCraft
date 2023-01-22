@@ -277,7 +277,13 @@ typeArgListToNode :: Boolean -> AboveInfo (List TypeArg) -> ListTypeArgRecValue 
 typeArgListToNode isActive aboveInfo tyArgs = hole' "typeArgListToNode"
 
 constructorListToNode :: Boolean -> AboveInfo (List Constructor) -> ListCtrRecValue -> Node
-constructorListToNode isActive aboveInfo ctrs = hole' "constructorListToNode"
+constructorListToNode isActive aboveInfo ctrs = -- TODO: This is just a placeholder implementation of this function
+  makeNode
+    { tag: ConstructorListNilNodeTag
+    , kids: []
+    , getCursor: justWhen isActive \_ -> _ { mode = makeCursorMode $ CtrListCursor ctrs.ctxs (aIGetPath aboveInfo) ctrs.ctrs }
+    , getSelect: Nothing
+    }
 
 type ChangeRecValue
   = { ctxs :: AllContext, ch :: Change }

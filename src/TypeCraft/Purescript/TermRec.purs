@@ -75,7 +75,7 @@ recTerm args {ctxs, ty: tyOut, term : (App md t1 t2 tyArg tyOut')}
         tyArg tyOut
 recTerm args {ctxs, term : Var md x tyArgs} = args.var md x {ctxs, tyArgs}
 recTerm args {ctxs, ty, term : Let md tBind@(TermBind xmd x) tyBinds def defTy body bodyTy}
-    = if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
+    = if not (ty == bodyTy) then unsafeThrow "shouldn't happen recTerm let" else
         -- TODO; should use number of tbinds here!
         let ctxs' = addLetToCtx ctxs tBind tyBinds defTy in
         args.lett md {ctxs, tBind} {ctxs, tyBinds}
@@ -84,7 +84,7 @@ recTerm args {ctxs, ty, term : Let md tBind@(TermBind xmd x) tyBinds def defTy b
             {ctxs: ctxs', ty: ty, term: body}
             bodyTy
 recTerm args {ctxs, ty, term : Data md tyBind@(TypeBind xmd x) tyBinds ctrs body bodyTy} =
-    if not (ty == bodyTy) then unsafeThrow "shouldn't happen" else
+    if not (ty == bodyTy) then unsafeThrow "shouldn't happen recTerm data" else
     let ctxs' = addDataToCtx ctxs tyBind tyBinds ctrs in
     args.dataa md {ctxs, tyBind}
         {ctxs, tyBinds} {ctxs: ctxs', ctrs}
@@ -93,15 +93,15 @@ recTerm args {ctxs, ty, term : Data md tyBind@(TypeBind xmd x) tyBinds ctrs body
         {ctxs: ctxs', ty: ty, term: body}
         bodyTy
 recTerm args {ctxs, ty, term : TLet md tyBind@(TypeBind xmd x) tyBinds def body bodyTy} =
-    if not (bodyTy == ty) then unsafeThrow "shouldn't happen" else
+    if not (bodyTy == ty) then unsafeThrow "shouldn't happen recTerm TLet" else
     let ctxs' = addTLetToCtx ctxs tyBind tyBinds def in
     args.tlet md {ctxs, tyBind} {ctxs, tyBinds}
         {ctxs: ctxs', ty: def}
         {ctxs: ctxs', ty: bodyTy, term: body}
         bodyTy
 recTerm args {ctxs, ty, term : TypeBoundary md c body} =
-    if not (ty == snd (getEndpoints c)) then unsafeThrow "shouldn't happen" else
-    args.typeBoundary md c {ctxs, ty: snd (getEndpoints c), term: body}
+    if not (ty == snd (getEndpoints c)) then unsafeThrow "shouldn't happen recTerm typebound" else
+    args.typeBoundary md c {ctxs, ty: fst (getEndpoints c), term: body}
 recTerm args {ctxs, ty, term : ContextBoundary md x c body} =
     let ctxs' = ctxs{ctx = alterCtxVarChange ctxs.ctx x c} in
     args.contextBoundary md x c {ctxs, ty: ty, term: body}
@@ -112,7 +112,7 @@ recTerm args {ctxs, ty, term : Buffer md def defTy body bodyTy} =
         {ctxs, ty: defTy}
         {ctxs, ty: bodyTy, term: body}
         bodyTy
-recTerm _ _ = unsafeThrow "invalid type for a lambda probably"
+recTerm _ term = unsafeThrow ("Missed all cases in recTerm. Term is: " <> show term.term <> " and type is: " <> show term.ty)
 
 type TypeRec a = {
     arrow :: ArrowMD -> TypeRecValue -> TypeRecValue -> a

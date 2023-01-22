@@ -17,6 +17,7 @@ import TypeCraft.Purescript.TermRec (TypeBindRecValue)
 import TypeCraft.Purescript.PathRec (recTypeBindPath)
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.PathRec (TypeBindPathRecValue)
+import TypeCraft.Purescript.TermToNode (constructorListToNode)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
@@ -155,7 +156,18 @@ termPathToNode isActive belowInfo termPath innerNode =
                           , innerNode
                           ]
                       }
-        , data4: \upRecVal md tbind tbinds ctrs {-body-} bodyTy -> hole' "termPathToNode 6"
+        , data4: \upRecVal md tyBind tyBinds ctrs {-body-} bodyTy ->
+            let newBI = stepBI (Data4 md tyBind.tyBind tyBinds.tyBinds ctrs.ctrs {-body-} bodyTy) belowInfo in
+            termPathToNode isActive newBI upRecVal
+              $ makeTermNode isActive newBI upRecVal
+                  { tag: DataNodeTag
+                  , kids: [
+                    typeBindToNode isActive (AICursor (Data1 md tyBinds.tyBinds ctrs.ctrs term bodyTy : upRecVal.termPath)) tyBind
+                    , typeBindListToNode isActive (AICursor (Data2 md tyBind.tyBind ctrs.ctrs term bodyTy : upRecVal.termPath)) tyBinds
+                    , constructorListToNode isActive (AICursor (Data3 md tyBind.tyBind tyBinds.tyBinds term bodyTy : upRecVal.termPath)) ctrs
+                    , innerNode
+                  ]
+                  }
         }
       )
       termPath

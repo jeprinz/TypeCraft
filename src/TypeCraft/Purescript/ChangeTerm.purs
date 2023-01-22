@@ -17,6 +17,8 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
+import Debug (trace)
+import TypeCraft.Purescript.Util (hole)
 
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
 chTermBoundary :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Term
@@ -44,8 +46,8 @@ chTerm kctx ctx c t =
                         then t2'
                         else TypeBoundary defaultTypeBoundaryMD (invert c2) t2'
                     in c1b /\ App md t1' t2'' (snd (getEndpoints c1a)) (snd (getEndpoints c1b))
-                otherChange -> tyInject (outTy)
-                    /\ TypeBoundary defaultTypeBoundaryMD (Replace (Arrow defaultArrowMD argTy outTy) (snd (getEndpoints otherChange)))
+                otherChange -> trace "gets here now" \_ -> tyInject (outTy)
+                    /\ TypeBoundary defaultTypeBoundaryMD (Replace (snd (getEndpoints otherChange)) (snd (getEndpoints cin)))
                        (Buffer defaultBufferMD t2 argTy t1' (snd (getEndpoints otherChange)))
 --                _ -> composeChange (Minus argTy (tyInject (snd (getEndpoints cin)))) c1 /\ -- is this right?
 --                     Buffer defaultBufferMD t1' (snd (getEndpoints c1)) t1'
@@ -109,7 +111,7 @@ chTerm kctx ctx c t =
                 let c' /\ t' = chTerm (ctxKindCons kctx x (TVarKindChange (kindInject (tyBindsWrapKind params Type)) (Just typeAliasChange))) ctx c t in
                 c' /\ TLet md x params ty' t' (snd (getEndpoints c')) -- TODO: what if c references x? Then it is out of scope above.
             c /\ Hole md -> (tyInject (snd (getEndpoints c))) /\ Hole md
-            cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
+            cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD (invert cin) t
         )
     in
         doInsertArgs cRes tRes

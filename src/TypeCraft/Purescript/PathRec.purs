@@ -41,7 +41,7 @@ type TermPathRec a = {
     , typeBoundary1 :: TermPathRecValue -> TypeBoundaryMD -> Change -> a
     , contextBoundary1 :: TermPathRecValue -> ContextBoundaryMD -> TermVarID -> VarChange -> a
     , tLet4 :: TermPathRecValue -> TLetMD -> TypeBind -> ListTypeBindRecValue -> TypeRecValue -> Type -> a
-    , data4 :: TermPathRecValue -> GADTMD -> TypeBind -> ListTypeBindRecValue -> ListCtrRecValue -> Type -> a
+    , data4 :: TermPathRecValue -> GADTMD -> TypeBindRecValue -> ListTypeBindRecValue -> ListCtrRecValue -> Type -> a
 }
 
 recTermPath :: forall a. TermPathRec a -> TermPathRecValue -> a
@@ -101,7 +101,7 @@ recTermPath args {ctxs, ty, term, termPath: (TLet4 md tyBind@(TypeBind _ x) tyBi
 recTermPath args {ctxs, ty, term, termPath: (Data4 md tyBind@(TypeBind _ x) tyBinds ctrs {-Term-} bodyTy) : up} =
     let ctxs' = removeDataFromCtx ctxs tyBind tyBinds ctrs in
     args.data4 {ctxs: ctxs', ty: bodyTy, term: Data md tyBind tyBinds ctrs term bodyTy, termPath: up}
-        md tyBind {ctxs, tyBinds}
+        md {ctxs, tyBind} {ctxs, tyBinds}
         {ctxs: ctxs', ctrs} bodyTy
 recTermPath _ _ = unsafeThrow "recTermPath given something that isn't a term path"
 

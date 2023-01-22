@@ -45,7 +45,7 @@ chTermPath kctx ctx (Minus t c) (App1 md {-here-} arg argTy outTy : up) =
     Buffer3 defaultBufferMD arg argTy {-Term-} outTy : up'
 -- TODO: App2 case, other App1 cases with other TypeChanges
 --    App2 AppMD Term {-Term-} Type Type -- TODO: this case goes along with the polymorphism change stuff
-chTermPath kctx ctx ch  (Let3 md tBind@(TermBind _ x) tyBinds {-Term = here-} ty body bodyTy : termPath) =
+chTermPath kctx ctx ch (Let3 md tBind@(TermBind _ x) tyBinds {-Term = here-} ty body bodyTy : termPath) =
     if not (ty == fst (getEndpoints ch)) then unsafeThrow "shouldn't happen" else
     let ctx' = insert x (VarTypeChange (tyBindsWrapChange tyBinds ch)) ctx in
     let c2 /\ body' = chTerm kctx ctx' (tyInject bodyTy) body in
@@ -163,8 +163,24 @@ chListCtrParamPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> U
 --    CtrParamListCons2 CtrParam {-List CtrParam-}
 chListCtrParamPath _ _ _ _ = hole' "chListCtrParamPath"
 
+data ListTypeArgChange = ListTypeArgChangeNil | ListTypeArgChangeCons Change ListTypeArgChange
+
+chListTypeArgPath :: KindChangeCtx -> ChangeCtx -> ListTypeArgChange -> UpPath -> UpPath
 --    TypeArgListCons2 (TypeArg) {-List TypeArg-}
 --    TNeu1 TNeuMD TypeVarID {-List TypeArg-}
+chListTypeArgPath = hole' "chListTypeArgPath"
 
+
+
+data ListTypeBindChange = ListTypeBindChangeCons TypeBind ListTypeBindChange
+    | ListTypeBindChangePlus TypeBind ListTypeBindChange
+    | ListTypeBindChangeMinus TypeBind ListTypeBindChange
+    | ListTypeBindChangeNil
+
+-- This function should enable adding type parameters to lets
+chListTypeBindPath :: KindChangeCtx -> ChangeCtx -> ListTypeBindChange -> UpPath -> UpPath
 --    TLet2 TLetMD TypeBind {-List TypeBind-} Type Term Type
 --    TypeBindListCons2 (TypeBind) {-List TypeBind-}
+--    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
+--    Let2 LetMD TermBind {-List TypeBind-} Term Type Term Type
+chListTypeBindPath = hole' "chTypeBindPath"
