@@ -3,7 +3,7 @@ module TypeCraft.Purescript.Node where
 import Control.Alternative
 import Control.Applicative
 import Prelude
-
+import Prim hiding (Type)
 import Data.Array (find)
 import Data.Bounded.Generic (genericBottom, genericTop)
 import Data.Enum (class BoundedEnum, class Enum, cardinality, enumFromTo)
@@ -13,14 +13,14 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar (Kind(..), Term(..))
+import TypeCraft.Purescript.Grammar (Kind(..), Term(..), Tooth, Type(..))
 import TypeCraft.Purescript.Nullable (Nullable)
 import TypeCraft.Purescript.Nullable as Nullable
 import TypeCraft.Purescript.State (State)
 import TypeCraft.Purescript.Util (hole, hole')
 
 -- Node
-foreign import data Node :: Type
+foreign import data Node :: Prim.Type
 
 foreign import makeNode_ ::
   { kids :: Array Node
@@ -72,7 +72,7 @@ foreign import setNodeQueryString :: String -> Node -> Node
 foreign import setNodeCompletions :: Array Node -> Number -> Node -> Node
 
 -- NodeIndentation
-foreign import data NodeIndentation :: Type
+foreign import data NodeIndentation :: Prim.Type
 
 foreign import makeInlineNodeIndentation :: NodeIndentation
 
@@ -81,7 +81,7 @@ foreign import makeNewlineNodeIndentation :: NodeIndentation -- doesn't indent
 foreign import makeIndentNodeIndentation :: NodeIndentation
 
 -- NodeTag & NodeTag_
-foreign import data NodeTag_ :: Type
+foreign import data NodeTag_ :: Prim.Type
 
 foreign import makeNodeTag_ :: String -> NodeTag_
 
@@ -215,7 +215,7 @@ typeToNodeTag :: Type -> NodeTag
 typeToNodeTag = hole
 
 -- NodeStyle
-foreign import data NodeStyle :: Type
+foreign import data NodeStyle :: Prim.Type
 
 foreign import makeNormalNodeStyle :: NodeStyle
 
@@ -245,25 +245,14 @@ setIndentNodeIndentationIf =
   else
     identity
 
-calculateNodeIndentation :: NodeTag -> NodeTag -> NodeIndentation
-calculateNodeIndentation parentTag childTag = hole' "calculateNodeIndentation"
-
 calculateNodeIsParenthesized :: NodeTag -> NodeTag -> Boolean
 calculateNodeIsParenthesized parentTag childTag = hole' "calculateNodeIsParenthesized"
 
-setCalculatedNodeData :: NodeTag -> Node -> Node
-setCalculatedNodeData parentTag childNode =
-  let
-    childTag = getNodeTag childNode
+setCalculatedNodeIsParenthesized :: NodeTag -> Node -> Node
+setCalculatedNodeIsParenthesized parentTag child = setNodeIsParenthesized (calculateNodeIsParenthesized parentTag (getNodeTag child)) child
 
-    indentation = calculateNodeIndentation parentTag childTag
-
-    isParenthesized = calculateNodeIsParenthesized parentTag childTag
-  in
-    childNode
-      # setNodeIsParenthesized isParenthesized
-      >>> setNodeIndentation indentation
-
+-- # setNodeIsParenthesized isParenthesized
+-- >>> setNodeIndentation indentation
 setNodeLabelMaybe :: Maybe String -> Node -> Node
 setNodeLabelMaybe (Just label) = setNodeLabel label
 
