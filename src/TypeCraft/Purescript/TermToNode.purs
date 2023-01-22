@@ -12,7 +12,7 @@ import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term(..)
 import TypeCraft.Purescript.Node (Node, NodeIndentation, NodeTag(..), getNodeTag, makeIndentNodeIndentation, makeInlineNodeIndentation, makeNewlineNodeIndentation, makeNode, setNodeIndentation, setNodeIsParenthesized, setNodeLabel, termToNodeTag, typeToNodeTag)
 import TypeCraft.Purescript.State (CursorLocation(..), Select(..), makeCursorMode, makeSelectMode)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListCtrRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, CtrParamRecValue, recTerm, recType)
-import TypeCraft.Purescript.Util (hole', justWhen)
+import TypeCraft.Purescript.Util (hole', justWhen, lookup')
 
 data AboveInfo syn
   = AICursor UpPath
@@ -58,7 +58,7 @@ arrangeNodeKids ::
   Node
 arrangeNodeKids args kids =
   makeNode
-    { kids: args.stepKids kids -- TODO: make sure that parentheses happen  ((\k th -> parenthesizeChildNode args.tag th (k ind th)) <$> kids)
+    { kids: args.stepKids kids
     , getCursor: justWhen args.isActive \_ -> _ { mode = makeCursorMode $ args.makeCursor unit }
     , getSelect:
         case args.aboveInfo of
@@ -165,7 +165,7 @@ termToNode isActive aboveInfo term =
             [ arrangeKid ai (termToNode isActive) t1
             , arrangeKid ai (termToNode isActive) t2
             ]
-    , var: \md x targs -> arrangeTerm args []
+    , var: \md x targs -> setNodeLabel (x `lookup'` term.ctxs.mdctx) $ arrangeTerm args []
     , lett:
         \md tBind tyBinds def defTy body _bodyTy ->
           arrangeTerm args
