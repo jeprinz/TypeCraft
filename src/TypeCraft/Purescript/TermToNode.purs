@@ -10,6 +10,7 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam(..), Term(..), TermBind(..), Tooth(..), Type(..), TypeArg, TypeBind(..), UpPath)
 import TypeCraft.Purescript.Node (Node, NodeIndentation, NodeTag(..), makeIndentNodeIndentation, makeInlineNodeIndentation, makeNewlineNodeIndentation, makeNode, setCalculatedNodeIsParenthesized, setNodeIndentation, setNodeIsParenthesized, setNodeLabel, termToNodeTag, typeToNodeTag)
+import TypeCraft.Purescript.Parenthesization (parenthesizeChildNode)
 import TypeCraft.Purescript.State (CursorLocation(..), Select(..), makeCursorMode, makeSelectMode)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListCtrRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, CtrParamRecValue, recTerm, recType)
 import TypeCraft.Purescript.Util (hole', justWhen)
@@ -59,7 +60,7 @@ arrangeNodeKids ::
   Node
 arrangeNodeKids args kids =
   makeNode
-    { kids: {-setCalculatedNodeIsParenthesized args.tag <$>-} args.stepAIKids kids
+    { kids: args.stepAIKids ((\k ind th -> parenthesizeChildNode args.tag th (k ind th)) <$> kids)
     , getCursor: justWhen args.isActive \_ -> _ { mode = makeCursorMode $ args.makeCursor unit }
     , getSelect:
         case args.aboveInfo of
