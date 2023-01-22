@@ -7,7 +7,6 @@ import Prim hiding (Type)
 
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Util (lookup')
-import TypeCraft.Purescript.Util (hole)
 
 {-
 This file deals with issues of alpha-equivalence.

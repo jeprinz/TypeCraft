@@ -212,7 +212,10 @@ termToNodeTag = case _ of
   Buffer _ _ _ _ _ -> BufferNodeTag
 
 typeToNodeTag :: Type -> NodeTag
-typeToNodeTag = hole
+typeToNodeTag = case _ of
+    Arrow _ _ _ -> ArrowNodeTag
+    THole _ _ -> THoleNodeTag
+    TNeu _ _ _ -> TNeuNodeTag
 
 -- NodeStyle
 foreign import data NodeStyle :: Prim.Type
@@ -246,7 +249,7 @@ setIndentNodeIndentationIf =
     identity
 
 calculateNodeIsParenthesized :: NodeTag -> NodeTag -> Boolean
-calculateNodeIsParenthesized parentTag childTag = hole' "calculateNodeIsParenthesized"
+calculateNodeIsParenthesized parentTag childTag = false -- hole' "calculateNodeIsParenthesized"
 
 setCalculatedNodeIsParenthesized :: NodeTag -> Node -> Node
 setCalculatedNodeIsParenthesized parentTag child = setNodeIsParenthesized (calculateNodeIsParenthesized parentTag (getNodeTag child)) child

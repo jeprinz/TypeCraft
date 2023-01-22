@@ -59,7 +59,7 @@ arrangeNodeKids ::
   Node
 arrangeNodeKids args kids =
   makeNode
-    { kids: setCalculatedNodeIsParenthesized args.tag <$> args.stepAIKids kids
+    { kids: {-setCalculatedNodeIsParenthesized args.tag <$>-} args.stepAIKids kids
     , getCursor: justWhen args.isActive \_ -> _ { mode = makeCursorMode $ args.makeCursor unit }
     , getSelect:
         case args.aboveInfo of

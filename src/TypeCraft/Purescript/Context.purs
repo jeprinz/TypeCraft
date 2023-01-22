@@ -20,7 +20,6 @@ import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.MD (TypeBindMD)
 import TypeCraft.Purescript.MD (defaultArrowMD)
 import TypeCraft.Purescript.Util (hole')
-import TypeCraft.Purescript.Util (hole)
 
 {-
 This file defines term contexts and type contexts!
