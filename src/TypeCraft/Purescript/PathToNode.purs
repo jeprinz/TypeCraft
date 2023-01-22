@@ -18,6 +18,9 @@ import TypeCraft.Purescript.PathRec (recTypeBindPath)
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.PathRec (TypeBindPathRecValue)
 import TypeCraft.Purescript.TermToNode (constructorListToNode)
+import TypeCraft.Purescript.TermToNode (PreNode)
+import TypeCraft.Purescript.Node (setNodeIndentation)
+import TypeCraft.Purescript.TermToNode (stepAIKidsTerm)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
@@ -37,12 +40,15 @@ stepBI tooth BITerm = BITerm
 
 stepBI tooth (BISelect middle bottom ctxs ty) = BISelect (tooth : middle) bottom ctxs ty
 
-type PreNode
+--arrangeKid :: forall term ty rc. BelowInfo term ty -> (BelowInfo term ty -> rc -> Node) -> rc -> PreNode
+--arrangeKid bi k rc ind th = setNodeIndentation ind $ k (stepBI th bi) rc
+
+type PartialNode
   = { kids :: Array Node
     , tag :: NodeTag
     }
 
-makeTermNode :: Boolean -> BelowInfo Term Type -> TermPathRecValue -> PreNode -> Node
+makeTermNode :: Boolean -> BelowInfo Term Type -> TermPathRecValue -> PartialNode -> Node
 makeTermNode isActive belowInfo termPath preNode =
   makeNode
     { kids: {-setCalculatedNodeData preNode.tag <$> -}preNode.kids
@@ -118,10 +124,13 @@ termPathToNode isActive belowInfo termPath innerNode =
                   $ makeTermNode isActive newBI upRecVal
                       { tag: LambdaNodeTag
                       , kids:
-                          [ termBindToNode isActive (AICursor (Lambda1 md argTy.ty term bodyTy : upRecVal.termPath)) tBind
-                          , typeToNode isActive (AICursor (Lambda2 md tBind.tBind term bodyTy : upRecVal.termPath)) argTy
-                          , innerNode
-                          ]
+--                          [ termBindToNode isActive (AICursor (Lambda1 md argTy.ty term bodyTy : upRecVal.termPath)) tBind
+--                          , typeToNode isActive (AICursor (Lambda2 md tBind.tBind term bodyTy : upRecVal.termPath)) argTy
+--                          , innerNode
+--                          ]
+                            stepAIKidsTerm term [
+                                \indentation _ -> setNodeIndentation indentation innerNode
+                            ]
                       }
         , buffer1: \upRecVal md {-Term-} bufTy body bodyTy -> hole' "termPathToNode 1"
         , buffer3: \upRecVal md buf bufTy {-Term-} bodyTy -> hole' "termPathToNode 2"
