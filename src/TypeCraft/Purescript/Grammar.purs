@@ -14,17 +14,14 @@ import Effect.Unsafe (unsafePerformEffect)
 import TypeCraft.Purescript.MD (AppMD, ArrowMD, BufferMD, ContextBoundaryMD, CtrMD, CtrParamMD, GADTMD, HoleMD, LambdaMD, LetMD, THoleMD, TLetMD, TNeuMD, TermBindMD, TypeArgMD, TypeBindMD, TypeBoundaryMD, VarMD, defaultHoleMD, defaultTHoleMD)
 import TypeCraft.Purescript.Util (hole')
 
-type TypeHoleID
-  = UUID
+type TypeHoleID = UUID
 
-type TermVarID
-  = UUID
+type TermVarID = UUID
 
 freshTermVarID :: Unit -> TermVarID
 freshTermVarID _ = unsafePerformEffect genUUID
 
-type TypeVarID
-  = UUID
+type TypeVarID = UUID
 
 data Type
   = Arrow ArrowMD Type Type
@@ -34,12 +31,9 @@ data Type
 freshTHole :: Unit -> Type
 freshTHole _ = THole defaultTHoleMD (freshTypeHoleID unit)
 
-data PolyType
-  = Forall TypeVarID PolyType
-  | PType Type -- doesn't appear in source code. Instead, source code has lists of type parameters.
+data PolyType = Forall TypeVarID PolyType | PType Type -- doesn't appear in source code. Instead, source code has lists of type parameters.
 
-data TypeArg
-  = TypeArg TypeArgMD Type
+data TypeArg = TypeArg TypeArgMD Type
 
 data Term
   = App AppMD Term Term Type Type -- The type of the argument, then the type of the output
@@ -65,8 +59,7 @@ freshTypeBind mb_varName =
     { varName: maybe "" identity mb_varName }
     (unsafePerformEffect genUUID)
 
-data TermBind
-  = TermBind TermBindMD TermVarID
+data TermBind = TermBind TermBindMD TermVarID
 
 freshTermBind :: Maybe String -> TermBind
 freshTermBind mb_varName =
@@ -74,16 +67,11 @@ freshTermBind mb_varName =
     { varName: maybe "" identity mb_varName }
     (unsafePerformEffect genUUID)
 
-data CtrParam
-  = CtrParam CtrParamMD Type
+data CtrParam = CtrParam CtrParamMD Type
 
-data Constructor
-  = Constructor CtrMD TermBind (List CtrParam)
+data Constructor = Constructor CtrMD TermBind (List CtrParam)
 
---data Kind = KArrow KArrowMD Kind Kind | Type TypeMD
-data Kind
-  = KArrow Kind
-  | Type
+data Kind = KArrow Kind | Type
 
 data PolyChange
   = CForall TypeVarID PolyChange
@@ -99,36 +87,14 @@ data Change
   | Minus Type Change
   | CNeu TypeVarID (List ChangeParam)
 
-data VarChange
-  = VarTypeChange PolyChange
-  | VarDelete PolyType
-  | VarInsert PolyType
-
-data ChangeParam
-  = ChangeParam Change
-  | PlusParam Type
-  | MinusParam Type
-
-data KindChange
-  = KCArrow KindChange
-  | KCType
-  | KPlus KindChange
-  | KMinus KindChange
-
 {-
 The following is a list of the grammatical sorts within this editor:
 Term, Type, Constructor, CtrParam, TypeArg, TypeBind, TermBind
 (List Constructor), (List CtrParam), (List TypeArg) , (List TypeBind)
 Each of these has a type of terms and of paths.
 The type <thing>Path is the set of possible paths when the cursor is on a <thing>
-
-I'm considering removing the following: Constructor, ConstructorParam, TypeArg
 -}
--- Thankfully, I don't think I need Syntax after all
---data Syntax =
---    STerm Term | SType Type | SCtrList (List Constructor) | SCtrParamList (List CtrParam)
---    | TypeArgList (List TypeArg) | TypeBindList (List TypeBind) | SConstructor Constructor
---    | SCtrParam CtrParam | STypeArg TypeArg | STypeBind TypeBind | STermBind TermBind
+
 -- If Term has a constructor named <name>, then here a constructor named <name>n
 -- refers to a zipper path piece with a hole as the nth term in that constructor.
 -- Can tell what path is up by what type the constructor name came from
@@ -182,29 +148,47 @@ data Tooth
   | TypeBindListCons1 {-TypeBind-} (List TypeBind)
   | TypeBindListCons2 (TypeBind) {-List TypeBind-}
 
-type UpPath
-  = List Tooth
+type UpPath = List Tooth
+type DownPath = List Tooth
 
-type DownPath
-  = List Tooth
+-- Some additional Changes grammars. These don't appear in the program, but are used in the TypeChange logic.
+data VarChange
+  = VarTypeChange PolyChange
+  | VarDelete PolyType
+  | VarInsert PolyType
+
+data ChangeParam
+  = ChangeParam Change
+  | PlusParam Type
+  | MinusParam Type
+
+data KindChange
+  = KCArrow KindChange
+  | KCType
+  | KPlus KindChange
+  | KMinus KindChange
+
+data ListCtrChange = ListCtrChangeNil | ListCtrChangeCons TermVarID ListCtrParamChange ListCtrChange
+    | ListCtrChangePlus Constructor ListCtrChange
+    | ListCtrChangeMinus Constructor ListCtrChange
+
+data ListCtrParamChange = ListCtrParamChangeNil | ListCtrParamChangeCons Change ListCtrParamChange
+    | ListCtrParamChangePlus CtrParam ListCtrParamChange
+    | ListCtrParamChangeMinus CtrParam ListCtrParamChange
 
 -- TODO: move the below stuff into a separate file
 tyInject :: Type -> Change
 tyInject (Arrow _ ty1 ty2) = CArrow (tyInject ty1) (tyInject ty2)
-
 tyInject (TNeu _ x args) = CNeu x (map (case _ of TypeArg _ t -> ChangeParam (tyInject t)) args)
-
 tyInject (THole _ id) = CHole id
 
 pTyInject :: PolyType -> PolyChange
 pTyInject (Forall x t) = CForall x (pTyInject t)
-
 pTyInject (PType t) = PChange (tyInject t)
 
 --tyInject (TLambda _ x k ty) = CLambda x (tyInject ty)
 kindInject :: Kind -> KindChange
 kindInject (KArrow k) = KCArrow (kindInject k)
-
 kindInject Type = KCType
 
 -- TODO:
@@ -216,13 +200,9 @@ uniqueIdCounter = unsafePerformEffect (new 0)
 
 freshInt :: Unit -> Int
 freshInt _ =
-  let
-    currentValue = unsafePerformEffect (read uniqueIdCounter)
-  in
-    let
-      _ = unsafePerformEffect (write (currentValue + 1) uniqueIdCounter)
-    in
-      currentValue
+  let currentValue = unsafePerformEffect (read uniqueIdCounter)
+  in let _ = unsafePerformEffect (write (currentValue + 1) uniqueIdCounter)
+  in currentValue
 
 freshTypeHoleID :: Unit -> TypeHoleID
 freshTypeHoleID _ = unsafePerformEffect genUUID

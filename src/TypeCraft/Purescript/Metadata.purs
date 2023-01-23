@@ -3,70 +3,33 @@ module TypeCraft.Purescript.MD where
 import Prelude
 
 -- Type Meta- Data
-type ArrowMD
-  = { codIndented :: Boolean }
-
-type TypeArgMD
-  = { indented :: Boolean }
-
-type TNeuMD
-  = {}
-
-type TAppMD
-  = { argIndented :: Boolean }
-
-type THoleMD
-  = {}
-
-type TLambdaMD
-  = { bodyIndented :: Boolean }
+type ArrowMD = { codIndented :: Boolean }
+type TypeArgMD = { indented :: Boolean }
+type TNeuMD = {}
+type TAppMD = { argIndented :: Boolean }
+type THoleMD = {}
+type TLambdaMD = { bodyIndented :: Boolean }
 
 -- Term Meta- Data
-type LambdaMD
-  = { bodyIndented :: Boolean }
-
-type AppMD
-  = { argIndented :: Boolean }
-
+type LambdaMD = { bodyIndented :: Boolean }
+type AppMD = { argIndented :: Boolean }
 type LetMD
   = { varIndented :: Boolean
     , typeIndented :: Boolean
     , defIndented :: Boolean
     , bodyIndented :: Boolean
     }
-
-type GADTMD
-  = {}
-
-type TermBindMD
-  = { varName :: String }
-
-type TypeBindMD
-  = { varName :: String }
-
-type CtrMD
-  = { indented :: Boolean }
-
-type CtrParamMD
-  = { paramName :: String, indented :: Boolean }
-
-type TypeBoundaryMD
-  = {}
-
-type ContextBoundaryMD
-  = {}
-
-type HoleMD
-  = {}
-
-type BufferMD
-  = {}
-
-type VarMD
-  = {}
-
-type TLetMD
-  = {}
+type GADTMD = {}
+type TermBindMD = { varName :: String }
+type TypeBindMD = { varName :: String }
+type CtrMD = { indented :: Boolean }
+type CtrParamMD = { paramName :: String, indented :: Boolean }
+type TypeBoundaryMD = {}
+type ContextBoundaryMD = {}
+type HoleMD = {}
+type BufferMD = {}
+type VarMD = {}
+type TLetMD = {}
 
 -- no kind metadata because it is never in the source code
 ------------------------------------------------------------------------------------------------------------------------

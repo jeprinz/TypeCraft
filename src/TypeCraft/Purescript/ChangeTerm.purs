@@ -111,6 +111,9 @@ chTerm kctx ctx c t =
                 let c' /\ t' = chTerm (ctxKindCons kctx x (TVarKindChange (kindInject (tyBindsWrapKind params Type)) (Just typeAliasChange))) ctx c t in
                 c' /\ TLet md x params ty' t' (snd (getEndpoints c')) -- TODO: what if c references x? Then it is out of scope above.
             c /\ Hole md -> (tyInject (snd (getEndpoints c))) /\ Hole md
+            c /\ Data md tyBind tyBinds ctrs body bodyTy ->
+                let ctrsCh /\ ctrs' = chCtrList kctx ctrs in
+                hole
             cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD (invert cin) t
         )
     in
@@ -162,26 +165,29 @@ chTypeArgs kctx (KMinus kc) (TypeArg md t : params) =
     tparams /\ (MinusParam t) : cparams
 chTypeArgs kctx _ _ = unsafeThrow "shouldn't get here: types didn't line up with kindchanges (or I missed a case)"
 
---chTerm :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Change  /\ Term
+-- The output Change is the change to the constructor itself
+chCtrList :: KindChangeCtx -> List Constructor ->  ListCtrChange /\ List Constructor
+chCtrList kctx ctrs = case ctrs of
+    Nil -> ListCtrChangeNil /\ Nil
+    Cons (Constructor md tBind@(TermBind _ x) ctrParams) ctrs ->
+        let ctrCh /\ ctrParams' = chParamList kctx ctrParams in
+        let ctrChs' /\ ctrs' = chCtrList kctx ctrs in
+        ListCtrChangeCons x ctrCh ctrChs' /\ (Constructor md tBind ctrParams') : ctrs'
 
 -- The output Change is the change to the constructor itself
-chCtrList :: KindChangeCtx -> List Constructor ->  List (List ChangeParam) /\ List Constructor
-chCtrList = hole' "chCtrList"
-
--- The output Change is the change to the constructor itself
-chCtr :: KindChangeCtx -> Constructor -> (List Change) /\ Constructor
-chCtr = hole' "chCtr"
+--chCtr :: KindChangeCtx -> Constructor -> ListCtrParamChange /\ Constructor
+--chCtr = hole' "chCtr"
 
 chCtrParam :: KindChangeCtx -> CtrParam -> Change /\ CtrParam
 chCtrParam kctx (CtrParam md t) =
     let t' /\ c = chType kctx t in c /\ CtrParam md t'
 
-chParamList :: KindChangeCtx -> List CtrParam -> (List Change) /\ List CtrParam
-chParamList _ Nil = Nil /\ Nil
+chParamList :: KindChangeCtx -> List CtrParam -> ListCtrParamChange /\ List CtrParam
+chParamList _ Nil = ListCtrParamChangeNil /\ Nil
 chParamList kctx (param : params) =
     let ch /\ param' = chCtrParam kctx param in
     let chs /\ params' = chParamList kctx params in
-    (ch : chs) /\ param' : params'
+    (ListCtrParamChangeCons ch chs) /\ param' : params'
 
 chTypeParamList :: KindChangeCtx -> List TypeArg -> List Change /\ List TypeArg
 chTypeParamList = hole' "chTypeParamList"

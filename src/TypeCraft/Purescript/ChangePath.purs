@@ -139,13 +139,6 @@ chCtrParamPath _ _ _ _ = hole' "chCtrParaPath"
 --    Let1 LetMD {-TermBind-} (List TypeBind) Term Type Term Type
 --    Constructor1 CtrMD {-TermBind-} (List CtrParam)
 
--- This datatype describes how a list of constructors has changed
--- TODO: PROBLEM: this is unable to describe re-orderings.
--- You can have - c [+ c [...]], but when this is applied to a match expression it will not
--- swap the cases, but rather delete one and create a new empty one!
-data ListCtrChange = ListCtrChangeNil | ListCtrChangeCons Change ListCtrChange
-    | ListCtrChangePlus Constructor ListCtrChange
-    | ListCtrChangeMinus Constructor ListCtrChange
 -- The Change by which a CtrListPath changes is the change by which the recursor
 chListCtrPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
 --    Data3 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type
@@ -153,11 +146,6 @@ chListCtrPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
 --    CtrListCons2 Constructor {-List Constructor-}
 chListCtrPath _ _ _ _ = hole' "chListCtrPath"
 
--- TODO: again, there will be a problem with swapping!
--- TODO: Should I just use Change instead of ListCtrParamChange? They are more or less the same!
-data ListCtrParamChange = ListCtrParamChangeNil | ListCtrParamChangeCons Change ListCtrParamChange
-    | ListCtrParamChangePlus CtrParam ListCtrParamChange
-    | ListCtrParamChangeMinus CtrParam ListCtrParamChange
 chListCtrParamPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
 --    Constructor2 CtrMD TermBind {-List CtrParam-}
 --    CtrParamListCons2 CtrParam {-List CtrParam-}

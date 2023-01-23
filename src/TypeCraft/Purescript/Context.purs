@@ -17,9 +17,10 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
 import TypeCraft.Purescript.Kinds (bindsToKind)
-import TypeCraft.Purescript.MD (TypeBindMD)
-import TypeCraft.Purescript.MD (defaultArrowMD)
+import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.Util (hole')
+import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Util (lookup')
 
 {-
 This file defines term contexts and type contexts!
@@ -74,6 +75,39 @@ kCtxInject kctx actx = mapMaybeWithKey (\x kind
 ctxInject :: TermContext -> ChangeCtx
 ctxInject ctx = map (\ty -> VarTypeChange (pTyInject ty)) ctx
 
+--data ListCtrChange = ListCtrChangeNil | ListCtrChangeCons TermVarID ListCtrParamChange ListCtrChange
+--    | ListCtrChangePlus Constructor ListCtrChange
+--    | ListCtrChangeMinus Constructor ListCtrChange
+
+-- TODO: when I properly deal with parameters to types, this will have to be modified!
+tyBindsWrapChange :: List TypeBind -> Change -> PolyChange
+tyBindsWrapChange Nil ch = PChange ch
+tyBindsWrapChange ((TypeBind _ x) : tyBinds) ch = CForall x (tyBindsWrapChange tyBinds ch)
+
+tyVarIdsWrapChange :: List TypeVarID -> Change -> PolyChange
+tyVarIdsWrapChange Nil ch = PChange ch
+tyVarIdsWrapChange (x : tyBinds) ch = CForall x (tyVarIdsWrapChange tyBinds ch)
+
+adjustCtxByCtrChanges :: {-the datatype id-}TypeVarID -> {-the datatype's parameters-}List TypeVarID -> ListCtrChange -> ChangeCtx -> ChangeCtx
+adjustCtxByCtrChanges dataType tyVarIds ctrsCh ctx = case ctrsCh of
+    ListCtrChangeNil -> ctx
+    ListCtrChangeCons x ctrParamsCh ctrsCh' -> hole
+    ListCtrChangePlus (Constructor _ (TermBind _ ctrId) ctrParams) ctrsCh' ->
+        let ty = ctrParamsToType dataType tyVarIds ctrParams in
+        insert ctrId (VarInsert ty) ctx
+    ListCtrChangeMinus ctr ctrsCh' -> ctx
+
+ctrParamsChangeToChange :: {-datatype-}TypeVarID -> {-datatype params-}List TypeVarID -> ListCtrParamChange -> PolyChange
+ctrParamsChangeToChange dataType tyVarIds ctrParamsCh =
+    let sub = genFreshener tyVarIds in -- TODO: figure out how to abstract this out and not have repetition with the other instance of these lines below
+    let freshTyVarIds = map (\id -> lookup' id sub) tyVarIds in
+    let ctrOutType = TNeu defaultTNeuMD dataType (map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD x Nil)) freshTyVarIds) in
+    tyVarIdsWrapChange freshTyVarIds (ctrParamsChangeToChangeImpl ctrParamsCh sub (tyInject ctrOutType))
+
+ctrParamsChangeToChangeImpl :: ListCtrParamChange -> {-freshen datatype parameters in each type-}TyVarSub -> Change -> Change
+ctrParamsChangeToChangeImpl = hole
+
+
 --------------------------------------------------------------------------------
 -------------- Metadatta contexts ---------------------------------------------
 --------------------------------------------------------------------------------
@@ -113,25 +147,34 @@ tyBindsWrapType :: List TypeBind -> Type -> PolyType
 tyBindsWrapType Nil ty = PType ty
 tyBindsWrapType ((TypeBind _ x) : tyBinds) ty = Forall x (tyBindsWrapType tyBinds ty)
 
-constructorTypes :: TypeBind -> List TypeBind -> List Constructor -> Map TermVarID PolyType
-constructorTypes dataType tyBinds ctrs =
-    let sub = genFreshener (map (\(TypeBind _ x) -> x) tyBinds) in
-    let freshTyBinds = map (subTypeBind sub) tyBinds in
-    let freshCtrs = map (subConstructor sub) ctrs in
-    constructorTypesImpl dataType freshTyBinds freshCtrs
+tyVarIdsWrapType :: List TypeVarID -> Type -> PolyType
+tyVarIdsWrapType Nil ty = PType ty
+tyVarIdsWrapType (x : xs) ty = Forall x (tyVarIdsWrapType xs ty)
 
-constructorTypesImpl :: TypeBind -> List TypeBind -> List Constructor -> Map TermVarID PolyType
-constructorTypesImpl dataType tyBinds Nil = empty
-constructorTypesImpl dataType tyBinds (Constructor _ (TermBind _ x) params : ctrs)
-    = insert x (ctrParamsToType (hole' "constructorTypesImpl") tyBinds params) (constructorTypesImpl dataType tyBinds ctrs)
+constructorTypes :: TypeBind -> List TypeBind -> List Constructor -> Map TermVarID PolyType
+constructorTypes (TypeBind _ dataType) tyBinds ctrs =
+    let tyVarIds = map (\(TypeBind _ x) -> x) tyBinds in
+    constructorTypesImpl dataType tyVarIds ctrs
+
+constructorTypesImpl :: TypeVarID -> List TypeVarID -> List Constructor -> Map TermVarID PolyType
+constructorTypesImpl dataType tyVarIds Nil = empty
+constructorTypesImpl dataType tyVarIds (Constructor _ (TermBind _ x) params : ctrs)
+    = let tyArgs = map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD x Nil)) tyVarIds
+    in insert x (ctrParamsToType dataType tyVarIds params) (constructorTypesImpl dataType tyVarIds ctrs)
 
 constructorNames :: List Constructor -> Map TermVarID String
 constructorNames Nil = empty
 constructorNames (Constructor _ (TermBind xmd x) params : ctrs)
     = insert x xmd.varName (constructorNames ctrs)
 
-ctrParamsToType :: Type -> List TypeBind -> List CtrParam -> PolyType
-ctrParamsToType dataType tyBinds ctrParams = tyBindsWrapType tyBinds (ctrParamsToTypeImpl dataType ctrParams)
+ctrParamsToType :: {-The datatype-}TypeVarID -> {-Datatype parameters-}List TypeVarID -> List CtrParam -> PolyType
+ctrParamsToType dataType tyVarIds ctrParams =
+    let sub = genFreshener tyVarIds in
+    let freshTyVarIds = map (\id -> lookup' id sub) tyVarIds in
+    let freshCtrParams = map (subCtrParam sub) ctrParams in
+    let ctrOutType = TNeu defaultTNeuMD dataType (map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD x Nil)) freshTyVarIds) in
+    tyVarIdsWrapType freshTyVarIds (ctrParamsToTypeImpl ctrOutType freshCtrParams)
+
 ctrParamsToTypeImpl :: Type -> List CtrParam -> Type
 ctrParamsToTypeImpl dataType Nil = dataType
 ctrParamsToTypeImpl dataType (CtrParam _ ty : params) = Arrow defaultArrowMD ty (ctrParamsToTypeImpl dataType params)
@@ -150,7 +193,7 @@ addDataToCtx ctxs tyBind@(TypeBind xmd x) tyBinds ctrs =
     }
 
 removeDataFromCtx :: AllContext -> TypeBind -> List TypeBind -> List Constructor -> AllContext
-removeDataFromCtx ctxs tyBind@(TypeBind xmd x) tyBinds ctrs =
+removeDataFromCtx ctxs (TypeBind _ x) _tyBinds ctrs =
     let ctrIds = constructorIds ctrs in
     ctxs{
         kctx = delete x ctxs.kctx
