@@ -2,25 +2,21 @@ module TypeCraft.Purescript.PathToNode where
 
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.PathRec (ListCtrParamPathRecValue, ListCtrPathRecValue, ListTypeArgPathRecValue, ListTypeBindPathRecValue, TermBindPathRecValue, TermPathRecValue, TypePathRecValue, recListTypeBindPath, recTermBindPath, recTermPath, recTypePath)
+
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Context (AllContext)
-import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, Tooth(..), Type, TypeArg, TypeBind, UpPath)
+import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term(..), Tooth(..), Type, TypeArg, TypeBind, UpPath)
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode)
+import TypeCraft.Purescript.Node (setNodeIndentation)
+import TypeCraft.Purescript.PathRec (ListCtrParamPathRecValue, ListCtrPathRecValue, ListTypeArgPathRecValue, ListTypeBindPathRecValue, TermBindPathRecValue, TermPathRecValue, TypePathRecValue, recListTypeBindPath, recTermBindPath, recTermPath, recTypePath)
+import TypeCraft.Purescript.PathRec (TypeBindPathRecValue)
+import TypeCraft.Purescript.PathRec (recTypeBindPath)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), termBindToNode, termToNode, typeToNode)
-import TypeCraft.Purescript.TermToNode (typeBindListToNode)
-import TypeCraft.Purescript.Util (hole', justWhen)
+import TypeCraft.Purescript.TermToNode (typeBindListToNode, constructorListToNode, stepKidsTerm)
 import TypeCraft.Purescript.TermToNode (typeBindToNode)
-import TypeCraft.Purescript.TermRec (TypeBindRecValue)
-import TypeCraft.Purescript.PathRec (recTypeBindPath)
-import TypeCraft.Purescript.Util (hole)
-import TypeCraft.Purescript.PathRec (TypeBindPathRecValue)
-import TypeCraft.Purescript.TermToNode (constructorListToNode)
-import TypeCraft.Purescript.TermToNode (PreNode)
-import TypeCraft.Purescript.Node (setNodeIndentation)
-import TypeCraft.Purescript.TermToNode (stepAIKidsTerm)
+import TypeCraft.Purescript.Util (hole', justWhen)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
@@ -51,7 +47,7 @@ type PartialNode
 makeTermNode :: Boolean -> BelowInfo Term Type -> TermPathRecValue -> PartialNode -> Node
 makeTermNode isActive belowInfo termPath preNode =
   makeNode
-    { kids: {-setCalculatedNodeData preNode.tag <$> -}preNode.kids
+    { kids: {-setCalculatedNodeData preNode.tag <$> -} preNode.kids
     , getCursor:
         justWhen isActive \_ ->
           _ { mode = makeCursorMode $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term }
@@ -124,13 +120,11 @@ termPathToNode isActive belowInfo termPath innerNode =
                   $ makeTermNode isActive newBI upRecVal
                       { tag: LambdaNodeTag
                       , kids:
---                          [ termBindToNode isActive (AICursor (Lambda1 md argTy.ty term bodyTy : upRecVal.termPath)) tBind
---                          , typeToNode isActive (AICursor (Lambda2 md tBind.tBind term bodyTy : upRecVal.termPath)) argTy
---                          , innerNode
---                          ]
-                            stepAIKidsTerm term [
-                                \indentation _ -> setNodeIndentation indentation innerNode
-                            ]
+                          stepKidsTerm upRecVal.term [
+                            \th -> termBindToNode isActive (AICursor (th : upRecVal.termPath)) tBind,
+                            \th -> typeToNode isActive (AICursor (th : upRecVal.termPath)) argTy,
+                            const innerNode
+                          ]
                       }
         , buffer1: \upRecVal md {-Term-} bufTy body bodyTy -> hole' "termPathToNode 1"
         , buffer3: \upRecVal md buf bufTy {-Term-} bodyTy -> hole' "termPathToNode 2"
