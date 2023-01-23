@@ -7,7 +7,7 @@ import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.TypeChangeAlgebra
 
-import Data.List (List(..), (:))
+import Data.List (List(..), (:), foldr)
 import Data.Map.Internal (empty, lookup, insert)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (fst)
@@ -19,6 +19,9 @@ import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
 import Debug (trace)
 import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Freshen
+import TypeCraft.Purescript.Unification (applySubChange)
+import TypeCraft.Purescript.Kinds (bindsToKind)
 
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
 chTermBoundary :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Term
@@ -113,7 +116,9 @@ chTerm kctx ctx c t =
             c /\ Hole md -> (tyInject (snd (getEndpoints c))) /\ Hole md
             c /\ Data md tyBind tyBinds ctrs body bodyTy ->
                 let ctrsCh /\ ctrs' = chCtrList kctx ctrs in
-                hole
+                let kctx' /\ ctx' = addDataToCtx (kctx /\ ctx) tyBind tyBinds ctrsCh in
+                let c' /\ body' = chTerm kctx' ctx' c body in
+                c' /\ Data md tyBind tyBinds ctrs' body' (snd (getEndpoints c'))
             cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD (invert cin) t
         )
     in
@@ -201,3 +206,47 @@ chTypeArgsNeu (PPlus x ch) args = hole' "chTypeArgsNeu"
 chTypeArgsNeu _ _ = unsafeThrow "shouldn't happen 7"
 -- TODO: there is something nontrivial to think about here. It should track a context so it knows which arguments got deleted etc.
 -- also if a type argument gets affected by the KindChangeCtx, then that needs to be reflected as well...
+
+
+
+--------------------------------------------------------------------------------
+--------------- Helper functions for adjusting the contexts --------------------
+--------------------------------------------------------------------------------
+
+-- Constructors, datatype itself, and recursor
+addDataToCtx :: CAllContext -> TypeBind -> List TypeBind -> ListCtrChange -> CAllContext
+addDataToCtx (kctx /\ ctx) tyBind@(TypeBind xmd dataType) tyBinds ctrsCh =
+    insert dataType (TVarKindChange (kindInject (bindsToKind tyBinds)) Nothing) kctx
+    /\ adjustCtxByCtrChanges dataType (map (\(TypeBind _ x) -> x) tyBinds) ctrsCh ctx
+
+
+adjustCtxByCtrChanges :: {-the datatype id-}TypeVarID -> {-the datatype's parameters-}List TypeVarID -> ListCtrChange -> ChangeCtx -> ChangeCtx
+adjustCtxByCtrChanges dataType tyVarIds ctrsCh ctx = case ctrsCh of
+    ListCtrChangeNil -> ctx
+    ListCtrChangeCons ctrId ctrParamsCh ctrsCh' ->
+        let ch = ctrParamsChangeToChange dataType tyVarIds ctrParamsCh in
+        insert ctrId (VarTypeChange ch) ctx
+    ListCtrChangePlus (Constructor _ (TermBind _ ctrId) ctrParams) ctrsCh' ->
+        let ty = ctrParamsToType dataType tyVarIds ctrParams in
+        insert ctrId (VarInsert ty) ctx
+    ListCtrChangeMinus (Constructor _ (TermBind _ ctrId) ctrParams) ctrsCh' ->
+        let ty = ctrParamsToType dataType tyVarIds ctrParams in
+        insert ctrId (VarDelete ty) ctx
+
+ctrParamsChangeToChange :: {-datatype-}TypeVarID -> {-datatype params-}List TypeVarID -> ListCtrParamChange -> PolyChange
+ctrParamsChangeToChange dataType tyVarIds ctrParamsCh =
+    let sub = genFreshener tyVarIds in -- TODO: figure out how to abstract this out and not have repetition with the other instance of these lines below
+    let freshTyVarIds = map (\id -> lookup' id sub) tyVarIds in
+    let ctrOutType = TNeu defaultTNeuMD dataType (map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD x Nil)) freshTyVarIds) in
+    tyVarIdsWrapChange freshTyVarIds (ctrParamsChangeToChangeImpl ctrParamsCh sub (tyInject ctrOutType))
+
+ctrParamsChangeToChangeImpl :: ListCtrParamChange -> {-freshen datatype parameters in each type-}TyVarSub -> Change -> Change
+ctrParamsChangeToChangeImpl ctrParamsCh sub outCh = case ctrParamsCh of
+    ListCtrParamChangeNil -> outCh
+    ListCtrParamChangeCons ch ctrParamsCh' ->
+        let tyVarSub = map (\x -> TNeu defaultTNeuMD x Nil) sub in
+        let ch' = applySubChange {subTypeVars: tyVarSub, subTHoles: empty} ch in
+        CArrow ch' (ctrParamsChangeToChangeImpl ctrParamsCh' sub outCh)
+    ListCtrParamChangePlus (CtrParam _ ty) ctrParamsCh' -> Plus (subType sub ty) (ctrParamsChangeToChangeImpl ctrParamsCh' sub outCh)
+    ListCtrParamChangeMinus (CtrParam _ ty) ctrParamsCh' -> Minus (subType sub ty) (ctrParamsChangeToChangeImpl ctrParamsCh' sub outCh)
+

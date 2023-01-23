@@ -6,6 +6,7 @@ import Prim hiding (Type)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List)
+import Data.Map(Map(..))
 import Data.Maybe (Maybe, maybe)
 import Data.Show.Generic (genericShow)
 import Data.UUID (UUID, genUUID)
@@ -161,6 +162,15 @@ data ChangeParam
   = ChangeParam Change
   | PlusParam Type
   | MinusParam Type
+
+data TypeAliasChange
+  = TAForall TypeVarID TypeAliasChange
+  | TAPlus TypeVarID TypeAliasChange
+  | TAMinus TypeVarID TypeAliasChange
+  | TAChange Change
+
+data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange) | TVarDelete -- Do I need TVarInsert? Does TVarDelete need more parameters?
+type KindChangeCtx = Map TypeVarID TVarChange
 
 data KindChange
   = KCArrow KindChange

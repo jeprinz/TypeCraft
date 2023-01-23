@@ -40,14 +40,6 @@ type TypeAliasContext = Map TypeVarID (List TypeBind /\ Type) -- The array is th
 -- TODO: TODO: TODO: I need to combine these and instead have Map TermVarID (K)
 type ChangeCtx = Map TermVarID VarChange
 
-data TypeAliasChange
-  = TAForall TypeVarID TypeAliasChange
-  | TAPlus TypeVarID TypeAliasChange
-  | TAMinus TypeVarID TypeAliasChange
-  | TAChange Change
-
-data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange) | TVarDelete -- Do I need TVarInsert? Does TVarDelete need more parameters?
-type KindChangeCtx = Map TypeVarID TVarChange
 ctxKindCons :: KindChangeCtx -> TypeBind -> TVarChange -> KindChangeCtx
 ctxKindCons kctx (TypeBind _ x) c = insert x c kctx
 
@@ -87,26 +79,6 @@ tyBindsWrapChange ((TypeBind _ x) : tyBinds) ch = CForall x (tyBindsWrapChange t
 tyVarIdsWrapChange :: List TypeVarID -> Change -> PolyChange
 tyVarIdsWrapChange Nil ch = PChange ch
 tyVarIdsWrapChange (x : tyBinds) ch = CForall x (tyVarIdsWrapChange tyBinds ch)
-
-adjustCtxByCtrChanges :: {-the datatype id-}TypeVarID -> {-the datatype's parameters-}List TypeVarID -> ListCtrChange -> ChangeCtx -> ChangeCtx
-adjustCtxByCtrChanges dataType tyVarIds ctrsCh ctx = case ctrsCh of
-    ListCtrChangeNil -> ctx
-    ListCtrChangeCons x ctrParamsCh ctrsCh' -> hole
-    ListCtrChangePlus (Constructor _ (TermBind _ ctrId) ctrParams) ctrsCh' ->
-        let ty = ctrParamsToType dataType tyVarIds ctrParams in
-        insert ctrId (VarInsert ty) ctx
-    ListCtrChangeMinus ctr ctrsCh' -> ctx
-
-ctrParamsChangeToChange :: {-datatype-}TypeVarID -> {-datatype params-}List TypeVarID -> ListCtrParamChange -> PolyChange
-ctrParamsChangeToChange dataType tyVarIds ctrParamsCh =
-    let sub = genFreshener tyVarIds in -- TODO: figure out how to abstract this out and not have repetition with the other instance of these lines below
-    let freshTyVarIds = map (\id -> lookup' id sub) tyVarIds in
-    let ctrOutType = TNeu defaultTNeuMD dataType (map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD x Nil)) freshTyVarIds) in
-    tyVarIdsWrapChange freshTyVarIds (ctrParamsChangeToChangeImpl ctrParamsCh sub (tyInject ctrOutType))
-
-ctrParamsChangeToChangeImpl :: ListCtrParamChange -> {-freshen datatype parameters in each type-}TyVarSub -> Change -> Change
-ctrParamsChangeToChangeImpl = hole
-
 
 --------------------------------------------------------------------------------
 -------------- Metadatta contexts ---------------------------------------------
