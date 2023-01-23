@@ -119,6 +119,15 @@ chTerm kctx ctx c t =
                 let kctx' /\ ctx' = addDataToCtx (kctx /\ ctx) tyBind tyBinds ctrsCh in
                 let c' /\ body' = chTerm kctx' ctx' c body in
                 c' /\ Data md tyBind tyBinds ctrs' body' (snd (getEndpoints c'))
+            c /\ TypeBoundary md ch body ->
+                let ch' = composeChange ch (invert c) in
+                let tyChInside = tyInject (fst (getEndpoints c)) in
+                let chBackUp /\ body' = chTerm kctx ctx tyChInside body in
+                tyChInside /\ TypeBoundary md (composeChange (invert chBackUp) ch') body'
+            c /\ ContextBoundary md x vCh body ->
+                case lookup x kctx of
+                    Just xChInCtx -> hole' "chTerm"
+                    Nothing -> hole' "chTerm"
             cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD (invert cin) t
         )
     in
