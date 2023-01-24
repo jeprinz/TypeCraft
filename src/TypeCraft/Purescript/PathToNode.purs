@@ -333,12 +333,23 @@ typeBindPathToNode isActive typeBindPath innerNode =
                         , typeBindListToNode isActive (AICursor (TLet2 md tyBind {-tyBinds-} def.ty body.term bodyTy : termPath.termPath)) tyBinds
                         , typeToNode isActive (AICursor (TLet3 md tyBind tyBinds.tyBinds {-def-} body.term bodyTy : termPath.termPath)) def
                         , termToNode isActive (AICursor (TLet4 md tyBind tyBinds.tyBinds def.ty {-body-} bodyTy : termPath.termPath)) body
-                        ]
-                    }
-      , data1: \termPath md {-tyBind-} tyBinds ctrs body bodyTy -> hole' "typeBindPathToNode"
-      , typeBindListCons1: \listTypeBindPath {-tyBind-} tyBind -> hole' "typeBindPathToNode"
-      }
-      typeBindPath
+                      ]
+                      }
+        , data1 : \termPath md {-tyBind-} tyBinds ctrs body bodyTy ->
+            let newBI = BITerm in
+                termPathToNode isActive newBI termPath
+                  $ makeTermNode isActive newBI termPath
+                      { tag: DataNodeTag
+                      , kids:
+                          stepKidsTerm termPath.term [
+                            const innerNode,
+                            \th -> typeBindListToNode isActive (AICursor (th : termPath.termPath)) tyBinds,
+                            \th -> ctrListToNode isActive (AICursor (th : termPath.termPath)) ctrs,
+                            \th -> termToNode isActive (AICursor (th : termPath.termPath)) body
+                          ]
+                      }
+        , typeBindListCons1 : \listTypeBindPath {-tyBind-} tyBind -> hole' "typeBindPathToNode"
+    } typeBindPath
 
 {-
 typePathToNode isActive :: Boolean -> BelowInfo Type Unit -> TypePathRecValue -> Node -> Node

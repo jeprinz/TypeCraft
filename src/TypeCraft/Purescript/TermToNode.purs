@@ -310,10 +310,6 @@ typeToNode isActive aboveInfo ty =
   ai :: forall a. AboveInfo a
   ai = aIOnlyCursor aboveInfo
 
--- ListCtr
-ctrListToNode :: Boolean -> AboveInfo Constructor -> ListCtrRecValue -> Node
-ctrListToNode isActive aboveInfo ctrs = hole' "ctrListToNode"
-
 -- Constructor
 ctrToNode :: Boolean -> AboveInfo Constructor -> Constructor -> Node
 ctrToNode isActive aboveInfo ctr = hole' "ctrToNode"
@@ -383,8 +379,8 @@ typeArgListToNode :: Boolean -> AboveInfo (List TypeArg) -> ListTypeArgRecValue 
 typeArgListToNode isActive aboveInfo tyArgs = hole' "typeArgListToNode"
 
 -- ConstructorList
-constructorListToNode :: Boolean -> AboveInfo (List Constructor) -> ListCtrRecValue -> Node
-constructorListToNode isActive aboveInfo ctrs =  -- TODO: This is just a placeholder implementation of this function
+ctrListToNode :: Boolean -> AboveInfo (List Constructor) -> ListCtrRecValue -> Node
+ctrListToNode isActive aboveInfo ctrs =  -- TODO: This is just a placeholder implementation of this function
   makeNode
     { tag: ConstructorListNilNodeTag
     , kids: []
