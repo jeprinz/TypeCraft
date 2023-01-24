@@ -151,21 +151,20 @@ typePathToNode isActive _ { typePath: Nil } node = node
 typePathToNode isActive belowInfo typePath innerNode =
   let
     ty = typePath.ty
-
-    -- makeTypeNode belowInfo typePath partialNode =
-    --   makeNode
-    --     { kids: partialNode.kids
-    --     , getCursor:
-    --         let
-    --           belowType = case belowInfo of
-    --             BITerm -> typePath.ty
-    --             BISelect middlePath term _ _ -> typePath.ty -- TODO: combineDownPathTerm middlePath term
-    --         in
-    --           justWhen isActive \_ ->
-    --             _ { mode = makeCursorMode $ TypeCursor typePath.ctxs typePath.typePath belowType }
-    --     , getSelect: Nothing
-    --     , tag: partialNode.tag
-    --     }
+  -- makeTypeNode belowInfo typePath partialNode =
+  --   makeNode
+  --     { kids: partialNode.kids
+  --     , getCursor:
+  --         let
+  --           belowType = case belowInfo of
+  --             BITerm -> typePath.ty
+  --             BISelect middlePath term _ _ -> typePath.ty -- TODO: combineDownPathTerm middlePath term
+  --         in
+  --           justWhen isActive \_ ->
+  --             _ { mode = makeCursorMode $ TypeCursor typePath.ctxs typePath.typePath belowType }
+  --     , getSelect: Nothing
+  --     , tag: partialNode.tag
+  --     }
   in
     recTypePath
       ( { lambda2:
@@ -216,36 +215,27 @@ typePathToNode isActive belowInfo typePath innerNode =
       )
       typePath
   where
-  makeArgsTerm upRecVal =
+  makeArgsTerm urv =
     { isActive
-    , makeCursor: hole
-    , makeSelect: hole
-    , term: { ctxs: upRecVal.ctxs, ty: upRecVal.ty, term: upRecVal.term }
+    , makeCursor: \_ -> Just $ TermCursor urv.ctxs urv.ty urv.termPath urv.term
+    , makeSelect:
+        \_ -> case belowInfo of
+          BITerm -> Nothing
+          -- TODO: is this correct that it gets the term from `urv`?
+          BISelect middlePath ty ctxs _ -> Just $ TermSelect urv.termPath urv.ctxs urv.ty urv.term middlePath ctxs ty urv.term true
+    , term: { ctxs: urv.ctxs, ty: urv.ty, term: urv.term }
     }
 
-  makeArgsType upRecVal =
+  makeArgsType urv =
     { isActive
-    , makeCursor: hole
-    , makeSelect: hole
-    , ty: { ctxs: upRecVal.ctxs, ty: upRecVal.ty }
+    , makeCursor: \_ -> Just $ TypeCursor urv.ctxs urv.typePath urv.ty
+    , makeSelect:
+        \_ -> case belowInfo of
+          BITerm -> Nothing
+          BISelect middlePath ty ctxs _ -> Just $ TypeSelect urv.typePath urv.ctxs urv.ty middlePath ctxs ty true
+    , ty: { ctxs: urv.ctxs, ty: urv.ty }
     }
 
--- typePathToNode isActive belowInfo path@(tooth : teeth) innerNode = hole
---    case tooth of
---        Let4 md tbind tbinds def {-type-} body bodyTy ->
---            let mdctx' = hole in
---            let innerNode' = makeTypeNode {
---                dat : hole
---                , kids : [
---                    termBindToNode isActive (AICursor (Let1 md {-tbind-} tbinds def ty body bodyTy : teeth)) tbind
---                    , termToNode isActive (AICursor (Let3 md tbind tbinds (bIGetTerm belowInfo) body bodyTy : teeth))
---                        {ctxs, mdty: defaultMDType, ty: ty, term: def}
---                    , innerNode
---                    , termToNode isActive (AICursor (Let5 md tbind tbinds def (bIGetTerm belowInfo) bodyTy : teeth))
---                        {ctxs, mdty: defaultMDType, ty: bodyTy, term: body}
---                ]
---            } in termPathToNode isActive (BITerm (Let md tbind tbinds def (bIGetTerm belowInfo) body bodyTy)) {ctxs, mdty: getParentMDType teeth, ty : ty, termPath: teeth} innerNode'
---        _ -> hole
 constructorPathToNode :: Boolean -> AllContext -> BelowInfo Constructor Unit -> UpPath -> Node -> Node
 constructorPathToNode isActive ctxs belowInfo up innerNode = (hole' "constructorPathToNode isActive")
 
