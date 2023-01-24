@@ -2,8 +2,10 @@ module TypeCraft.Purescript.PathToNode where
 
 import Prelude
 import Prim hiding (Type)
+
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
+import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, Tooth(..), Type, TypeArg, TypeBind, UpPath)
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode)
@@ -74,7 +76,7 @@ termPathToNode isActive belowInfo termPath innerNode =
                   [ arrangeKid upRecVal.termPath (termBindToNode isActive) tBind
                   , arrangeKid upRecVal.termPath (typeBindListToNode isActive) tyBinds
                   , arrangeKid upRecVal.termPath (typeToNode isActive) ty
-                  , arrangeKid upRecVal.termPath (\_ _ -> innerNode) upRecVal.term -- TODO: correct?
+                  , arrangeKid upRecVal.termPath (\_ _ -> innerNode) upRecVal.term
                   , arrangeKid upRecVal.termPath (termToNode isActive) body
                   ]
       , app1:
@@ -173,12 +175,12 @@ termPathToNode isActive belowInfo termPath innerNode =
   where
   args =
     { isActive
-    , makeCursor: \_ -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term -- Just (_ { mode = makeCursorMode $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term })
+    , makeCursor: \_ -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term
     , makeSelect:
         \_ -> case belowInfo of
           BITerm -> Nothing
           BISelect middlePath term ctxs ty -> Just $ TermSelect termPath.termPath termPath.ctxs termPath.ty termPath.term middlePath ctxs ty term true
-    , term: { ctxs: termPath.ctxs, term: termPath.term, ty: termPath.ty }
+    , term: unsafeThrow "TODO: need the above recval"  -- { ctxs: termPath.ctxs, term: termPath.term, ty: termPath.ty } 
     }
 
 typePathToNode :: Boolean -> BelowInfo Type Unit -> TypePathRecValue -> Node -> Node
