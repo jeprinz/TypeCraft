@@ -14,13 +14,14 @@ import Data.String as String
 import Data.Tuple.Nested (type (/\), (/\))
 import Data.UUID (UUID)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar (Change(..), PolyType(..), Term(..), TermVarID, Tooth(..), Type(..), TypeArg(..), TypeHoleID, TypeVarID, freshHole, freshTHole, freshTermBind, freshTypeBind, tyInject)
+import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Key (Key)
-import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultBufferMD, defaultLambdaMD, defaultLetMD, defaultTLetMD, defaultTypeBoundaryMD, defaultVarMD)
+import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State)
 import TypeCraft.Purescript.Util (hole)
-import TypeCraft.Purescript.MD (defaultGADTMD)
+import TypeCraft.Purescript.Util (lookup')
+import Debug (trace)
 
 isNonemptyQueryString :: Query -> Boolean
 isNonemptyQueryString query = not $ String.null query.string
@@ -144,9 +145,17 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
               ]
             ]
   TypeCursor ctxs path ty ->
+    trace ("Debug while looking for type completions: " <> show (Map.values ctxs.mdkctx)) \_ ->
     Writer.execWriter do
       -- TNeu
-      -- TODO: TNeu
+      traverse_
+        ( \(id /\ tyName) -> case Map.lookup id ctxs.kctx of
+            Nothing -> unsafeThrow $ "the entry '" <> show (id /\ tyName) <> "' was found in the ctxs.mdkctx, but not in the ctxs.kctx: '" <> show ctxs.ctx <> "'"
+            Just kind ->
+              when (str `kindaStartsWith` tyName) do
+                Writer.tell [ [CompletionType (makeEmptyTNeu id kind) ] ]
+        )
+        (Map.toUnfoldable ctxs.mdkctx :: Array (UUID /\ String))
       -- Arrow
       when (str `kindaStartsWithAny` [ "arrow", "->" ])
         $ Writer.tell
@@ -165,3 +174,10 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
               ]
             ]
   _ -> [] -- TODO: impl
+
+makeEmptyTNeu :: TypeVarID -> Kind -> Type
+makeEmptyTNeu x k = TNeu defaultTNeuMD x (helper k)
+    where
+        helper :: Kind -> List.List TypeArg
+        helper Type = List.Nil
+        helper (KArrow k) = TypeArg defaultTypeArgMD (freshTHole unit) List.: (helper k)
