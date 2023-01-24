@@ -2,7 +2,6 @@ module TypeCraft.Purescript.TermToNode where
 
 import Prelude
 import Prim hiding (Type)
-
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
@@ -46,29 +45,46 @@ type PreNode
   = Tooth -> Node
 
 arrangeNodeKids ::
-  forall a.
+  forall a info.
   { isActive :: Boolean
-  , aboveInfo :: AboveInfo a
   , tag :: NodeTag
+  , makeCursor :: Unit -> Maybe CursorLocation
+  , makeSelect :: Unit -> Maybe Select
   , stepKids :: Array PreNode -> Array Node
-  , makeCursor :: Unit -> CursorLocation
-  , makeSelect :: UpPath → AllContext → a → UpPath -> Select
   } ->
   Array PreNode ->
   Node
+-- , getCursor: justWhen args.isActive \_ -> _ { mode = makeCursorMode $ args.makeCursor unit }
+-- , getSelect:
+--     case args.aboveInfo of
+--       AICursor _path -> Nothing
+--       AISelect topPath topCtx a midPath -> justWhen args.isActive \_ -> _ { mode = makeSelectMode $ args.makeSelect topPath topCtx a midPath }
 arrangeNodeKids args kids =
   makeNode
     { kids: args.stepKids kids
-    , getCursor: justWhen args.isActive \_ -> _ { mode = makeCursorMode $ args.makeCursor unit }
+    , getCursor:
+        -- join
+        --   $ justWhen args.isActive \info -> case args.makeCursor args.info of
+        --       Nothing -> Nothing
+        --       Just cursorLocation -> Just (_ { mode = makeCursorMode cursorLocation })
+        join
+          $ justWhen args.isActive \_ -> do
+              cursorLocation <- args.makeCursor unit
+              Just (_ { mode = makeCursorMode cursorLocation })
     , getSelect:
-        case args.aboveInfo of
-          AICursor _path -> Nothing
-          AISelect topPath topCtx a midPath -> justWhen args.isActive \_ -> _ { mode = makeSelectMode $ args.makeSelect topPath topCtx a midPath }
+        -- join
+        --   $ justWhen args.isActive \info -> do
+        --       select <- args.makeSelect args.info
+        --       Just (_ { mode = makeSelectMode select })
+        join
+          $ justWhen args.isActive \_ -> do
+              select <- args.makeSelect unit
+              Just (_ { mode = makeSelectMode select })
     , tag: args.tag
     }
 
-arrangeKid :: forall a rc. AboveInfo a -> (AboveInfo a -> rc -> Node) -> rc -> PreNode
-arrangeKid ai k rc th = k (stepAI th ai) rc
+arrangeKidAI :: forall a recVal. AboveInfo a -> (AboveInfo a -> recVal -> Node) -> recVal -> PreNode
+arrangeKidAI info k rv th = k (stepAI th info) rv
 
 -- | Term
 stepKidsTerm :: Term -> Array PreNode -> Array Node
@@ -124,7 +140,8 @@ stepKidsTerm term kids = case term of
 
 arrangeTerm ::
   { isActive :: Boolean
-  , aboveInfo :: AboveInfo (Term /\ Type)
+  , makeCursor :: Unit -> Maybe CursorLocation
+  , makeSelect :: Unit -> Maybe Select
   , term :: TermRecValue
   } ->
   Array PreNode ->
@@ -132,11 +149,13 @@ arrangeTerm ::
 arrangeTerm args =
   arrangeNodeKids
     { isActive: args.isActive
-    , aboveInfo: args.aboveInfo
     , tag: termToNodeTag args.term.term
     , stepKids: stepKidsTerm args.term.term
-    , makeCursor: \_ -> TermCursor args.term.ctxs args.term.ty (aIGetPath args.aboveInfo) args.term.term
-    , makeSelect: \topPath topCtx (topTerm /\ topTy) midPath -> TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term false
+    -- , makeCursor: \_ -> TermCursor args.term.ctxs args.term.ty (aIGetPath args.aboveInfo) args.term.term
+    -- , info: args.info
+    , makeCursor: args.makeCursor
+    -- , makeSelect: \topPath topCtx (topTerm /\ topTy) midPath -> TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term false
+    , makeSelect: args.makeSelect
     }
 
 --- need to track a path for the cursor, and two paths for the selction. also,
@@ -155,65 +174,73 @@ termToNode isActive aboveInfo term =
     { lambda:
         \md tBind ty body _bodyTy ->
           arrangeTerm args
-            [ arrangeKid ai (termBindToNode isActive) tBind
-            , arrangeKid ai (typeToNode isActive) ty
-            , arrangeKid ai (termToNode isActive) body
+            [ arrangeKidAI ai (termBindToNode isActive) tBind
+            , arrangeKidAI ai (typeToNode isActive) ty
+            , arrangeKidAI ai (termToNode isActive) body
             ]
     , app:
         \md t1 t2 _argTy _outTy ->
           arrangeTerm args
-            [ arrangeKid ai (termToNode isActive) t1
-            , arrangeKid ai (termToNode isActive) t2
+            [ arrangeKidAI ai (termToNode isActive) t1
+            , arrangeKidAI ai (termToNode isActive) t2
             ]
     , var: \md x targs -> setNodeLabel (x `lookup'` term.ctxs.mdctx) $ arrangeTerm args []
     , lett:
         \md tBind tyBinds def defTy body _bodyTy ->
           arrangeTerm args
-            [ arrangeKid ai (termBindToNode isActive) tBind
-            , arrangeKid ai (typeBindListToNode isActive) tyBinds
-            , arrangeKid ai (termToNode isActive) def
-            , arrangeKid ai (typeToNode isActive) defTy
-            , arrangeKid ai (termToNode isActive) body
+            [ arrangeKidAI ai (termBindToNode isActive) tBind
+            , arrangeKidAI ai (typeBindListToNode isActive) tyBinds
+            , arrangeKidAI ai (termToNode isActive) def
+            , arrangeKidAI ai (typeToNode isActive) defTy
+            , arrangeKidAI ai (termToNode isActive) body
             ]
     , dataa:
         \md x tbinds ctrs body _bodyTy ->
           arrangeTerm args
-            [ arrangeKid ai (typeBindToNode isActive) x
-            , arrangeKid ai (typeBindListToNode isActive) tbinds
-            , arrangeKid ai (constructorListToNode isActive) ctrs
-            , arrangeKid ai (termToNode isActive) body
+            [ arrangeKidAI ai (typeBindToNode isActive) x
+            , arrangeKidAI ai (typeBindListToNode isActive) tbinds
+            , arrangeKidAI ai (constructorListToNode isActive) ctrs
+            , arrangeKidAI ai (termToNode isActive) body
             ]
     , tlet:
         \md tyBind tyBinds def body _bodyTy ->
           arrangeTerm args
-            [ arrangeKid ai (typeBindToNode isActive) tyBind
-            , arrangeKid ai (typeBindListToNode isActive) tyBinds
-            , arrangeKid ai (typeToNode isActive) def
-            , arrangeKid ai (termToNode isActive) body
+            [ arrangeKidAI ai (typeBindToNode isActive) tyBind
+            , arrangeKidAI ai (typeBindListToNode isActive) tyBinds
+            , arrangeKidAI ai (typeToNode isActive) def
+            , arrangeKidAI ai (termToNode isActive) body
             ]
     , typeBoundary:
         \md ch t ->
           arrangeTerm args
-            [ arrangeKid ai (termToNode isActive) t
-            , arrangeKid ai (const changeToNode) { ch, ctxs: term.ctxs }
+            [ arrangeKidAI ai (termToNode isActive) t
+            , arrangeKidAI ai (const changeToNode) { ch, ctxs: term.ctxs }
             ]
     , contextBoundary:
         \md x c t ->
           arrangeTerm args
-            [ arrangeKid ai (termToNode isActive) t
+            [ arrangeKidAI ai (termToNode isActive) t
             ]
     , hole: \md -> arrangeTerm args []
     , buffer:
         \md def defTy body _bodyTy ->
           arrangeTerm args
-            [ arrangeKid ai (termToNode isActive) def
-            , arrangeKid ai (typeToNode isActive) defTy
-            , arrangeKid ai (termToNode isActive) body
+            [ arrangeKidAI ai (termToNode isActive) def
+            , arrangeKidAI ai (typeToNode isActive) defTy
+            , arrangeKidAI ai (termToNode isActive) body
             ]
     }
     term
   where
-  args = { isActive, aboveInfo, term }
+  args =
+    { isActive
+    , makeCursor: \_ -> Just $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
+    , makeSelect:
+        \_ -> case aboveInfo of
+          AICursor _path -> Nothing
+          AISelect topPath topCtx (topTerm /\ topTy) midPath -> Just $ TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term false
+    , term
+    }
 
   ai :: forall a. AboveInfo a
   ai = aIOnlyCursor aboveInfo
@@ -234,19 +261,22 @@ stepKidsType ty kids = case ty of
 
 arrangeType ::
   { isActive :: Boolean
-  , aboveInfo :: AboveInfo Type
   , ty :: TypeRecValue
+  , makeCursor :: Unit -> Maybe CursorLocation
+  , makeSelect :: Unit -> Maybe Select
   } ->
   Array PreNode ->
   Node
 arrangeType args =
   arrangeNodeKids
     { isActive: args.isActive
-    , aboveInfo: args.aboveInfo
     , tag: typeToNodeTag args.ty.ty
     , stepKids: stepKidsType args.ty.ty
-    , makeCursor: \_ -> TypeCursor args.ty.ctxs (aIGetPath args.aboveInfo) args.ty.ty
-    , makeSelect: \topPath topCtx topTy midPath -> TypeSelect topPath topCtx topTy midPath args.ty.ctxs args.ty.ty false
+    -- , makeCursor: \_ -> TypeCursor args.ty.ctxs (aIGetPath args.aboveInfo) args.ty.ty
+    -- , makeSelect: \topPath topCtx topTy midPath -> TypeSelect topPath topCtx topTy midPath args.ty.ctxs args.ty.ty false
+    -- , info: args.info
+    , makeCursor: args.makeCursor
+    , makeSelect: args.makeSelect
     }
 
 typeToNode :: Boolean -> AboveInfo Type -> TypeRecValue -> Node
@@ -255,19 +285,27 @@ typeToNode isActive aboveInfo ty =
     { arrow:
         \md ty1 ty2 ->
           arrangeType args
-            [ arrangeKid ai (typeToNode isActive) ty1
-            , arrangeKid ai (typeToNode isActive) ty2
+            [ arrangeKidAI ai (typeToNode isActive) ty1
+            , arrangeKidAI ai (typeToNode isActive) ty2
             ]
     , tNeu:
         \md x tyArgs ->
           arrangeType args
-            [ arrangeKid ai (typeArgListToNode isActive) tyArgs
+            [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
             ]
     , tHole: \md x -> arrangeType args []
     }
     ty
   where
-  args = { isActive, aboveInfo, ty }
+  args =
+    { isActive
+    , makeCursor: \_ -> Just $ TypeCursor args.ty.ctxs (aIGetPath aboveInfo) ty.ty
+    , makeSelect:
+        \_ -> case aboveInfo of
+          AICursor _path -> Nothing
+          AISelect topPath topCtx topTy midPath -> Just $ TypeSelect topPath topCtx topTy midPath ty.ctxs ty.ty false
+    , ty
+    }
 
   ai :: forall a. AboveInfo a
   ai = aIOnlyCursor aboveInfo
