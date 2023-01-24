@@ -91,11 +91,11 @@ stepKidsTerm term kids = case term of
   Var md x args
     | [] <- kids -> []
   Let md bnd bnds imp sig bod ty
-    | [ k_bnd, k_bnds, k_imp, k_sig, k_bod ] <- kids ->
+    | [ k_bnd, k_bnds, k_sig, k_imp, k_bod ] <- kids ->
       [ k_bnd (Let1 md bnds imp sig bod ty)
       , k_bnds (Let2 md bnd imp sig bod ty)
+      , setNodeIndentation (indentIf md.typeIndented) $ k_sig (Let4 md bnd bnds imp bod ty) -- NOTE: Yes, these are out of order. Yes, they need to stay like that.
       , setNodeIndentation (indentIf md.defIndented) $ k_imp (Let3 md bnd bnds sig bod ty)
-      , setNodeIndentation (indentIf md.typeIndented) $ k_sig (Let4 md bnd bnds imp bod ty)
       , setNodeIndentation (newlineIf md.bodyIndented) $ k_bod (Let5 md bnd bnds imp sig ty)
       ]
   Data md bnd bnds ctrs bod ty
@@ -126,12 +126,14 @@ stepKidsTerm term kids = case term of
       ]
   _ -> unsafeThrow $ "stepKidsTerm: wrong number of kids\nterm = " <> show term <> "\nlength kids = " <> show (Array.length kids)
 
-arrangeTerm ::
+type TermNodeCursorInfo =
   { isActive :: Boolean
   , makeCursor :: Unit -> Maybe CursorLocation
   , makeSelect :: Unit -> Maybe Select
   , term :: TermRecValue
-  } ->
+  }
+arrangeTerm ::
+  TermNodeCursorInfo ->
   Array PreNode ->
   Node
 arrangeTerm args =
@@ -175,8 +177,8 @@ termToNode isActive aboveInfo term =
           arrangeTerm args
             [ arrangeKidAI ai (termBindToNode isActive) tBind
             , arrangeKidAI ai (typeBindListToNode isActive) tyBinds
-            , arrangeKidAI ai (termToNode isActive) def
             , arrangeKidAI ai (typeToNode isActive) defTy
+            , arrangeKidAI ai (termToNode isActive) def
             , arrangeKidAI ai (termToNode isActive) body
             ]
     , dataa:
@@ -245,12 +247,14 @@ stepKidsType ty kids = case ty of
     | [] <- kids -> []
   _ -> unsafeThrow "stepKidsType: wrong number of kids"
 
-arrangeType ::
+type TypeNodeCursorInfo =
   { isActive :: Boolean
   , ty :: TypeRecValue
   , makeCursor :: Unit -> Maybe CursorLocation
   , makeSelect :: Unit -> Maybe Select
-  } ->
+  }
+arrangeType ::
+  TypeNodeCursorInfo ->
   Array PreNode ->
   Node
 arrangeType args =
