@@ -13,9 +13,7 @@ import TypeCraft.Purescript.PathRec (ListCtrParamPathRecValue, ListCtrPathRecVal
 import TypeCraft.Purescript.PathRec (TypeBindPathRecValue)
 import TypeCraft.Purescript.PathRec (recTypeBindPath)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode)
-import TypeCraft.Purescript.TermToNode (AboveInfo(..), termBindToNode, termToNode, typeToNode)
-import TypeCraft.Purescript.TermToNode (typeBindListToNode, constructorListToNode, stepKidsTerm)
-import TypeCraft.Purescript.TermToNode (typeBindToNode)
+import TypeCraft.Purescript.TermToNode
 import TypeCraft.Purescript.Util (hole', justWhen)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
@@ -167,7 +165,7 @@ termPathToNode isActive belowInfo termPath innerNode =
                   , kids: [
                     typeBindToNode isActive (AICursor (Data1 md tyBinds.tyBinds ctrs.ctrs term bodyTy : upRecVal.termPath)) tyBind
                     , typeBindListToNode isActive (AICursor (Data2 md tyBind.tyBind ctrs.ctrs term bodyTy : upRecVal.termPath)) tyBinds
-                    , constructorListToNode isActive (AICursor (Data3 md tyBind.tyBind tyBinds.tyBinds term bodyTy : upRecVal.termPath)) ctrs
+                    , ctrListToNode isActive (AICursor (Data3 md tyBind.tyBind tyBinds.tyBinds term bodyTy : upRecVal.termPath)) ctrs
                     , innerNode
                   ]
                   }
@@ -319,7 +317,19 @@ typeBindPathToNode isActive typeBindPath innerNode =
                         , termToNode isActive (AICursor (TLet4 md tyBind tyBinds.tyBinds def.ty {-body-} bodyTy : termPath.termPath)) body
                       ]
                       }
-        , data1 : \termPath md {-tyBind-} tyBinds ctrs body bodyTy -> hole' "typeBindPathToNode"
+        , data1 : \termPath md {-tyBind-} tyBinds ctrs body bodyTy ->
+            let newBI = BITerm in
+                termPathToNode isActive newBI termPath
+                  $ makeTermNode isActive newBI termPath
+                      { tag: DataNodeTag
+                      , kids:
+                          stepKidsTerm termPath.term [
+                            const innerNode,
+                            \th -> typeBindListToNode isActive (AICursor (th : termPath.termPath)) tyBinds,
+                            \th -> ctrListToNode isActive (AICursor (th : termPath.termPath)) ctrs,
+                            \th -> termToNode isActive (AICursor (th : termPath.termPath)) body
+                          ]
+                      }
         , typeBindListCons1 : \listTypeBindPath {-tyBind-} tyBind -> hole' "typeBindPathToNode"
     } typeBindPath
 
