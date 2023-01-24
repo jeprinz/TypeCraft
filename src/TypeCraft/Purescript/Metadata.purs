@@ -47,7 +47,7 @@ defaultTNeuMD :: TNeuMD
 defaultTNeuMD = {}
 
 defaultTypeArgMD :: TypeArgMD
-defaultTypeArgMD = { indented: true }
+defaultTypeArgMD = { indented: false }
 
 defaultTHoleMD :: THoleMD
 defaultTHoleMD = {}

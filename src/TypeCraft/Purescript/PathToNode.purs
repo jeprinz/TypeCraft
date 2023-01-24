@@ -10,8 +10,8 @@ import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, Toot
 import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode)
 import TypeCraft.Purescript.PathRec (ListCtrParamPathRecValue, ListCtrPathRecValue, ListTypeArgPathRecValue, ListTypeBindPathRecValue, TermBindPathRecValue, TermPathRecValue, TypePathRecValue, recListTypeBindPath, recTermBindPath, recTermPath, recTypePath, TypeBindPathRecValue, recTypeBindPath)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode)
-import TypeCraft.Purescript.TermToNode (AboveInfo(..), PreNode, arrangeTerm, ctrListToNode, stepKidsTerm, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode)
-import TypeCraft.Purescript.Util (hole', justWhen)
+import TypeCraft.Purescript.TermToNode (AboveInfo(..), PreNode, arrangeTerm, arrangeType, ctrListToNode, stepKidsTerm, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode)
+import TypeCraft.Purescript.Util (hole, hole', justWhen)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
@@ -152,99 +152,83 @@ typePathToNode isActive belowInfo typePath innerNode =
   let
     ty = typePath.ty
 
-    makeTypeNode belowInfo typePath partialNode =
-      makeNode
-        { kids: partialNode.kids
-        , getCursor:
-            let
-              belowType = case belowInfo of
-                BITerm -> typePath.ty
-                BISelect middlePath term _ _ -> typePath.ty -- TODO: combineDownPathTerm middlePath term
-            in
-              justWhen isActive \_ ->
-                _ { mode = makeCursorMode $ TypeCursor typePath.ctxs typePath.typePath belowType }
-        , getSelect: Nothing
-        , tag: partialNode.tag
-        }
+    -- makeTypeNode belowInfo typePath partialNode =
+    --   makeNode
+    --     { kids: partialNode.kids
+    --     , getCursor:
+    --         let
+    --           belowType = case belowInfo of
+    --             BITerm -> typePath.ty
+    --             BISelect middlePath term _ _ -> typePath.ty -- TODO: combineDownPathTerm middlePath term
+    --         in
+    --           justWhen isActive \_ ->
+    --             _ { mode = makeCursorMode $ TypeCursor typePath.ctxs typePath.typePath belowType }
+    --     , getSelect: Nothing
+    --     , tag: partialNode.tag
+    --     }
   in
     recTypePath
       ( { lambda2:
             \termPath md tBind {-Type-} body bodyTy ->
-              let
-                newBI = BITerm
-              in {- (stepBI (Lambda2 md tBind.tBind body.term bodyTy) BITerm) -}
-                termPathToNode isActive newBI termPath
-                  $ makeTermNode isActive newBI termPath
-                      { kids:
-                          [ termBindToNode isActive (AICursor (Lambda1 md ty body.term bodyTy : termPath.termPath)) tBind
-                          , innerNode
-                          , termToNode isActive (AICursor (Lambda3 md tBind.tBind ty bodyTy : termPath.termPath)) body
-                          ]
-                      , tag: LambdaNodeTag
-                      }
+              termPathToNode isActive BITerm termPath
+                $ arrangeTerm (makeArgsTerm termPath)
+                    [ arrangeKid termPath.termPath (termBindToNode isActive) tBind
+                    , arrangeKid termPath.termPath (\_ _ -> innerNode) ty
+                    , arrangeKid termPath.termPath (termToNode isActive) body
+                    ]
         , let4:
             \termPath md tBind tyBinds def {-Type-} body bodyTy ->
-              let
-                newBI = BITerm
-              in {- (stepBI (Let4 md tBind.tBind tyBinds.tyBinds def.term body.term bodyTy) BITerm) -}
-                termPathToNode isActive newBI termPath
-                  $ makeTermNode isActive newBI termPath
-                      { kids:
-                          [ termBindToNode isActive (AICursor (Let1 md {-tbind-} tyBinds.tyBinds def.term typePath.ty body.term bodyTy : termPath.termPath)) tBind
-                          , typeBindListToNode isActive (AICursor (Let2 md tBind.tBind {-List TypeBind-} def.term ty body.term bodyTy : termPath.termPath)) tyBinds
-                          , innerNode
-                          , termToNode isActive (AICursor (Let3 md tBind.tBind tyBinds.tyBinds {-Term-} typePath.ty body.term bodyTy : termPath.termPath)) def
-                          , termToNode isActive (AICursor (Let5 md tBind.tBind tyBinds.tyBinds def.term typePath.ty {-Term-} bodyTy : termPath.termPath)) body
-                          ]
-                      , tag: LetNodeTag
-                      }
+              termPathToNode isActive BITerm termPath
+                $ arrangeTerm (makeArgsTerm termPath)
+                    [ arrangeKid termPath.termPath (termBindToNode isActive) tBind
+                    , arrangeKid termPath.termPath (typeBindListToNode isActive) tyBinds
+                    , arrangeKid termPath.termPath (\_ _ -> innerNode) ty
+                    , arrangeKid termPath.termPath (termToNode isActive) def
+                    , arrangeKid termPath.termPath (termToNode isActive) body
+                    ]
         , buffer2: \termPath md def {-Type-} body bodyTy -> (hole' "typePathToNode isActive")
         , tLet3:
             \termPath md tyBind tyBinds {-Type-} body bodyTy ->
-              let
-                newBI = BITerm
-              in
-                termPathToNode isActive newBI termPath
-                  $ makeTermNode isActive newBI termPath
-                      { tag: TLetNodeTag
-                      , kids:
-                          [ typeBindToNode isActive (AICursor (TLet1 md {-tyBind-} tyBinds.tyBinds ty body.term bodyTy : termPath.termPath)) tyBind
-                          , typeBindListToNode isActive (AICursor (TLet2 md tyBind.tyBind {-tyBinds-} ty body.term bodyTy : termPath.termPath)) tyBinds
-                          , innerNode
-                          , termToNode isActive (AICursor (TLet4 md tyBind.tyBind tyBinds.tyBinds ty {-body-} bodyTy : termPath.termPath)) body
-                          ]
-                      }
+              termPathToNode isActive BITerm termPath
+                $ arrangeTerm (makeArgsTerm termPath)
+                    [ arrangeKid termPath.termPath (typeBindToNode isActive) tyBind
+                    , arrangeKid termPath.termPath (typeBindListToNode isActive) tyBinds
+                    , arrangeKid termPath.termPath (\_ _ -> innerNode) ty
+                    , arrangeKid termPath.termPath (termToNode isActive) body
+                    ]
         , ctrParam1: \ctrParamPath md {-Type-} -> (hole' "typePathToNode isActive")
         , typeArg1: \typeArgPath md {-Type-} -> (hole' "typePathToNode isActive")
         , arrow1:
             \typePath md tyOut {-Type-} ->
-              let
-                newBI = stepBI (Arrow1 md tyOut.ty) belowInfo
-              in
-                typePathToNode isActive newBI typePath
-                  $ makeTypeNode newBI typePath
-                      { kids:
-                          [ innerNode
-                          , typeToNode isActive (AICursor (Arrow2 md ty {-Type-} : typePath.typePath)) tyOut
-                          ]
-                      , tag: ArrowNodeTag
-                      }
+              typePathToNode isActive (stepBI (Arrow1 md tyOut.ty) belowInfo) typePath
+                $ arrangeType (makeArgsType typePath)
+                    [ arrangeKid typePath.typePath (\_ _ -> innerNode) ty
+                    , arrangeKid typePath.typePath (typeToNode isActive) tyOut
+                    ]
         , arrow2:
             \typePath md tyIn {-Type-} ->
-              let
-                newBI = stepBI (Arrow2 md tyIn.ty) belowInfo
-              in
-                typePathToNode isActive newBI typePath
-                  $ makeTypeNode newBI typePath
-                      { kids:
-                          [ typeToNode isActive (AICursor (Arrow1 md {-Type-} ty : typePath.typePath)) tyIn
-                          , innerNode
-                          ]
-                      , tag: ArrowNodeTag
-                      }
+              typePathToNode isActive (stepBI (Arrow2 md tyIn.ty) belowInfo) typePath
+                $ arrangeType (makeArgsType typePath)
+                    [ arrangeKid typePath.typePath (typeToNode isActive) tyIn
+                    , arrangeKid typePath.typePath (\_ _ -> innerNode) ty
+                    ]
         }
       )
       typePath
+  where
+  makeArgsTerm upRecVal =
+    { isActive
+    , makeCursor: hole
+    , makeSelect: hole
+    , term: { ctxs: upRecVal.ctxs, ty: upRecVal.ty, term: upRecVal.term }
+    }
+
+  makeArgsType upRecVal =
+    { isActive
+    , makeCursor: hole
+    , makeSelect: hole
+    , ty: { ctxs: upRecVal.ctxs, ty: upRecVal.ty }
+    }
 
 -- typePathToNode isActive belowInfo path@(tooth : teeth) innerNode = hole
 --    case tooth of

@@ -2,9 +2,9 @@ module TypeCraft.Purescript.ModifyState where
 
 import Data.Tuple.Nested
 import Prelude
-
 import Data.Array ((:), uncons)
 import Data.Array as Array
+import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.String as String
@@ -19,7 +19,8 @@ import TypeCraft.Purescript.Grammar (tyInject)
 import TypeCraft.Purescript.Key (Key)
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
-import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select, State, emptyQuery, getCompletion, isEmptyQuery, makeCursorMode)
+import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
+import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), Mode(..), Query, Select, State, CursorMode, emptyQuery, getCompletion, isEmptyQuery, makeCursorMode)
 import TypeCraft.Purescript.Unification (applySubType, subTermPath)
 import TypeCraft.Purescript.Util (hole')
 
@@ -41,6 +42,9 @@ handleKey key st = case st.mode of
       | key.key == "ArrowLeft" -> moveCursorPrev st
       | key.key == "ArrowRight" -> moveCursorNext st
       | key.key == "Escape" -> pure $ st { mode = CursorMode cursorMode { query = emptyQuery } }
+      | key.key == "Tab" -> do
+        cursorLocation' <- toggleIndentation cursorMode.cursorLocation
+        pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
       | key.key == "Enter" -> do
         cursorMode' <- submitQuery cursorMode
         -- checkpoints the pre-submission mode with a cleared query string
@@ -164,6 +168,7 @@ delete st = case st.mode of
     TypeCursor ctxs path ty -> do
       let
         ty' = (freshTHole unit)
+
         cursorLocation' = TypeCursor ctxs (chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty' ty) path) ty'
       pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
     _ -> Nothing

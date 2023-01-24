@@ -122,3 +122,9 @@
 .punctuation.assign {
   margin: 0 0.5rem;
 }
+
+/* indentation */
+
+.indent-step {
+  width: 1rem;
+}
