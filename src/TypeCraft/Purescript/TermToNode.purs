@@ -2,6 +2,7 @@ module TypeCraft.Purescript.TermToNode where
 
 import Prelude
 import Prim hiding (Type)
+import Data.Array as Array
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
@@ -45,7 +46,6 @@ type PreNode
   = Tooth -> Node
 
 arrangeNodeKids ::
-  forall a info.
   { isActive :: Boolean
   , tag :: NodeTag
   , makeCursor :: Unit -> Maybe CursorLocation
@@ -54,28 +54,15 @@ arrangeNodeKids ::
   } ->
   Array PreNode ->
   Node
--- , getCursor: justWhen args.isActive \_ -> _ { mode = makeCursorMode $ args.makeCursor unit }
--- , getSelect:
---     case args.aboveInfo of
---       AICursor _path -> Nothing
---       AISelect topPath topCtx a midPath -> justWhen args.isActive \_ -> _ { mode = makeSelectMode $ args.makeSelect topPath topCtx a midPath }
 arrangeNodeKids args kids =
   makeNode
     { kids: args.stepKids kids
     , getCursor:
-        -- join
-        --   $ justWhen args.isActive \info -> case args.makeCursor args.info of
-        --       Nothing -> Nothing
-        --       Just cursorLocation -> Just (_ { mode = makeCursorMode cursorLocation })
         join
           $ justWhen args.isActive \_ -> do
               cursorLocation <- args.makeCursor unit
               Just (_ { mode = makeCursorMode cursorLocation })
     , getSelect:
-        -- join
-        --   $ justWhen args.isActive \info -> do
-        --       select <- args.makeSelect args.info
-        --       Just (_ { mode = makeSelectMode select })
         join
           $ justWhen args.isActive \_ -> do
               select <- args.makeSelect unit
@@ -86,7 +73,8 @@ arrangeNodeKids args kids =
 arrangeKidAI :: forall a recVal. AboveInfo a -> (AboveInfo a -> recVal -> Node) -> recVal -> PreNode
 arrangeKidAI info k rv th = k (stepAI th info) rv
 
--- | Term
+-- ** Term
+-- | here is where indentation and parenthesization happens
 stepKidsTerm :: Term -> Array PreNode -> Array Node
 stepKidsTerm term kids = case term of
   App md apl arg ty1 ty2
@@ -136,7 +124,7 @@ stepKidsTerm term kids = case term of
       , k_sig (Buffer2 md imp bod ty)
       , k_bod (Buffer3 md imp sig ty)
       ]
-  _ -> unsafeThrow "stepKidsTerm: wrong number of kids"
+  _ -> unsafeThrow $ "stepKidsTerm: wrong number of kids\nterm = " <> show term <> "\nlength kids = " <> show (Array.length kids)
 
 arrangeTerm ::
   { isActive :: Boolean
@@ -151,10 +139,7 @@ arrangeTerm args =
     { isActive: args.isActive
     , tag: termToNodeTag args.term.term
     , stepKids: stepKidsTerm args.term.term
-    -- , makeCursor: \_ -> TermCursor args.term.ctxs args.term.ty (aIGetPath args.aboveInfo) args.term.term
-    -- , info: args.info
     , makeCursor: args.makeCursor
-    -- , makeSelect: \topPath topCtx (topTerm /\ topTy) midPath -> TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term false
     , makeSelect: args.makeSelect
     }
 
@@ -199,7 +184,7 @@ termToNode isActive aboveInfo term =
           arrangeTerm args
             [ arrangeKidAI ai (typeBindToNode isActive) x
             , arrangeKidAI ai (typeBindListToNode isActive) tbinds
-            , arrangeKidAI ai (constructorListToNode isActive) ctrs
+            , arrangeKidAI ai (ctrListToNode isActive) ctrs
             , arrangeKidAI ai (termToNode isActive) body
             ]
     , tlet:
@@ -245,7 +230,8 @@ termToNode isActive aboveInfo term =
   ai :: forall a. AboveInfo a
   ai = aIOnlyCursor aboveInfo
 
--- | Type
+-- ** Type
+-- | here is where indentation and parenthesization happens
 stepKidsType :: Type -> Array PreNode -> Array Node
 stepKidsType ty kids = case ty of
   Arrow md ty1 ty2
@@ -272,9 +258,6 @@ arrangeType args =
     { isActive: args.isActive
     , tag: typeToNodeTag args.ty.ty
     , stepKids: stepKidsType args.ty.ty
-    -- , makeCursor: \_ -> TypeCursor args.ty.ctxs (aIGetPath args.aboveInfo) args.ty.ty
-    -- , makeSelect: \topPath topCtx topTy midPath -> TypeSelect topPath topCtx topTy midPath args.ty.ctxs args.ty.ty false
-    -- , info: args.info
     , makeCursor: args.makeCursor
     , makeSelect: args.makeSelect
     }
