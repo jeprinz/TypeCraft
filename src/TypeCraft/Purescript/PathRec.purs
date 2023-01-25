@@ -2,7 +2,7 @@ module TypeCraft.Purescript.PathRec where
 
 import Prelude
 import Prim hiding (Type)
-import Data.Map.Internal (delete, insert)
+import Data.Map.Internal (insert)
 
 import TypeCraft.Purescript.Grammar (Change, Constructor(..), CtrParam(..), PolyType(..), Term(..), TermBind(..), TermVarID, Tooth(..), Type(..), TypeArg(..), TypeBind(..), TypeVarID, UpPath, VarChange)
 import Effect.Exception.Unsafe (unsafeThrow)
@@ -14,6 +14,7 @@ import TypeCraft.Purescript.TermRec (CtrParamRecValue, CtrRecValue, ListCtrParam
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Context (addLetToCtx)
+import TypeCraft.Purescript.Util (delete')
 
 type TermPathRecValue = {ctxs :: AllContext, ty :: Type, term :: Term, termPath :: UpPath}
 type TypePathRecValue = {ctxs :: AllContext, ty :: Type, typePath :: UpPath}
@@ -47,17 +48,17 @@ type TermPathRec a = {
 recTermPath :: forall a. TermPathRec a -> TermPathRecValue -> a
 recTermPath args {ctxs, ty, term, termPath: (Let3 md tBind@(TermBind xmd x) tyBinds {-Term-} defTy body bodyTy) : up} =
     if not (ty == defTy) then unsafeThrow "dynamic type error detected 1" else
-    let ctxs' = ctxs{mdctx = delete x ctxs.mdctx, ctx = delete x ctxs.ctx} in
+    let ctxs' = ctxs{mdctx = delete' x ctxs.mdctx, ctx = delete' x ctxs.ctx} in
     args.let3 {ctxs: ctxs', ty: bodyTy, term: Let md tBind tyBinds term defTy body bodyTy, termPath: up} md
-        {ctxs, tBind} {ctxs, tyBinds}
+        {ctxs: ctxs', tBind} {ctxs: ctxs', tyBinds}
         {ctxs: ctxs', ty: defTy}
         {ctxs, ty: bodyTy, term: body} -- body
         bodyTy -- bodyTy
 recTermPath args {ctxs, ty, term, termPath: (Let5 md tBind@(TermBind _ x) tyBinds def defTy {-Term-} bodyTy) : up} =
     if not (ty == bodyTy) then unsafeThrow "dynamic type error detedted" else
-    let ctxs' = ctxs{mdctx = delete x ctxs.mdctx, ctx = delete x ctxs.ctx} in
+    let ctxs' = ctxs{mdctx = delete' x ctxs.mdctx, ctx = delete' x ctxs.ctx} in
     args.let5 {ctxs: ctxs', ty: ty, term: (Let md tBind tyBinds def defTy term bodyTy), termPath: up} md
-        {ctxs, tBind} {ctxs, tyBinds}
+        {ctxs: ctxs', tBind} {ctxs: ctxs', tyBinds}
         {ctxs, ty: defTy, term: def} --def
         {ctxs: ctxs', ty: defTy} -- defTy
         bodyTy -- bodyTy
@@ -73,7 +74,7 @@ recTermPath args {ctxs, ty, term, termPath: (App2 md t1 {-Term-} argTy outTy) : 
         argTy outTy
 recTermPath args {ctxs, ty, term, termPath: (Lambda3 md tBind@(TermBind _ x) argTy {-Term-} bodyTy) : up} =
     if not (bodyTy == ty) then unsafeThrow "dynamic type error detected 4" else
-    let ctxs' = ctxs{mdctx= delete x ctxs.mdctx, ctx= delete x ctxs.ctx} in
+    let ctxs' = ctxs{mdctx= delete' x ctxs.mdctx, ctx= delete' x ctxs.ctx} in
     args.lambda3 {ctxs: ctxs', ty: Arrow defaultArrowMD argTy bodyTy, term: Lambda md tBind argTy term bodyTy, termPath: up}
         md {ctxs, tBind} {ctxs: ctxs', ty: argTy}
         bodyTy

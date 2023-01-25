@@ -6,7 +6,7 @@ import TypeCraft.Purescript.Freshen
 import TypeCraft.Purescript.Grammar
 
 import Data.List (List(..), (:))
-import Data.Map.Internal (Map, delete, empty, filterKeys, insert, lookup)
+import Data.Map.Internal (Map, empty, filterKeys, insert, lookup)
 import Data.Map.Internal (empty, lookup, insert, union, mapMaybeWithKey)
 import Data.Maybe (Maybe(..))
 import Data.Set (Set)
@@ -18,8 +18,7 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Freshen (freshenChange)
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.MD
-import TypeCraft.Purescript.Util (hole')
-import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Util (hole', hole, delete')
 import TypeCraft.Purescript.Util (lookup')
 
 {-
@@ -50,7 +49,7 @@ addLetToCCtx ctx tBind@(TermBind _ x) tyBinds ty =
         insert x (VarTypeChange (pTyInject (tyBindsWrapType tyBinds ty))) ctx
 
 removeLetFromCCtx :: CAllContext -> TermBind -> CAllContext
-removeLetFromCCtx (kctx /\ ctx) (TermBind _ x) = kctx /\ delete x ctx
+removeLetFromCCtx (kctx /\ ctx) (TermBind _ x) = kctx /\ delete' x ctx
 
 kCtxInject :: TypeContext -> TypeAliasContext -> KindChangeCtx
 kCtxInject kctx actx = mapMaybeWithKey (\x kind
@@ -79,6 +78,10 @@ tyBindsWrapChange ((TypeBind _ x) : tyBinds) ch = CForall x (tyBindsWrapChange t
 tyVarIdsWrapChange :: List TypeVarID -> Change -> PolyChange
 tyVarIdsWrapChange Nil ch = PChange ch
 tyVarIdsWrapChange (x : tyBinds) ch = CForall x (tyVarIdsWrapChange tyBinds ch)
+
+data NameChange = NameChangeInsert String | NameChangeDelete String | NameChangeSame String
+type MDTypeChangeCtx = Map TypeVarID NameChange
+type MDTermChangeCtx = Map TypeVarID NameChange
 
 --------------------------------------------------------------------------------
 -------------- Metadatta contexts ---------------------------------------------
@@ -168,8 +171,8 @@ removeDataFromCtx :: AllContext -> TypeBind -> List TypeBind -> List Constructor
 removeDataFromCtx ctxs (TypeBind _ x) _tyBinds ctrs =
     let ctrIds = constructorIds ctrs in
     ctxs{
-        kctx = delete x ctxs.kctx
-        , mdkctx = delete x ctxs.mdkctx
+        kctx = delete' x ctxs.kctx
+        , mdkctx = delete' x ctxs.mdkctx
         , ctx= filterKeys (\k -> not (member k ctrIds)) ctxs.ctx
         , mdctx= filterKeys (\k -> not (member k ctrIds)) ctxs.mdctx
     }
@@ -183,7 +186,7 @@ addTLetToCtx ctxs tyBind@(TypeBind xmd x) tyBinds def =
         }
 
 removeTLetFromCtx :: AllContext -> TypeBind -> AllContext
-removeTLetFromCtx ctxs (TypeBind _ x) = ctxs{kctx= delete x ctxs.kctx, mdkctx= delete x ctxs.mdkctx, actx = delete x ctxs.actx}
+removeTLetFromCtx ctxs (TypeBind _ x) = ctxs{kctx= delete' x ctxs.kctx, mdkctx= delete' x ctxs.mdkctx, actx = delete' x ctxs.actx}
 
 addLetToCtx :: AllContext -> TermBind -> List TypeBind -> Type -> AllContext
 addLetToCtx ctxs tBind@(TermBind xmd x) tyBinds defTy

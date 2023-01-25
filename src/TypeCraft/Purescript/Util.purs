@@ -2,7 +2,7 @@ module TypeCraft.Purescript.Util where
 
 import Prelude
 import Effect.Exception.Unsafe (unsafeThrow)
-import Data.Map (Map, lookup)
+import Data.Map (Map, lookup, member, delete)
 import Data.Maybe (Maybe(..))
 import Data.List(List, head)
 
@@ -34,3 +34,5 @@ justWhen :: forall a. Boolean -> (Unit -> a) -> Maybe a
 justWhen false _ = Nothing
 justWhen true k = Just (k unit)
 
+delete' :: forall v k . Ord k => k -> Map k v -> Map k v
+delete' k m  = if member k m then delete k m else unsafeThrow "Tried to delete an element not present in the map"
