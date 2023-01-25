@@ -125,6 +125,11 @@
 
 /* indentation */
 
+.indent {
+  display: inline-block;
+}
+
 .indent-step {
+  display: inline-block;
   width: 1rem;
 }

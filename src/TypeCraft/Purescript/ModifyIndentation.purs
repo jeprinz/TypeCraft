@@ -21,7 +21,7 @@ toggleIndentation = case _ of
         Lambda3 md bnd sig ty -> setTooth (Lambda3 md { bodyIndented = not md.bodyIndented } bnd sig ty)
         Let1 md tyBnds def sig bod ty -> Nothing
         Let2 md tyBnd def sig bod ty -> Nothing
-        Let3 md tyBnd tyBnds sig bod ty -> setTooth (Let3 md { typeIndented = not md.typeIndented } tyBnd tyBnds sig bod ty)
+        Let3 md tyBnd tyBnds sig bod ty -> Nothing -- setTooth (Let3 md { typeIndented = not md.typeIndented } tyBnd tyBnds sig bod ty)
         Let5 md tyBnd tyBnds def sig ty -> setTooth (Let5 md { bodyIndented = not md.bodyIndented } tyBnd tyBnds def sig ty)
         _ -> unsafeThrow "malformed TermCursor"
   TypeCursor ctxs (th List.: path) ty0 ->
@@ -29,7 +29,7 @@ toggleIndentation = case _ of
       setTooth th' = Just $ TypeCursor ctxs (th' List.: path) ty0
     in
       case th of
-        Let4 md tyBnd tyBnds def bod ty -> setTooth (Let4 md { defIndented = not md.defIndented } tyBnd tyBnds def bod ty)
+        Let4 md tyBnd tyBnds def bod ty -> Nothing -- setTooth (Let4 md { defIndented = not md.defIndented } tyBnd tyBnds def bod ty)
         Lambda2 md bnd bod ty -> Nothing
         Buffer2 md def bod ty -> Nothing
         TLet3 md tyBnd tyBnds bod ty -> Nothing

@@ -81,8 +81,8 @@ defaultLetMD :: LetMD
 defaultLetMD =
   { varIndented: false
   , typeIndented: false
-  , defIndented: true
-  , bodyIndented: true
+  , defIndented: false
+  , bodyIndented: false
   }
 
 -- termbind
