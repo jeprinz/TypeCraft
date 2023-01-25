@@ -8,6 +8,7 @@ import Data.Generic.Rep (class Generic)
 import Data.List (List)
 import Data.Map(Map(..))
 import Data.Maybe (Maybe, maybe)
+import Data.Tuple.Nested
 import Data.Show.Generic (genericShow)
 import Data.UUID (UUID, genUUID)
 import Effect.Ref (Ref, new, read, write)
@@ -169,7 +170,9 @@ data TypeAliasChange
   | TAMinus TypeVarID TypeAliasChange
   | TAChange Change
 
-data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange) | TVarDelete -- Do I need TVarInsert? Does TVarDelete need more parameters?
+data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange)
+    | TVarDelete Kind (Maybe (List TypeBind /\ Type))
+    | TVarInsert Kind (Maybe (List TypeBind /\ Type))
 type KindChangeCtx = Map TypeVarID TVarChange
 
 data KindChange

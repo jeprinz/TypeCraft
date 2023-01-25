@@ -156,10 +156,11 @@ chType kctx startType@(TNeu md x args) =
             let args' /\ cargs = chTypeArgs kctx kindChange args in
             TNeu md x args' /\ CNeu x cargs
         Just taCh -> hole' "chType" -- if the type variable was that of a type alias, we must deal with the possiblity that the type alias was changed
-    Just TVarDelete ->
+    Just (TVarDelete kind maybeValue) ->
         let x = freshTypeHoleID unit in
         let newType = THole defaultHoleMD x in
         newType /\ Replace startType newType
+    Just (TVarInsert kind maybeValue) -> unsafeThrow "I don't think this should happen but I'm not 100% sure"
 --    (Just (TVarTypeChange _)) -> unsafeThrow "I need to figure out what is the deal with TVarTypeChange!!!"
 
 

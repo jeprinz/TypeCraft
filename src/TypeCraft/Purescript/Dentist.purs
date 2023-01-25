@@ -11,6 +11,7 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.TypeChangeAlgebra (alterCCtxVarChange)
 import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)
 import TypeCraft.Purescript.Util (hole, hole')
+import Data.Maybe (Maybe(..))
 
 {-
 The middle path in a selection is composed of a subset of Teeth: those for which the top and bottom have the
@@ -24,6 +25,7 @@ For each of these, we need to look at a selection and get the TypeChange and Con
 -}
 
 
+-- Changes go from bottom of path to top
 termToothChange :: Type -> TypeContext -> TermContext -> TypeAliasContext -> Tooth -> Change /\ KindChangeCtx /\ ChangeCtx
 termToothChange ty kctx ctx actx tooth =
     case ty /\ tooth of
@@ -39,7 +41,14 @@ termToothChange ty kctx ctx actx tooth =
         ty /\ TypeBoundary1 md ch {-Term-} -> ch /\ kCtxInject kctx actx /\ ctxInject ctx
         ty /\ ContextBoundary1 md x vch {-Term-} -> tyInject ty /\ kCtxInject kctx actx /\ alterCCtxVarChange (ctxInject ctx) x vch
         ty /\ TLet4 md tyBind tyBinds def {-Term-} bodyTy -> hole' "termToothChange"
-        ty /\ Data4 md tyBind tyBinds ctrs {-Term-} bodyTy -> hole' "termToothChange"
+        ty /\ Data4 md tyBind@(TypeBind _ x) tyBinds ctrs {-Term-} bodyTy ->
+            tyInject bodyTy
+            /\ insert x (TVarDelete (tyBindsWrapKind tyBinds Type) Nothing) (kCtxInject kctx actx)
+            /\ let ctrTypes = constructorTypes tyBind tyBinds ctrs in
+               let startingCtx = ctxInject ctx in
+               let ctrTypeChanges = map (\pt -> VarDelete pt) ctrTypes in
+               union startingCtx ctrTypeChanges
+                -- TODO: Also introduce the recursor into the context here
         _ -> unsafeThrow "Not a term-term tooth"
 
 -- TODO: insetad of having ctxInject everywhere, maybe it should input a change ctx?
