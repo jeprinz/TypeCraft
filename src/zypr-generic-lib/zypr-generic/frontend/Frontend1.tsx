@@ -21,7 +21,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         kids = ([] as JSX.Element[]).concat([Punc.parenL], kids, [Punc.parenR])
 
       // Indentation
-      console.log("node.indentation.case", node.indentation.case)
       switch (node.indentation.case) {
         // no newline nor indent
         case 'inline':
@@ -32,7 +31,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           break
         // newline but no indent
         case 'newline':
-          kids = [Punc.newline, kids].flat()
+          // kids = [Punc.newline, kids].flat()
+          kids = [Punc.newline, Punc.indent(indentationLevel), kids].flat()
           break
       }
 
@@ -112,7 +112,20 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         kid_i++
         if (!(0 <= kid_i && kid_i < node.kids.length))
           throw new Error(`kid index ${kid_i} out of range for node tag '${node.tag.case}', which has ${node.kids.length} kids`);
-        return renderNode(node.kids[kid_i], indentationLevel + 1)
+
+        let indentationLevel_new = indentationLevel
+        // Indentation
+        switch (node.indentation.case) {
+          // no newline nor indent
+          case 'inline': break
+          // newline and indent
+          case 'indent': break
+          // newline but no indent
+          case 'newline':
+            indentationLevel_new ++
+        }
+
+        return renderNode(node.kids[kid_i], indentationLevel_new)
       }
 
       const showLabel = (label: string | undefined) => label !== undefined ? (label.length > 0 ? label : "~") : "<undefined>"
