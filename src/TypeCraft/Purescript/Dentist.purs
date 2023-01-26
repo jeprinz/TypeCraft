@@ -14,8 +14,8 @@ import TypeCraft.Purescript.Util (hole, hole')
 import Data.Maybe (Maybe(..))
 import Data.Map(Map(..))
 import Data.List(List(..), (:))
-import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints)
-import TypeCraft.Purescript.TypeChangeAlgebra (composeChange)
+import TypeCraft.Purescript.TypeChangeAlgebra
+import Data.Tuple (snd)
 
 {-
 The middle path in a selection is composed of a subset of Teeth: those for which the top and bottom have the
@@ -57,39 +57,42 @@ termPathToChange ty (tooth : up) =
     let chRight = termPathToChange tyRight up in
     composeChange ch chRight
 
-downPathToCtxChange :: AllContext -> DownPath -> KindChangeCtx /\ ChangeCtx /\ MDTermChangeCtx /\ MDTypeChangeCtx
-downPathToCtxChange {ctx, kctx, actx, mdctx, mdkctx} Nil = kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+downPathToCtxChange :: AllContext -> DownPath -> AllChangeContexts
+downPathToCtxChange {ctx, kctx, actx, mdctx, mdkctx} Nil = ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
 downPathToCtxChange {ctx, kctx, actx, mdctx, mdkctx} (tooth : down) =
-    hole
+    let all1 = termToothCtxChange kctx ctx actx mdctx mdkctx tooth in
+    let all2 = downPathToCtxChange (snd (getAllEndpoints all1)) down in
+    composeAllChCtxs all1 all2
 
 -- The input contexts come from the top, and the output context changes go from the top to bottom.
 termToothCtxChange :: TypeContext -> TermContext -> TypeAliasContext -> MDTypeContext -> MDTermContext
-    -> Tooth -> KindChangeCtx /\ ChangeCtx /\ MDTermChangeCtx /\ MDTypeChangeCtx
+    -> Tooth -> AllChangeContexts
 termToothCtxChange kctx ctx actx mdctx mdkctx tooth =
     case tooth of
         App1 md {-Term-} t2 argTy outTy ->
-            kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+            ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
         App2 md t1 {-Term-} argTy outTy ->
-            kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+            ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
         Lambda3 md tBind@(TermBind xmd x) argTy {-Term-} bodyTy ->
-            kCtxInject kctx actx /\ insert x (VarInsert (PType argTy)) (ctxInject ctx) /\ insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
+            insert x (VarInsert (PType argTy)) (ctxInject ctx) /\ kCtxInject kctx actx /\ insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
         Let3 md tBind@(TermBind xmd x) tyBinds {-Term-} defTy body bodyTy
-            -> kCtxInject kctx actx /\ insert x (VarInsert (tyBindsWrapType tyBinds defTy)) (ctxInject ctx)
-                /\ insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
-        Let5 md tBind@(TermBind _ x) tyBinds def defTy {-Term-} bodyTy
-            -> kCtxInject kctx actx /\ insert x (VarInsert (tyBindsWrapType tyBinds defTy)) (ctxInject ctx) /\ mdctxInject mdctx /\ mdkctxInject mdkctx
-        Buffer1 md {-Term-} defTy body bodyTy -> kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
-        Buffer3 md def defTy {-Term-} bodyTy -> kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
-        TypeBoundary1 md ch {-Term-} -> kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
-        ContextBoundary1 md x vch {-Term-} -> kCtxInject kctx actx /\ alterCCtxVarChange (ctxInject ctx) x vch /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+            -> insert x (VarInsert (tyBindsWrapType tyBinds defTy)) (ctxInject ctx) /\ kCtxInject kctx actx /\
+                insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
+        Let5 md tBind@(TermBind xmd x) tyBinds def defTy {-Term-} bodyTy
+            -> insert x (VarInsert (tyBindsWrapType tyBinds defTy)) (ctxInject ctx) /\ kCtxInject kctx actx /\ insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
+        Buffer1 md {-Term-} defTy body bodyTy -> ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+        Buffer3 md def defTy {-Term-} bodyTy -> ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+        TypeBoundary1 md ch {-Term-} -> ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+        ContextBoundary1 md x vch {-Term-} -> alterCCtxVarChange (ctxInject ctx) x vch /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
         TLet4 md tyBind tyBinds def {-Term-} bodyTy -> hole' "termToothChange"
         Data4 md tyBind@(TypeBind xmd x) tyBinds ctrs {-Term-} bodyTy ->
-            insert x (TVarInsert (tyBindsWrapKind tyBinds Type) Nothing) (kCtxInject kctx actx)
-            /\ let ctrTypes = constructorTypes tyBind tyBinds ctrs in
+            let ctrTypes = constructorTypes tyBind tyBinds ctrs in
                let startingCtx = ctxInject ctx in
                let ctrTypeChanges = map (\pt -> VarInsert pt) ctrTypes in
                union startingCtx ctrTypeChanges
                 -- TODO: Also introduce the recursor into the context here
+            /\
+            insert x (TVarInsert (tyBindsWrapKind tyBinds Type) Nothing) (kCtxInject kctx actx)
             /\ let ctrNames = constructorNames ctrs in
                let ctrNameChanges = map NameChangeInsert ctrNames in
                union (mdctxInject mdctx) ctrNameChanges

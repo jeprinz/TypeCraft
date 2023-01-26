@@ -89,6 +89,8 @@ mdctxInject m = map NameChangeSame m
 mdkctxInject :: MDTypeContext -> MDTypeChangeCtx
 mdkctxInject m = map NameChangeSame m
 
+type AllChangeContexts = ChangeCtx /\ KindChangeCtx /\ MDTermChangeCtx /\ MDTypeChangeCtx
+
 --------------------------------------------------------------------------------
 -------------- Metadatta contexts ---------------------------------------------
 --------------------------------------------------------------------------------

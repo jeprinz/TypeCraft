@@ -23,6 +23,9 @@ import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select, State, botSelectOrientation, cursorLocationToSelect, emptyQuery, getCompletion, isEmptyQuery, makeCursorMode, makeSelectMode, selectToCursorLocation, topSelectOrientation)
 import TypeCraft.Purescript.Unification (applySubType, subTermPath)
 import TypeCraft.Purescript.Util (hole')
+import TypeCraft.Purescript.Dentist (downPathToCtxChange)
+import Data.Tuple (snd)
+import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 
 handleKey :: Key -> State -> Maybe State
 handleKey key st = case st.mode of
@@ -80,11 +83,11 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
                   , query: emptyQuery
                   }
           CompletionTermPath pathNew ch ->
-            let
-              path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
-            in
+            let path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
+            let chCtxs = downPathToCtxChange ctxs (List.reverse pathNew) in
+            let newCtxs = snd (getAllEndpoints chCtxs) in
               pure
-                { cursorLocation: TermCursor ctxs ty (pathNew <> path') tm
+                { cursorLocation: TermCursor newCtxs ty (pathNew <> path') tm
                 , query: emptyQuery
                 }
           _ -> unsafeThrow "tried to submit a non-CompletionTerm* completion at a TermCursor"
