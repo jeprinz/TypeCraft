@@ -9,7 +9,7 @@ import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.PathRec
 import TypeCraft.Purescript.State
 
-import Data.List (List(..), (:), find)
+import Data.List (List(..), (:), find, last, init)
 import Data.List (index)
 import Data.List (length)
 import Data.Maybe (Maybe(..))
@@ -184,7 +184,7 @@ getLastChild cursor =
         Just child -> getLastChild child
 
 moveSelectLeft :: Select -> Maybe Mode
-moveSelectLeft (TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 botSelectOrientation)  =
+moveSelectLeft (TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 false)  =
     case topPath of
     Nil -> Nothing
     (tooth : topPath') ->
@@ -193,11 +193,11 @@ moveSelectLeft (TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 bo
             Just (TermCursor ctxs1' ty1' topPath' term1' /\ _) ->
                 Just $ SelectMode {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 botSelectOrientation}
             _ -> unsafeThrow "Shouldn't happen moveSelectLeft" -- This shouldn't happen because there can be nothing above a term other than more terms!
-moveSelectLeft(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 topSelectOrientation)  =
+moveSelectLeft(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 true)  =
     case  (goLeftUntilSort GSTerm (TermCursor ctxs2 ty2 middlePath term2)) of
         Just (TermCursor ctxs2' ty2' middlePath' term2') -> Just $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' topSelectOrientation} 
         Nothing -> Just $ makeCursorMode $ TermCursor ctxs1 ty1 topPath term1 -- enter cursor mode
-        Just _ -> unsafeThrow "Shouldn't happen"
+        Just _ -> unsafeThrow "Shouldn't happen 1"
 moveSelectLeft(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root)  = hole' "moveSelectTopUp"
 moveSelectLeft(CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root)  = hole' "moveSelectTopUp"
 moveSelectLeft(CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root)  = hole' "moveSelectTopUp"
@@ -205,23 +205,25 @@ moveSelectLeft(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 
 moveSelectLeft(TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root)  = hole' "moveSelectTopUp"
 
 moveSelectRight :: Select -> Maybe Mode
-moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 botSelectOrientation)  =
+moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 false)  =
     case middlePath of
     Nil -> unsafeThrow "Shouldn't be an empty selection"
     (tooth : Nil) -> Just $ makeCursorMode $ TermCursor ctxs2 ty2 (tooth : topPath) term2 -- in this case, we exit select mode and enter cursor mode
-    (tooth : middlePath') ->
+    middlePath ->
+        let tooth = fromJust $ last middlePath in
+        let middlePath' = fromJust $ init middlePath in
 --        let topPath' = tooth : topPath in
         let children = getCursorChildren (TermCursor ctxs1 ty1 topPath term1) in
         let particularChild = fromJust $ find (\cursor -> head' (getPath cursor) == tooth) children in -- get the child who's top tooth is equal to "tooth"
         case particularChild of
             TermCursor ctxs1' ty1' topPath' term1' ->
                 Just $ SelectMode
-                    {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 topSelectOrientation}
+                    {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 botSelectOrientation}
             _ -> unsafeThrow "SHouldn't happen"
-moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 topSelectOrientation)  = hole' "moveSelectTopUp"
+moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 true) =
     case  (goRightUntilSort GSTerm (TermCursor ctxs2 ty2 middlePath term2)) of
         TermCursor ctxs2' ty2' middlePath' term2' -> Just $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' topSelectOrientation}
-        _ -> unsafeThrow "Shouldn't happen"
+        badCursor -> unsafeThrow ("Shouldn't happen: got " <> show badCursor)
 moveSelectRight(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root)  = hole' "moveSelectTopUp"
 moveSelectRight(CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root)  = hole' "moveSelectTopUp"
 moveSelectRight(CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root)  = hole' "moveSelectTopUp"
@@ -265,7 +267,7 @@ getCursorSort(TypeBindListCursor _ _ _) = GSTypeBindList
 goLeftUntilSort :: GrammaticalSort -> CursorLocation -> Maybe CursorLocation
 goLeftUntilSort sort cursor =
     let cursor' = stepCursorBackwards cursor in
-    if not (getCursorSort cursor == sort) then goLeftUntilSort sort cursor
+    if not (getCursorSort cursor' == sort) then goLeftUntilSort sort cursor'
     else
         if getPath cursor' == Nil then Nothing else Just cursor'
 
@@ -276,7 +278,7 @@ of the correct sort. This is merely a quirk of our grammar, not something that i
 goRightUntilSort :: GrammaticalSort -> CursorLocation -> CursorLocation
 goRightUntilSort sort cursor =
     let cursor' = stepCursorForwards cursor in
-    if not (getCursorSort cursor == sort) then goRightUntilSort sort cursor
+    if not (getCursorSort cursor' == sort) then goRightUntilSort sort cursor'
     else cursor'
 
 
