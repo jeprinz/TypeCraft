@@ -173,3 +173,8 @@ selectToCursorLocation = case _ of
         , bot: const $ TermCursor ctxs2 ty2 (tmPath2 <> tmPath1) tm2
         }
   _ -> hole' "selectToCursorLocation: other cases"
+
+cursorLocationToSelect :: SelectOrientation -> CursorLocation -> Select
+cursorLocationToSelect ori = case _ of
+  TermCursor ctxs ty tmPath tm -> TermSelect tmPath ctxs ty tm Nil ctxs ty tm ori
+  _ -> hole' "cursorLocationToSelect: other cases"

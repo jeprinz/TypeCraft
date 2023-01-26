@@ -2,7 +2,6 @@ module TypeCraft.Purescript.ModifyState where
 
 import Data.Tuple.Nested
 import Prelude
-
 import Data.Array ((:), uncons)
 import Data.Array as Array
 import Data.List as List
@@ -14,14 +13,14 @@ import TypeCraft.Purescript.ChangePath (chTermPath, chTypePath)
 import TypeCraft.Purescript.ChangeTerm (chType, chTypeParamList)
 import TypeCraft.Purescript.Context (ctxInject, kCtxInject)
 import TypeCraft.Purescript.Context (kCtxInject)
-import TypeCraft.Purescript.CursorMovement (stepCursorBackwards, stepCursorForwards)
+import TypeCraft.Purescript.CursorMovement (moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
 import TypeCraft.Purescript.Grammar (Change(..), TermBind(..), TypeBind(..), freshHole, freshTHole)
 import TypeCraft.Purescript.Grammar (tyInject)
 import TypeCraft.Purescript.Key (Key)
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
-import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select, State, emptyQuery, getCompletion, isEmptyQuery, makeCursorMode, selectToCursorLocation)
+import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select, State, botSelectOrientation, cursorLocationToSelect, emptyQuery, getCompletion, isEmptyQuery, makeCursorMode, makeSelectMode, selectToCursorLocation, topSelectOrientation)
 import TypeCraft.Purescript.Unification (applySubType, subTermPath)
 import TypeCraft.Purescript.Util (hole')
 
@@ -40,10 +39,10 @@ handleKey key st = case st.mode of
         pure $ st { mode = CursorMode cursorMode { query = query } }
       | (key.ctrlKey || key.metaKey) && key.key == "z" -> undo st
       | (key.ctrlKey || key.metaKey) && key.key == "Z" -> redo st
-      | key.key == "ArrowLeft" -> moveCursorPrev st
-      | key.key == "ArrowRight" -> moveCursorNext st
       | key.key == "ArrowLeft" && key.shiftKey -> moveSelectPrev st
       | key.key == "ArrowRight" && key.shiftKey -> moveSelectNext st
+      | key.key == "ArrowLeft" -> moveCursorPrev st
+      | key.key == "ArrowRight" -> moveCursorNext st
       | key.key == "Escape" -> pure $ st { mode = CursorMode cursorMode { query = emptyQuery } }
       | key.key == "Tab" -> do
         cursorLocation' <- toggleIndentation cursorMode.cursorLocation
@@ -58,7 +57,9 @@ handleKey key st = case st.mode of
       | otherwise -> Nothing
   SelectMode selectMode
     | key.key == "Escape" -> pure $ st { mode = makeCursorMode (selectToCursorLocation selectMode.select) }
-    | otherwise -> Nothing 
+    | key.key == "ArrowLeft" && key.shiftKey -> moveSelectPrev st
+    | key.key == "ArrowRight" && key.shiftKey -> moveSelectNext st
+    | otherwise -> Nothing
 
 submitQuery :: CursorMode -> Maybe CursorMode
 submitQuery cursorMode = case cursorMode.cursorLocation of
@@ -129,14 +130,19 @@ moveCursorNext st = case st.mode of
 
 moveSelectPrev :: State -> Maybe State
 moveSelectPrev st = do
-  -- select <- case st.mode of
-  --   CursorMode {cursorLocation} ->  ?a 
-  --   SelectMode{select} -> select
-  -- return { select: stepSelect }
-  Nothing
+  select <- case st.mode of
+    CursorMode { cursorLocation } -> pure $ cursorLocationToSelect botSelectOrientation cursorLocation
+    SelectMode { select } -> pure select
+  mode <- moveSelectLeft select
+  pure $ st { mode = mode }
 
 moveSelectNext :: State -> Maybe State
-moveSelectNext st = hole' "moveSelectNext"
+moveSelectNext st = do
+  select <- case st.mode of
+    CursorMode { cursorLocation } -> pure $ cursorLocationToSelect botSelectOrientation cursorLocation
+    SelectMode { select } -> pure select
+  mode <- moveSelectRight select
+  pure $ st { mode = mode }
 
 setSelect :: Select -> State -> Maybe State
 setSelect select st = pure $ st { mode = SelectMode { select } }
