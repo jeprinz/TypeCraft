@@ -2,16 +2,15 @@ module TypeCraft.Purescript.PathToNode where
 
 import Prelude
 import Prim hiding (Type)
+import TypeCraft.Purescript.PathRec (ListCtrParamPathRecValue, ListCtrPathRecValue, ListTypeArgPathRecValue, ListTypeBindPathRecValue, TermBindPathRecValue, TermPathRecValue, TypeBindPathRecValue, TypePathRecValue, recListTypeBindPath, recTermBindPath, recTermPath, recTypeBindPath, recTypePath)
+import TypeCraft.Purescript.TermToNode (AboveInfo(..), PreNode, TermNodeCursorInfo, TypeNodeCursorInfo, arrangeTerm, arrangeType, ctrListToNode, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
-import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, Tooth(..), Type, TypeArg, TypeBind, UpPath)
-import TypeCraft.Purescript.Node (Node, NodeTag(..), makeNode)
-import TypeCraft.Purescript.PathRec
-import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode)
-import TypeCraft.Purescript.Util (hole, hole', justWhen)
-import TypeCraft.Purescript.TermToNode
+import TypeCraft.Purescript.Node (Node, NodeTag, makeNode)
+import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, topSelectOrientation)
+import TypeCraft.Purescript.Util (hole', justWhen)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
@@ -55,7 +54,7 @@ makeTermNode isActive belowInfo termPath preNode =
           BITerm -> Nothing
           BISelect middlePath term ctxs ty ->
             justWhen isActive \_ ->
-              _ { mode = SelectMode $ { select: TermSelect termPath.termPath termPath.ctxs termPath.ty termPath.term middlePath ctxs ty term true } }
+              _ { mode = SelectMode $ { select: TermSelect termPath.termPath termPath.ctxs termPath.ty termPath.term middlePath ctxs ty term topSelectOrientation } }
     , tag: preNode.tag
     }
 
@@ -163,7 +162,7 @@ makeTermArgs isActive belowInfo upRecVal =
   , makeSelect:
       \_ -> case belowInfo of
         BITerm -> Nothing
-        BISelect middlePath term ctxs ty -> Just $ TermSelect upRecVal.termPath upRecVal.ctxs upRecVal.ty upRecVal.term middlePath ctxs ty term true
+        BISelect middlePath term ctxs ty -> Just $ TermSelect upRecVal.termPath upRecVal.ctxs upRecVal.ty upRecVal.term middlePath ctxs ty term topSelectOrientation
   , term: { ctxs: upRecVal.ctxs, term: upRecVal.term, ty: upRecVal.ty }
   }
 
@@ -174,7 +173,7 @@ makeTypeArgs isActive belowInfo urv =
   , makeSelect:
       \_ -> case belowInfo of
         BITerm -> Nothing
-        BISelect middlePath ty ctxs _ -> Just $ TypeSelect urv.typePath urv.ctxs urv.ty middlePath ctxs ty true
+        BISelect middlePath ty ctxs _ -> Just $ TypeSelect urv.typePath urv.ctxs urv.ty middlePath ctxs ty topSelectOrientation
   , ty: { ctxs: urv.ctxs, ty: urv.ty }
   }
 

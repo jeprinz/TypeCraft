@@ -78,7 +78,7 @@
 }
 
 .query-completion-active {
-  background-color: rgb(39, 215, 255);
+  background-color: blue;
 }
 
 .query-completion-empty {
@@ -90,7 +90,7 @@
   background-color: rgb(208, 236, 255);
   
   border-radius: 0.2rem;
-  box-shadow: 0 0 0 1px blue inset, 2px 2px 4px 0 black;
+  box-shadow: 0 0 0 1px orange inset, 2px 2px 4px 0 black;
   padding: 0 0.2rem;
 }
 
@@ -98,7 +98,7 @@
   background-color: white;
 
   border-radius: 0.2rem;
-  box-shadow: 0 0 0 1px blue inset, 1px 1px 2px 0 black inset;
+  box-shadow: 0 0 0 1px orange inset, 1px 1px 2px 0 black inset;
   padding: 0 0.2rem;
 }
 
@@ -106,7 +106,7 @@
   background-color: rgb(208, 236, 255);
 
   border-radius: 0.2rem;
-  box-shadow: 0 0 0 1px blue inset, 2px 2px 4px 0 black inset;
+  box-shadow: 0 0 0 1px orange inset, 2px 2px 4px 0 black inset;
 }
 
 /* punctuation */

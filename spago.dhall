@@ -18,6 +18,7 @@
   , "transformers"
   , "tuples"
   , "uuid"
+  , "variant"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs" ]

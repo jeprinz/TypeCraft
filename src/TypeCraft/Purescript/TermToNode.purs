@@ -2,6 +2,7 @@ module TypeCraft.Purescript.TermToNode where
 
 import Prelude
 import Prim hiding (Type)
+
 import Data.Array as Array
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
@@ -10,7 +11,7 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term(..), TermBind(..), Tooth(..), Type(..), TypeArg, TypeBind(..), UpPath)
 import TypeCraft.Purescript.Node (Node, NodeIndentation, NodeTag(..), getNodeTag, makeIndentNodeIndentation, makeInlineNodeIndentation, makeNewlineNodeIndentation, makeNode, setNodeIndentation, setNodeIsParenthesized, setNodeLabel, termToNodeTag, typeToNodeTag)
-import TypeCraft.Purescript.State (CursorLocation(..), Select(..), makeCursorMode, makeSelectMode)
+import TypeCraft.Purescript.State (CursorLocation(..), Select(..), botSelectOrientation, makeCursorMode, makeSelectMode)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListCtrRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, CtrParamRecValue, recTerm, recType)
 import TypeCraft.Purescript.Util (hole', justWhen, lookup')
 
@@ -227,7 +228,7 @@ termToNode isActive aboveInfo term =
     , makeSelect:
         \_ -> case aboveInfo of
           AICursor _path -> Nothing
-          AISelect topPath topCtx (topTerm /\ topTy) midPath -> Just $ TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term false
+          AISelect topPath topCtx (topTerm /\ topTy) midPath -> Just $ TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term botSelectOrientation
     , term
     }
 
@@ -292,7 +293,7 @@ typeToNode isActive aboveInfo ty =
     , makeSelect:
         \_ -> case aboveInfo of
           AICursor _path -> Nothing
-          AISelect topPath topCtx topTy midPath -> Just $ TypeSelect topPath topCtx topTy midPath ty.ctxs ty.ty false
+          AISelect topPath topCtx topTy midPath -> Just $ TypeSelect topPath topCtx topTy midPath ty.ctxs ty.ty botSelectOrientation
     , ty
     }
 

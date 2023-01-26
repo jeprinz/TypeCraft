@@ -184,18 +184,18 @@ getLastChild cursor =
         Just child -> getLastChild child
 
 moveSelectLeft :: Select -> Maybe Mode
-moveSelectLeft (TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 false)  =
+moveSelectLeft (TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 botSelectOrientation)  =
     case topPath of
     Nil -> Nothing
     (tooth : topPath') ->
         let middlePath' = middlePath <> (tooth : Nil) in
         case parent (TermCursor ctxs1 ty1 topPath term1) of
             Just (TermCursor ctxs1' ty1' topPath' term1' /\ _) ->
-                Just $ SelectMode {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 false}
+                Just $ SelectMode {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 botSelectOrientation}
             _ -> unsafeThrow "Shouldn't happen moveSelectLeft" -- This shouldn't happen because there can be nothing above a term other than more terms!
-moveSelectLeft(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 true)  =
+moveSelectLeft(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 topSelectOrientation)  =
     case  (goLeftUntilSort GSTerm (TermCursor ctxs2 ty2 middlePath term2)) of
-        Just (TermCursor ctxs2' ty2' middlePath' term2') -> Just $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' true} 
+        Just (TermCursor ctxs2' ty2' middlePath' term2') -> Just $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' topSelectOrientation} 
         Nothing -> Just $ makeCursorMode $ TermCursor ctxs1 ty1 topPath term1 -- enter cursor mode
         Just _ -> unsafeThrow "Shouldn't happen"
 moveSelectLeft(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root)  = hole' "moveSelectTopUp"
@@ -205,7 +205,7 @@ moveSelectLeft(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 
 moveSelectLeft(TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root)  = hole' "moveSelectTopUp"
 
 moveSelectRight :: Select -> Maybe Mode
-moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 false)  =
+moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 botSelectOrientation)  =
     case middlePath of
     Nil -> unsafeThrow "Shouldn't be an empty selection"
     (tooth : Nil) -> Just $ makeCursorMode $ TermCursor ctxs2 ty2 (tooth : topPath) term2 -- in this case, we exit select mode and enter cursor mode
@@ -216,11 +216,11 @@ moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 fa
         case particularChild of
             TermCursor ctxs1' ty1' topPath' term1' ->
                 Just $ SelectMode
-                    {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 true}
+                    {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 topSelectOrientation}
             _ -> unsafeThrow "SHouldn't happen"
-moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 true)  = hole' "moveSelectTopUp"
+moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 topSelectOrientation)  = hole' "moveSelectTopUp"
     case  (goRightUntilSort GSTerm (TermCursor ctxs2 ty2 middlePath term2)) of
-        TermCursor ctxs2' ty2' middlePath' term2' -> Just $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' true}
+        TermCursor ctxs2' ty2' middlePath' term2' -> Just $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' topSelectOrientation}
         _ -> unsafeThrow "Shouldn't happen"
 moveSelectRight(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root)  = hole' "moveSelectTopUp"
 moveSelectRight(CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root)  = hole' "moveSelectTopUp"
@@ -294,7 +294,7 @@ selectLeftFromCursor :: CursorLocation -> Maybe Select
 selectLeftFromCursor cursor@(TermCursor ctxs ty (tooth : path) term) =
     case parent cursor of
         Nothing -> Nothing
-        Just (TermCursor ctxs1 ty1 path1 term1 /\ _) -> Just $ TermSelect path1 ctxs1 ty1 term1 (tooth : Nil) ctxs ty term false
+        Just (TermCursor ctxs1 ty1 path1 term1 /\ _) -> Just $ TermSelect path1 ctxs1 ty1 term1 (tooth : Nil) ctxs ty term botSelectOrientation
         Just _ -> unsafeThrow "shouldn't happen"
 selectLeftFromCursor (TypeCursor ctxs (tooth : path) ty) = hole' "selectLeftFromCursor"
 selectLeftFromCursor (CtrListCursor ctxs (tooth : path) ctrs) = hole' "selectLeftFromCursor"
@@ -308,7 +308,7 @@ selectRightFromCursor cursor@(TermCursor ctxs ty path term) =
     case head (getCursorChildren cursor) of
         Nothing -> Nothing
         Just (TermCursor ctxs1 ty1 (tooth : _path) term1) ->
-            Just $ TermSelect path ctxs ty term (tooth : Nil) ctxs1 ty1 term1 true
+            Just $ TermSelect path ctxs ty term (tooth : Nil) ctxs1 ty1 term1 topSelectOrientation
         Just _ -> unsafeThrow "shouldn't happen"
 selectRightFromCursor (TypeCursor ctxs (tooth : path) ty) = hole' "selectRightFromCursor"
 selectRightFromCursor (CtrListCursor ctxs (tooth : path) ctrs) = hole' "selectRightFromCursor"
