@@ -165,9 +165,9 @@ data ChangeParam
   | MinusParam Type
 
 data TypeAliasChange
-  = TAForall TypeVarID TypeAliasChange
-  | TAPlus TypeVarID TypeAliasChange
-  | TAMinus TypeVarID TypeAliasChange
+  = TAForall TypeBind TypeAliasChange
+  | TAPlus TypeBind TypeAliasChange
+  | TAMinus TypeBind TypeAliasChange
   | TAChange Change
 
 data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange)

@@ -13,6 +13,9 @@ import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)
 import TypeCraft.Purescript.Util (hole, hole')
 import Data.Maybe (Maybe(..))
 import Data.Map(Map(..))
+import Data.List(List(..), (:))
+import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints)
+import TypeCraft.Purescript.TypeChangeAlgebra (composeChange)
 
 {-
 The middle path in a selection is composed of a subset of Teeth: those for which the top and bottom have the
@@ -27,30 +30,70 @@ For each of these, we need to look at a selection and get the TypeChange and Con
 
 
 -- The input type comes from the bottom, and the output Change goes from bottom to top.
--- However, the input contexts come from the top, and the output context changes go from the top to bottom.
-termToothChange :: Type -> TypeContext -> TermContext -> TypeAliasContext -> Tooth -> Change /\ KindChangeCtx /\ ChangeCtx
-termToothChange ty kctx ctx actx tooth =
+termToothChange :: Type -> Tooth -> Change
+termToothChange ty tooth =
     case ty /\ tooth of
-        Arrow _ ty1 ty2 /\ App1 md {-Term-} t2 argTy outTy -> Minus ty1 (tyInject ty2) /\ kCtxInject kctx actx /\ ctxInject ctx
-        ty /\ App2 md t1 {-Term-} argTy outTy -> Replace ty outTy /\ kCtxInject kctx actx /\ ctxInject ctx
-        ty /\ Lambda3 md tBind@(TermBind _ x) argTy {-Term-} bodyTy -> Plus argTy (tyInject ty) /\ kCtxInject kctx actx /\ insert x (VarInsert (PType argTy)) (ctxInject ctx)
-        ty /\ Let3 md tBind@(TermBind _ x) tyBinds {-Term-} defTy body bodyTy
-            -> Replace defTy bodyTy /\ kCtxInject kctx actx /\ insert x (VarInsert (tyBindsWrapType tyBinds defTy)) (ctxInject ctx)
+        Arrow _ ty1 ty2 /\ App1 md {-Term-} t2 argTy outTy -> Minus ty1 (tyInject ty2)
+        ty /\ App2 md t1 {-Term-} argTy outTy -> Replace ty outTy
+        ty /\ Lambda3 md tBind@(TermBind _ x) argTy {-Term-} bodyTy -> Plus argTy (tyInject ty)
+        ty /\ Let3 md tBind@(TermBind _ x) tyBinds {-Term-} defTy body bodyTy -> Replace defTy bodyTy
         ty /\ Let5 md tBind@(TermBind _ x) tyBinds def defTy {-Term-} bodyTy
-            -> tyInject bodyTy /\ kCtxInject kctx actx /\ insert x (VarInsert (tyBindsWrapType tyBinds defTy)) (ctxInject ctx)
-        ty /\ Buffer1 md {-Term-} defTy body bodyTy -> Replace defTy bodyTy /\ kCtxInject kctx actx /\ ctxInject ctx
-        ty /\ Buffer3 md def defTy {-Term-} bodyTy -> tyInject bodyTy /\ kCtxInject kctx actx /\ ctxInject ctx
-        ty /\ TypeBoundary1 md ch {-Term-} -> ch /\ kCtxInject kctx actx /\ ctxInject ctx
-        ty /\ ContextBoundary1 md x vch {-Term-} -> tyInject ty /\ kCtxInject kctx actx /\ alterCCtxVarChange (ctxInject ctx) x vch
+            -> tyInject bodyTy
+        ty /\ Buffer1 md {-Term-} defTy body bodyTy -> Replace defTy bodyTy
+        ty /\ Buffer3 md def defTy {-Term-} bodyTy -> tyInject bodyTy
+        ty /\ TypeBoundary1 md ch {-Term-} -> ch
+        ty /\ ContextBoundary1 md x vch {-Term-} -> tyInject ty
         ty /\ TLet4 md tyBind tyBinds def {-Term-} bodyTy -> hole' "termToothChange"
         ty /\ Data4 md tyBind@(TypeBind _ x) tyBinds ctrs {-Term-} bodyTy ->
             tyInject bodyTy
-            /\ insert x (TVarInsert (tyBindsWrapKind tyBinds Type) Nothing) (kCtxInject kctx actx)
+        _ -> unsafeThrow "Not a term-term tooth"
+
+termPathToChange :: Type -> UpPath -> Change
+termPathToChange ty Nil = tyInject ty
+termPathToChange ty (tooth : up) =
+    let ch = termToothChange ty tooth in
+    let (ty2 /\ tyRight) = (getEndpoints ch) in
+    if not (ty2 == ty) then unsafeThrow "sanity check failed in termPathToChange" else
+    let chRight = termPathToChange tyRight up in
+    composeChange ch chRight
+
+downPathToCtxChange :: AllContext -> DownPath -> KindChangeCtx /\ ChangeCtx /\ MDTermChangeCtx /\ MDTypeChangeCtx
+downPathToCtxChange {ctx, kctx, actx, mdctx, mdkctx} Nil = kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+downPathToCtxChange {ctx, kctx, actx, mdctx, mdkctx} (tooth : down) =
+    hole
+
+-- The input contexts come from the top, and the output context changes go from the top to bottom.
+termToothCtxChange :: TypeContext -> TermContext -> TypeAliasContext -> MDTypeContext -> MDTermContext
+    -> Tooth -> KindChangeCtx /\ ChangeCtx /\ MDTermChangeCtx /\ MDTypeChangeCtx
+termToothCtxChange kctx ctx actx mdctx mdkctx tooth =
+    case tooth of
+        App1 md {-Term-} t2 argTy outTy ->
+            kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+        App2 md t1 {-Term-} argTy outTy ->
+            kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+        Lambda3 md tBind@(TermBind xmd x) argTy {-Term-} bodyTy ->
+            kCtxInject kctx actx /\ insert x (VarInsert (PType argTy)) (ctxInject ctx) /\ insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
+        Let3 md tBind@(TermBind xmd x) tyBinds {-Term-} defTy body bodyTy
+            -> kCtxInject kctx actx /\ insert x (VarInsert (tyBindsWrapType tyBinds defTy)) (ctxInject ctx)
+                /\ insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
+        Let5 md tBind@(TermBind _ x) tyBinds def defTy {-Term-} bodyTy
+            -> kCtxInject kctx actx /\ insert x (VarInsert (tyBindsWrapType tyBinds defTy)) (ctxInject ctx) /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+        Buffer1 md {-Term-} defTy body bodyTy -> kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+        Buffer3 md def defTy {-Term-} bodyTy -> kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+        TypeBoundary1 md ch {-Term-} -> kCtxInject kctx actx /\ ctxInject ctx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+        ContextBoundary1 md x vch {-Term-} -> kCtxInject kctx actx /\ alterCCtxVarChange (ctxInject ctx) x vch /\ mdctxInject mdctx /\ mdkctxInject mdkctx
+        TLet4 md tyBind tyBinds def {-Term-} bodyTy -> hole' "termToothChange"
+        Data4 md tyBind@(TypeBind xmd x) tyBinds ctrs {-Term-} bodyTy ->
+            insert x (TVarInsert (tyBindsWrapKind tyBinds Type) Nothing) (kCtxInject kctx actx)
             /\ let ctrTypes = constructorTypes tyBind tyBinds ctrs in
                let startingCtx = ctxInject ctx in
                let ctrTypeChanges = map (\pt -> VarInsert pt) ctrTypes in
                union startingCtx ctrTypeChanges
                 -- TODO: Also introduce the recursor into the context here
+            /\ let ctrNames = constructorNames ctrs in
+               let ctrNameChanges = map NameChangeInsert ctrNames in
+               union (mdctxInject mdctx) ctrNameChanges
+            /\ insert x (NameChangeInsert xmd.varName) (mdkctxInject mdkctx)
         _ -> unsafeThrow "Not a term-term tooth"
 
 -- TODO: insetad of having ctxInject everywhere, maybe it should input a change ctx?

@@ -5,7 +5,7 @@ import Prim hiding (Type)
 import Data.Array (foldr)
 import Data.Array as Array
 import Data.Int (toNumber)
-import Data.List (List(..))
+import Data.List (List(..), reverse)
 import Data.Maybe (Maybe(..))
 import Data.String as String
 import Data.Tuple.Nested ((/\))
@@ -16,6 +16,9 @@ import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMod
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeArgListToNode, typeBindListToNode, typeBindToNode, typeToNode)
 import TypeCraft.Purescript.Unification (applySubType)
 import TypeCraft.Purescript.Util (fromJust', hole')
+import TypeCraft.Purescript.Dentist (downPathToCtxChange)
+import Data.Tuple (snd)
+import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 
 {-
 TODO: Note from Jacob: Counterintuitvely, all cursor modes should use BISelect
@@ -115,14 +118,16 @@ cursorModeToNode cursorMode =
       _ -> hole' "completionToNode CompletionTerm non-TermCursor"
     CompletionTermPath termPath ch -> case cursorMode.cursorLocation of
       TermCursor ctxs ty termPath' term ->
+--        let chCtxs = downPathToCtxChange ctxs (reverse termPath) in
+--        let newCtxs = snd (getAllEndpoints chCtxs) in
         setNodeStyle makeQueryInsertTopStyle
           $ termPathToNode false
               BITerm
-              { ctxs, term, termPath, ty }
+              { ctxs: ctxs {-TODO: Jacob note: this is where it needs newCtxs-}, term, termPath, ty }
               ( setNodeStyle makeQueryInsertBotNodeStyle
                   if opts.isInline then
                     -- if inline, render with cursor term at head
-                    termToNode true
+                    termToNode true -- TODO: shouldn't this be false? Why should you be able to click on the query?
                       (AISelect (termPath' <> termPath) ctxs (term /\ ty) Nil)
                       { ctxs, term, ty }
                   else

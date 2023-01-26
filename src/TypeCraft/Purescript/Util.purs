@@ -35,4 +35,5 @@ justWhen false _ = Nothing
 justWhen true k = Just (k unit)
 
 delete' :: forall v k . Ord k => k -> Map k v -> Map k v
-delete' k m  = if member k m then delete k m else unsafeThrow "Tried to delete an element not present in the map"
+--delete' k m  = if member k m then delete k m else unsafeThrow "Tried to delete an element not present in the map"
+delete' k m  = delete k m

@@ -59,7 +59,7 @@ kCtxInject kctx actx = mapMaybeWithKey (\x kind
                 Just (tyBinds /\ def) ->
                     let bindsToTAC :: List TypeBind -> TypeAliasChange
                         bindsToTAC Nil = TAChange (tyInject def)
-                        bindsToTAC ((TypeBind _ x) : tyBinds) = TAForall x (bindsToTAC tyBinds)
+                        bindsToTAC (tyBind : tyBinds) = TAForall tyBind (bindsToTAC tyBinds)
                     in Just (bindsToTAC tyBinds))
     ) kctx
 
@@ -82,6 +82,12 @@ tyVarIdsWrapChange (x : tyBinds) ch = CForall x (tyVarIdsWrapChange tyBinds ch)
 data NameChange = NameChangeInsert String | NameChangeDelete String | NameChangeSame String
 type MDTypeChangeCtx = Map TypeVarID NameChange
 type MDTermChangeCtx = Map TypeVarID NameChange
+
+mdctxInject :: MDTermContext -> MDTermChangeCtx
+mdctxInject m = map NameChangeSame m
+
+mdkctxInject :: MDTypeContext -> MDTypeChangeCtx
+mdkctxInject m = map NameChangeSame m
 
 --------------------------------------------------------------------------------
 -------------- Metadatta contexts ---------------------------------------------

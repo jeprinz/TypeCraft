@@ -21,6 +21,7 @@ import TypeCraft.Purescript.Substitution (Sub)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
 import TypeCraft.Purescript.Alpha
+import TypeCraft.Purescript.Util (hole)
 
 getEndpoints :: Change -> Type /\ Type
 getEndpoints (CArrow a b) =
@@ -63,6 +64,33 @@ pGetEndpoints (PMinus tBind pc) =
     Forall tBind pt1 /\ pt2
 pGetEndpoints (PChange c) = let t1 /\ t2 = getEndpoints c in PType t1 /\ PType t2
 
+kChGetEndpoints :: KindChange -> Kind /\ Kind
+kChGetEndpoints kc = case kc of
+    KCType -> Type /\ Type
+    KCArrow kc ->
+        let k1 /\ k2 = kChGetEndpoints kc in
+        KArrow k1 /\ KArrow k2
+    KPlus kc ->
+        let k1 /\ k2 = kChGetEndpoints kc in
+        k1 /\ KArrow k2
+    KMinus kc ->
+        let k1 /\ k2 = kChGetEndpoints kc in
+        KArrow k1 /\ k2
+
+taChGetEndpoints :: TypeAliasChange -> (List TypeBind /\ Type) /\ (List TypeBind /\ Type)
+taChGetEndpoints tac = case tac of
+    TAChange ch ->
+        let ty1 /\ ty2 = getEndpoints ch in
+        (Nil /\ ty1) /\ (Nil /\ ty2)
+    TAForall x tac ->
+        let (binds1 /\ ty1) /\ (binds2 /\ ty2) = taChGetEndpoints tac in
+        ((x : binds1) /\ ty1) /\ ((x : binds2) /\ ty2)
+    TAPlus x tac ->
+        let (binds1 /\ ty1) /\ (binds2 /\ ty2) = taChGetEndpoints tac in
+        (binds1 /\ ty1) /\ ((x : binds2) /\ ty2)
+    TAMinus x tac ->
+        let (binds1 /\ ty1) /\ (binds2 /\ ty2) = taChGetEndpoints tac in
+        ((x : binds1) /\ ty1) /\ (binds2 /\ ty2)
 
 -- Assumption: the first typechange is from A to B, and the second is from B to C. If the B's don't line up,
 -- then this function will throw an exception
@@ -113,6 +141,9 @@ composePolyChangeImpl equiv (PMinus x pc1) pc2 = PMinus x (composePolyChangeImpl
 composePolyChangeImpl equiv pc1 (PPlus x pc2) = PPlus x (composePolyChangeImpl equiv pc1 pc2)
 composePolyChangeImpl equiv _ _ = unsafeThrow "shouldn't get here. Could be that an x != y above or another case that shouldn't happen"
 -- TODO: should Replace be in PolyChange instead or in addition to in Change? Also, finish cases here!
+
+--composeKindChange :: KindChange -> KindChange -> KindChange
+--composeKindChange
 
 invert :: Change -> Change
 invert (CArrow change1 change2) = CArrow (invert change1) (invert change2)
@@ -201,6 +232,9 @@ combineParams _ _ = Nothing
 mapMap2 :: forall k v1 v2 v3. Ord k => (v1 -> v2 -> v3) -> Map k v1 -> Map k v2 -> Map k v3
 mapMap2 f m1 m2 = f <$> m1 <*> m2
 
+mmapMap2 :: forall k v1 v2 v3. Ord k => (v1 -> v2 -> Maybe v3) -> Map k v1 -> Map k v2 -> Map k v3
+mmapMap2 f m1 m2 = mapMaybe (\(x /\ y) -> f x y) ((\x y -> x /\ y) <$> m1 <*> m2)
+
 combineSubs :: Sub -> Sub -> Maybe Sub
 combineSubs s1 s2 = sequence (mapMap2 combine s1 s2)
 
@@ -258,6 +292,14 @@ composeVarChange (VarInsert t1) (VarDelete t2) | polyTypeEq t1 t2 = Nothing
 composeVarChange (VarDelete t1) (VarInsert t2) | polyTypeEq t1 t2 = Just $ VarTypeChange (pTyInject t1)
 composeVarChange _ _ = unsafeThrow "VarChanges composed in a way that doesn't make sense, or I wrote a bug into the function"
 
+--composeTVarChange :: TVarChange -> TVarChange -> TVarChange
+--composeTVarChange (TVarKindChange kc1) (TVarKindChange kc2) = Just $ TVarKindChange (composeKindChange kc1 kc2)
+--composeTVarChange (VarInsert pt) (VarTypeChange pc) = Just $ VarInsert (snd (pGetEndpoints pc))
+--composeTVarChange (VarTypeChange pc) (VarDelete pt) = Just $ VarInsert (fst (pGetEndpoints pc))
+--composeTVarChange (VarInsert t1) (VarDelete t2) | polyTypeEq t1 t2 = Nothing
+--composeTVarChange (VarDelete t1) (VarInsert t2) | polyTypeEq t1 t2 = Just $ VarTypeChange (pTyInject t1)
+--composeTVarChange _ _ = unsafeThrow "TVarChanges composed in a way that doesn't make sense, or I wrote a bug into the function"
+
 alterCtxVarChange :: TermContext -> TermVarID -> VarChange -> TermContext
 alterCtxVarChange ctx x (VarInsert pty) = insert x pty ctx
 alterCtxVarChange ctx x (VarDelete pty) = delete x ctx
@@ -271,3 +313,80 @@ alterCCtxVarChange ctx x vch = case lookup x ctx of
     Nothing -> case vch of
                VarInsert pty -> insert x (VarInsert pty) ctx
                _ -> unsafeThrow "Shouldn't happen"
+
+-- Context endpoints
+
+getCtxEndpoints :: ChangeCtx -> TermContext /\ TermContext
+getCtxEndpoints ctx =
+    mapMaybe (case _ of
+        VarInsert _ -> Nothing
+        VarTypeChange pc -> Just (fst (pGetEndpoints pc))
+        VarDelete pt -> Just pt) ctx
+    /\
+    mapMaybe (case _ of
+        VarInsert pt -> Just pt
+        VarTypeChange pc -> Just (snd (pGetEndpoints pc))
+        VarDelete _ -> Nothing) ctx
+
+composeCtxs :: ChangeCtx -> ChangeCtx -> ChangeCtx
+composeCtxs ctx1 ctx2 = mmapMap2 composeVarChange ctx1 ctx2
+
+getKCtxTyEndpoints :: KindChangeCtx -> TypeContext /\ TypeContext
+getKCtxTyEndpoints kctx =
+    mapMaybe (case _ of
+        TVarInsert _ _ -> Nothing
+        TVarKindChange kch tac -> Just (fst (kChGetEndpoints kch))
+        TVarDelete kind ta -> Just kind) kctx
+    /\
+    mapMaybe (case _ of
+        TVarInsert kind ta -> Just kind
+        TVarKindChange kch tac -> Just (snd (kChGetEndpoints kch))
+        TVarDelete _ _ -> Nothing) kctx
+
+getKCtxAliasEndpoints :: KindChangeCtx -> TypeAliasContext /\ TypeAliasContext
+getKCtxAliasEndpoints kctx =
+    mapMaybe (case _ of
+        TVarInsert _ _ -> Nothing
+        TVarKindChange kch tac -> fst <$> taChGetEndpoints <$> tac
+        TVarDelete kind ta -> ta) kctx
+    /\
+    mapMaybe (case _ of
+        TVarInsert kind ta -> ta
+        TVarKindChange kch tac -> snd <$> taChGetEndpoints <$> tac
+        TVarDelete _ _ -> Nothing) kctx
+
+getMDCtxEndpoints :: MDTermChangeCtx -> MDTermContext /\ MDTermContext
+getMDCtxEndpoints mdctx =
+    mapMaybe (case _ of
+        NameChangeInsert _ -> Nothing
+        NameChangeSame name -> Just name
+        NameChangeDelete name -> Just name) mdctx
+    /\
+    mapMaybe (case _ of
+        NameChangeInsert name -> Just name
+        NameChangeSame name -> Just name
+        NameChangeDelete _  -> Nothing) mdctx
+
+getMDKCtxEndpoints :: MDTypeChangeCtx -> MDTypeContext /\ MDTypeContext
+getMDKCtxEndpoints mdkctx =
+    mapMaybe (case _ of
+        NameChangeInsert _ -> Nothing
+        NameChangeSame name -> Just name
+        NameChangeDelete name -> Just name) mdkctx
+    /\
+    mapMaybe (case _ of
+        NameChangeInsert name -> Just name
+        NameChangeSame name -> Just name
+        NameChangeDelete _  -> Nothing) mdkctx
+
+getAllEndpoints :: KindChangeCtx /\ ChangeCtx /\ MDTermChangeCtx /\ MDTypeChangeCtx
+    -> AllContext /\ AllContext
+getAllEndpoints (kctx /\ ctx /\ mdctx /\ mdkctx) =
+    let ctx1 /\ ctx2 = getCtxEndpoints ctx in
+    let kctx1 /\ kctx2 = getKCtxTyEndpoints kctx in
+    let actx1 /\ actx2 = getKCtxAliasEndpoints kctx in
+    let mdctx1 /\ mdctx2 = getMDCtxEndpoints mdctx in
+    let mdkctx1 /\ mdkctx2 = getMDKCtxEndpoints mdkctx in
+    { ctx: ctx1, kctx: kctx1, actx: actx1, mdctx: mdctx1, mdkctx: mdkctx1 }
+    /\
+    { ctx: ctx2, kctx: kctx2, actx: actx2, mdctx: mdctx2, mdkctx: mdkctx2 }
