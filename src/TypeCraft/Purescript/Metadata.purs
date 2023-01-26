@@ -82,7 +82,7 @@ defaultLetMD =
   { varIndented: false
   , typeIndented: false
   , defIndented: false
-  , bodyIndented: false
+  , bodyIndented: true
   }
 
 -- termbind

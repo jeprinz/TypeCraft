@@ -33,11 +33,13 @@ aIGetPath (AICursor path) = path
 
 aIGetPath (AISelect top ctx term middle) = middle <> top
 
-newlineIf :: Boolean -> NodeIndentation
-newlineIf = if _ then makeNewlineNodeIndentation else makeInlineNodeIndentation
+-- don't indent inactive things (such as appear in query previews)
+newlineIf :: Boolean -> Boolean -> NodeIndentation
+newlineIf isActive isNewlined = if isNewlined &&  isActive then makeNewlineNodeIndentation else makeInlineNodeIndentation
 
-indentIf :: Boolean -> NodeIndentation
-indentIf = if _ then makeIndentNodeIndentation else makeInlineNodeIndentation
+-- don't indent inactive things (such as appear in query previews)
+indentIf :: Boolean -> Boolean -> NodeIndentation
+indentIf isActive isIndented = if isIndented && isActive then makeIndentNodeIndentation else makeInlineNodeIndentation
 
 inline :: NodeIndentation
 inline = makeInlineNodeIndentation
@@ -75,18 +77,18 @@ arrangeKidAI info k rv th = k (stepAI th info) rv
 
 -- ** Term
 -- | here is where indentation and parenthesization happens
-stepKidsTerm :: Term -> Array PreNode -> Array Node
-stepKidsTerm term kids = case term of
+stepKidsTerm :: Boolean -> Term -> Array PreNode -> Array Node
+stepKidsTerm isActive term kids = case term of
   App md apl arg ty1 ty2
     | [ k_apl, k_arg ] <- kids ->
       [ k_apl (App1 md arg ty1 ty2)
-      , setNodeIndentation (indentIf md.argIndented) $ k_arg (App1 md apl ty1 ty2)
+      , setNodeIndentation (indentIf isActive md.argIndented) $ k_arg (App1 md apl ty1 ty2)
       ]
   Lambda md bnd sig body ty
     | [ k_bnd, k_ty, k_body ] <- kids ->
       [ k_bnd (Lambda1 md sig body ty)
       , k_ty (Lambda2 md bnd body ty)
-      , setNodeIndentation (indentIf md.bodyIndented) $ k_body (Lambda3 md bnd sig ty)
+      , setNodeIndentation (indentIf isActive md.bodyIndented) $ k_body (Lambda3 md bnd sig ty)
       ]
   Var md x args
     | [] <- kids -> []
@@ -94,9 +96,9 @@ stepKidsTerm term kids = case term of
     | [ k_bnd, k_bnds, k_sig, k_imp, k_bod ] <- kids ->
       [ k_bnd (Let1 md bnds imp sig bod ty)
       , k_bnds (Let2 md bnd imp sig bod ty)
-      , setNodeIndentation (indentIf md.typeIndented) $ k_sig (Let4 md bnd bnds imp bod ty) -- NOTE: Yes, these are out of order. Yes, they need to stay like that.
-      , setNodeIndentation (indentIf md.defIndented) $ k_imp (Let3 md bnd bnds sig bod ty)
-      , setNodeIndentation (newlineIf md.bodyIndented) $ k_bod (Let5 md bnd bnds imp sig ty)
+      , setNodeIndentation (indentIf isActive md.typeIndented) $ k_sig (Let4 md bnd bnds imp bod ty) -- NOTE: Yes, these are out of order. Yes, they need to stay like that.
+      , setNodeIndentation (indentIf isActive md.defIndented) $ k_imp (Let3 md bnd bnds sig bod ty)
+      , setNodeIndentation (newlineIf isActive md.bodyIndented) $ k_bod (Let5 md bnd bnds imp sig ty)
       ]
   Data md bnd bnds ctrs bod ty
     | [ k_bnd, k_bnds, k_ctrs, k_bod ] <- kids ->
@@ -140,7 +142,7 @@ arrangeTerm args =
   arrangeNodeKids
     { isActive: args.isActive
     , tag: termToNodeTag args.term.term
-    , stepKids: stepKidsTerm args.term.term
+    , stepKids: stepKidsTerm args.isActive args.term.term
     , makeCursor: args.makeCursor
     , makeSelect: args.makeSelect
     }
@@ -234,12 +236,12 @@ termToNode isActive aboveInfo term =
 
 -- ** Type
 -- | here is where indentation and parenthesization happens
-stepKidsType :: Type -> Array PreNode -> Array Node
-stepKidsType ty kids = case ty of
+stepKidsType :: Boolean -> Type -> Array PreNode -> Array Node
+stepKidsType isActive ty kids = case ty of
   Arrow md ty1 ty2
     | [ k_ty1, k_ty2 ] <- kids ->
       [ let node = k_ty1 (Arrow1 md ty2) in setNodeIsParenthesized (getNodeTag node == ArrowNodeTag) node
-      , setNodeIndentation (indentIf md.codIndented) $ k_ty2 (Arrow2 md ty1)
+      , setNodeIndentation (indentIf isActive md.codIndented) $ k_ty2 (Arrow2 md ty1)
       ]
   TNeu md x args
     | [ k_args ] <- kids -> [ k_args (TNeu1 md x) ]
@@ -261,7 +263,7 @@ arrangeType args =
   arrangeNodeKids
     { isActive: args.isActive
     , tag: typeToNodeTag args.ty.ty
-    , stepKids: stepKidsType args.ty.ty
+    , stepKids: stepKidsType args.isActive args.ty.ty
     , makeCursor: args.makeCursor
     , makeSelect: args.makeSelect
     }

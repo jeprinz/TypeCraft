@@ -20,22 +20,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       if (node.isParenthesized)
         kids = ([] as JSX.Element[]).concat([Punc.parenL], kids, [Punc.parenR])
 
-      // Indentation
-      switch (node.indentation.case) {
-        // no newline nor indent
-        case 'inline':
-          break
-        // newline and indent
-        case 'indent':
-          kids = [Punc.newline, Punc.indent(indentationLevel), kids].flat()
-          break
-        // newline but no indent
-        case 'newline':
-          // kids = [Punc.newline, kids].flat()
-          kids = [Punc.newline, Punc.indent(indentationLevel), kids].flat()
-          break
-      }
-
       // TODO: Indentation 
 
       // Cursor
@@ -69,8 +53,17 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         )
       }
 
+      kids = [
+        <div
+          className={([] as string[]).concat(["node"], classNames).join(" ")}
+          onClick={onClick}
+        >
+          {kids}
+        </div>
+      ]
+
       if (node.queryString !== undefined) {
-        return [
+        kids = [
           <div className="node cursor">
             <div className="query">
               <div className="query-inner">
@@ -84,24 +77,62 @@ export default function makeFrontend(backend: Backend): JSX.Element {
                 }</div>
               </div>
             </div>
-            <div
-              className={([] as string[]).concat(["node"], classNames).join(" ")}
-              onClick={onClick}
-            >
-              {kids}
-            </div>
-          </div>
-        ]
-      } else {
-        return [
-          <div
-            className={([] as string[]).concat(["node"], classNames).join(" ")}
-            onClick={onClick}
-          >
             {kids}
           </div>
         ]
       }
+
+      // kids =
+      //   node.queryString !== undefined ?
+      //     [
+      //       <div className="node cursor">
+      //         <div className="query">
+      //           <div className="query-inner">
+      //             <div className="query-string">
+      //               <span className="query-string-inner">{node.queryString}</span>
+      //             </div>
+      //             <div className="query-completions">{
+      //               node.completions !== undefined && node.completions.length > 0 ?
+      //                 node.completions.map((node, i) => renderCompletion(node, i)) :
+      //                 <div className="query-completion query-completion-empty">no completions</div>
+      //             }</div>
+      //           </div>
+      //         </div>
+      //         <div
+      //           className={([] as string[]).concat(["node"], classNames).join(" ")}
+      //           onClick={onClick}
+      //         >
+      //           {kids}
+      //         </div>
+      //       </div>
+      //     ] :
+      //     [
+      //       <div
+      //         className={([] as string[]).concat(["node"], classNames).join(" ")}
+      //         onClick={onClick}
+      //       >
+      //         {kids}
+      //       </div>
+      //     ]
+
+      // Indentation
+      switch (node.indentation.case) {
+        // no newline nor indent
+        case 'inline': break
+        // newline and indent
+        case 'indent': kids = [Punc.newline, Punc.indent(indentationLevel), kids].flat(); break
+        // newline but no indent
+        case 'newline':
+          if (indentationLevel == 0) {
+            // put an extra new line at top level
+            kids = [Punc.newline, Punc.newline, kids].flat();
+          } else {
+            kids = [Punc.newline, kids].flat();
+          }
+          break
+      }
+
+      return kids
     }
 
     function renderNode(node: Node, indentationLevel: number): JSX.Element[] {
@@ -113,19 +144,20 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         if (!(0 <= kid_i && kid_i < node.kids.length))
           throw new Error(`kid index ${kid_i} out of range for node tag '${node.tag.case}', which has ${node.kids.length} kids`);
 
-        let indentationLevel_new = indentationLevel
+        let kid = node.kids[kid_i]
+
         // Indentation
-        switch (node.indentation.case) {
+        let indentationLevel_kid = indentationLevel;
+        switch (kid.indentation.case) {
           // no newline nor indent
           case 'inline': break
           // newline and indent
-          case 'indent': break
+          case 'indent': indentationLevel_kid = indentationLevel + 1; break
           // newline but no indent
-          case 'newline':
-            indentationLevel_new ++
+          case 'newline': break
         }
 
-        return renderNode(node.kids[kid_i], indentationLevel_new)
+        return renderNode(node.kids[kid_i], indentationLevel_kid)
       }
 
       const showLabel = (label: string | undefined) => label !== undefined ? (label.length > 0 ? label : "~") : "<undefined>"
@@ -174,6 +206,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
   }
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
+    // always capture these events:
+    if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter"].includes(event.key) && !(event.metaKey || event.ctrlKey))
+      event.preventDefault()
+
     const state = editor.props.backend.handleKeyboardEvent(event)(editor.state)
     if (state === undefined) {
       return
