@@ -4,7 +4,6 @@ import Data.Tuple.Nested
 import Data.Variant
 import Prelude
 import Prim hiding (Type)
-
 import Data.Array as Array
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..))
@@ -168,11 +167,9 @@ instance showSelect :: Show Select where
 
 selectToCursorLocation :: Select -> CursorLocation
 selectToCursorLocation = case _ of
-  TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori -> -- if ori then
-    --   -- root is at top
-    --   hole
-    -- else
-    --   -- root is at bottom
-    --   hole
-    hole
-  _ -> hole' "selectToCursorLocation"
+  TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
+    (ori # _) <<< (case_ # _) <<< onMatch
+      $ { top: const $ TermCursor ctxs1 ty1 tmPath1 tm1
+        , bot: const $ TermCursor ctxs2 ty2 (tmPath2 <> tmPath1) tm2
+        }
+  _ -> hole' "selectToCursorLocation: other cases"

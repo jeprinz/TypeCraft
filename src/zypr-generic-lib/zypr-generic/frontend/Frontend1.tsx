@@ -43,6 +43,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       function onMouseUp(event: React.MouseEvent) {
         let getSelect = node.getSelect
         if (getSelect !== undefined) {
+          // console.log(`getSelect for this '${node.tag.case}' node`)
           editor.setState(getSelect(editor.state))
           event.stopPropagation()
         } 
