@@ -25,6 +25,7 @@ isIgnoreKey key =
             , "ArrowRight"
             , "ArrowUp"
             , "ArrowDown"
+            , "CapsLock"
             ]
       )
 

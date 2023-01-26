@@ -160,7 +160,17 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         return renderNode(node.kids[kid_i], indentationLevel_kid)
       }
 
-      const showLabel = (label: string | undefined) => label !== undefined ? (label.length > 0 ? label : "~") : "<undefined>"
+      // const showLabel = (label: string | undefined) => label !== undefined ? (label.length > 0 ? label : "~") : "<undefined>"
+      const renderLabel = (label: string | undefined): JSX.Element[] => {
+        if (label !== undefined) {
+          if (label.length > 0)
+            return [<span className="label">{label}</span>]
+          else
+          return [<span className="label label-empty">{" "}</span>]
+        } else {
+          return [<span className="label">undefined label</span>]
+        }
+      }
 
       switch (node.tag.case) {
         case 'ty arr': return go(node, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat(), indentationLevel)
@@ -171,7 +181,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'ty-arg': return go(node, ["ty-arg"], kid(), indentationLevel)
         case 'tm app': return go(node, ["tm_app"], [kid(), [Punc.application], kid()].flat(), indentationLevel)
         case 'tm lam': return go(node, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
-        case 'tm var': return go(node, ["tm_var"], [<span>{showLabel(node.label)}</span>].flat(), indentationLevel)
+        case 'tm var': return go(node, ["tm_var"], renderLabel(node.label), indentationLevel)
         case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.colon], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm dat': return go(node, ["tm_dat"], [[Punc.data], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
@@ -179,8 +189,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
         case 'tm hol': return go(node, ["tm_hol"], [Punc.interrogative].flat(), indentationLevel) // TODO: render type; is it a node child?
         case 'tm buf': return go(node, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat(), indentationLevel)
-        case 'ty-bnd': return go(node, ["ty-bnd"], [<span>{showLabel(node.label)}</span>], indentationLevel)
-        case 'tm-bnd': return go(node, ["tm-bnd"], [<span>{showLabel(node.label)}</span>], indentationLevel)
+        case 'ty-bnd': return go(node, ["ty-bnd"], renderLabel(node.label), indentationLevel)
+        case 'tm-bnd': return go(node, ["tm-bnd"], renderLabel(node.label), indentationLevel)
         case 'ctr-prm': return go(node, ["ctr-prm"], [[/* TODO: name */], [Punc.colon], kid()].flat(), indentationLevel) // TODO: label
         case 'ctr': return go(node, ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat(), indentationLevel)
         // ty-arg-list

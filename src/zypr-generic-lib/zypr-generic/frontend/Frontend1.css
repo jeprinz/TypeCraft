@@ -74,10 +74,11 @@
 
 .query-completion {
   padding: 0.2rem;
+  background-color: white;
 }
 
 .query-completion-active {
-  background-color: blue;
+  background-color: rgb(39, 215, 255);
 }
 
 .query-completion-empty {
@@ -157,4 +158,18 @@
 .indent-step {
   display: inline-block;
   width: 1rem;
+}
+
+/* label */
+
+.label {
+
+}
+
+.label-empty {
+  border-radius: 0.2rem;
+  display: inline-block;
+  white-space: pre;
+  border: 1px dashed black;
+  background-color: rgb(255, 224, 165);
 }
