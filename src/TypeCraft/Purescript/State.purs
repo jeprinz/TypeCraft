@@ -151,14 +151,11 @@ data Select
   | TypeArgListSelect UpPath AllContext (List TypeArg) UpPath AllContext (List TypeArg) SelectOrientation
   | TypeBindListSelect UpPath AllContext (List TypeBind) UpPath AllContext (List TypeBind) SelectOrientation
 
-type SelectOrientation
-  = Variant ( top :: Unit, bot :: Unit )
-
-topSelectOrientation :: SelectOrientation
-topSelectOrientation = inj (Proxy :: Proxy "top") unit
-
-botSelectOrientation :: SelectOrientation
-botSelectOrientation = inj (Proxy :: Proxy "bot") unit
+type SelectOrientation = Boolean -- I didn't know how to match on a Variant, so I changed it back to a boolean. That way I can use an if expression like a normal person
+topSelectOrientation :: Boolean
+topSelectOrientation = true
+botSelectOrientation :: Boolean
+botSelectOrientation = false
 
 derive instance genericSelect :: Generic Select _
 
@@ -168,10 +165,12 @@ instance showSelect :: Show Select where
 selectToCursorLocation :: Select -> CursorLocation
 selectToCursorLocation = case _ of
   TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
-    (ori # _) <<< (case_ # _) <<< onMatch
-      $ { top: const $ TermCursor ctxs1 ty1 tmPath1 tm1
-        , bot: const $ TermCursor ctxs2 ty2 (tmPath2 <> tmPath1) tm2
-        }
+--    (ori # _) <<< (case_ # _) <<< onMatch
+--      $ { top: const $ TermCursor ctxs1 ty1 tmPath1 tm1
+--        , bot: const $ TermCursor ctxs2 ty2 (tmPath2 <> tmPath1) tm2
+--        }
+    if ori then TermCursor ctxs1 ty1 tmPath1 tm1
+        else TermCursor ctxs2 ty2 (tmPath2 <> tmPath1) tm2
   _ -> hole' "selectToCursorLocation: other cases"
 
 cursorLocationToSelect :: SelectOrientation -> CursorLocation -> Select

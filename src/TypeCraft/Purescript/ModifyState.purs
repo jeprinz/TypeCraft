@@ -142,7 +142,7 @@ moveSelectPrev st = do
 moveSelectNext :: State -> Maybe State
 moveSelectNext st = do
   select <- case st.mode of
-    CursorMode { cursorLocation } -> pure $ cursorLocationToSelect botSelectOrientation cursorLocation
+    CursorMode { cursorLocation } -> pure $ cursorLocationToSelect topSelectOrientation cursorLocation
     SelectMode { select } -> pure select
   mode <- moveSelectRight select
   pure $ st { mode = mode }
