@@ -23,10 +23,21 @@
     2px 0 0 0 blue;
 }
 
-/* .node.cursor::before {
-  white-space: pre;
-  content: '\A  ';
-} */
+.node.select-top {
+  border-radius: 0.2rem;
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+  background-color: rgb(208, 236, 255)
+}
+
+.node.select-bot {
+  border-radius: 0.2rem;
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+  background-color: white;
+}
 
 .node.query-replace-new {
   border-radius: 0.2rem;
@@ -88,7 +99,7 @@
 
 .query-insert-top {
   background-color: rgb(208, 236, 255);
-  
+
   border-radius: 0.2rem;
   box-shadow: 0 0 0 1px orange inset, 2px 2px 4px 0 black;
   padding: 0 0.2rem;
@@ -162,9 +173,7 @@
 
 /* label */
 
-.label {
-
-}
+.label {}
 
 .label-empty {
   border-radius: 0.2rem;
