@@ -108,6 +108,17 @@ initState =
 
 data Clipboard
   = EmptyClip -- add more later, not priority yet
+  -- Term clipboards:
+  | TermClip AllContext Type Term
+  | TypeClip AllContext Type
+  | VarNameClip String -- both for TermBind and TypeBind
+  -- Path clipboards:
+  | TermPathClip AllContext Type UpPath AllContext Type
+  | TypePathClip AllContext UpPath
+  | CtrListClip AllContext UpPath
+  | CtrParamList AllContext UpPath
+  | TypeArgList AllContext UpPath
+  | VarNameList AllContext UpPath -- for TypeBind Lists
 
 data CursorLocation
   = TermCursor AllContext Type UpPath Term
