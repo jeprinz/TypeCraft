@@ -90,39 +90,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         ]
       }
 
-      // kids =
-      //   node.queryString !== undefined ?
-      //     [
-      //       <div className="node cursor">
-      //         <div className="query">
-      //           <div className="query-inner">
-      //             <div className="query-string">
-      //               <span className="query-string-inner">{node.queryString}</span>
-      //             </div>
-      //             <div className="query-completions">{
-      //               node.completions !== undefined && node.completions.length > 0 ?
-      //                 node.completions.map((node, i) => renderCompletion(node, i)) :
-      //                 <div className="query-completion query-completion-empty">no completions</div>
-      //             }</div>
-      //           </div>
-      //         </div>
-      //         <div
-      //           className={([] as string[]).concat(["node"], classNames).join(" ")}
-      //           onClick={onClick}
-      //         >
-      //           {kids}
-      //         </div>
-      //       </div>
-      //     ] :
-      //     [
-      //       <div
-      //         className={([] as string[]).concat(["node"], classNames).join(" ")}
-      //         onClick={onClick}
-      //       >
-      //         {kids}
-      //       </div>
-      //     ]
-
       // Indentation
       switch (node.indentation.case) {
         // no newline nor indent
@@ -135,7 +102,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
             // put an extra new line at top level
             kids = [Punc.newline, Punc.newline, kids].flat();
           } else {
-            kids = [Punc.newline, kids].flat();
+            kids = [Punc.newline, Punc.indent(indentationLevel), kids].flat(); break
           }
           break
       }
