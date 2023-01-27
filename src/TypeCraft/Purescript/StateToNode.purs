@@ -33,12 +33,10 @@ stateToNode st = case st.mode of
   SelectMode select -> case select of
     -- TODO: need more info about root to render it
     { select: TermSelect topPath ctx1 ty1 term1 middlePath ctx2 ty2 term2 root } ->  -- TODO: render something differently depending on root?
-      termPathToNode true
-        BITerm
+      termPathToNode true Nil BITerm
         { ctxs: ctx1, ty: ty1, term: term1, termPath: topPath }
         $ setNodeStyle makeSelectTopNodeStyle
-        $ termPathToNode true
-            BITerm
+        $ termPathToNode true topPath BITerm
             { ctxs: ctx2, ty: ty2, term: term2, termPath: middlePath }
         $ setNodeStyle makeSelectBotNodeStyle
         $ termToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2, term: term2 }
@@ -83,14 +81,14 @@ cursorModeToNode cursorMode =
 
   cursorModePathToNode :: Node -> Node
   cursorModePathToNode = case cursorMode.cursorLocation of
-    TermCursor ctxs ty termPath term -> termPathToNode true (BISelect Nil term ctxs ty) { ctxs, term, termPath, ty }
-    TypeCursor ctxs typePath ty -> typePathToNode true BITerm { ctxs, ty, typePath }
-    TypeBindCursor ctxs typeBindPath tyBind -> typeBindPathToNode true {ctxs, typeBindPath, tyBind}
-    TermBindCursor ctxs termBindPath tBind -> termBindPathToNode true { ctxs, tBind, termBindPath }
-    TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListPathToNode true BITerm { ctxs, listTypeArgPath, tyArgs } -- BITerm upPath
-    CtrListCursor ctxs listCtrPath ctrs -> ctrListPathToNode true BITerm { ctxs, ctrs, listCtrPath }
-    CtrParamListCursor ctxs listCtrParamPath ctrParams -> ctrParamListPathToNode true BITerm { ctxs, ctrParams, listCtrParamPath }
-    TypeBindListCursor ctxs listTypeBindPath tyBinds -> typeBindListPathToNode true BITerm { ctxs, tyBinds, listTypeBindPath }
+    TermCursor ctxs ty termPath term -> termPathToNode true Nil (BISelect Nil term ctxs ty) { ctxs, term, termPath, ty }
+    TypeCursor ctxs typePath ty -> typePathToNode true Nil BITerm { ctxs, ty, typePath }
+    TypeBindCursor ctxs typeBindPath tyBind -> typeBindPathToNode true Nil {ctxs, typeBindPath, tyBind}
+    TermBindCursor ctxs termBindPath tBind -> termBindPathToNode true Nil { ctxs, tBind, termBindPath }
+    TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListPathToNode true Nil BITerm { ctxs, listTypeArgPath, tyArgs } -- BITerm upPath
+    CtrListCursor ctxs listCtrPath ctrs -> ctrListPathToNode true Nil BITerm { ctxs, ctrs, listCtrPath }
+    CtrParamListCursor ctxs listCtrParamPath ctrParams -> ctrParamListPathToNode true Nil BITerm { ctxs, ctrParams, listCtrParamPath }
+    TypeBindListCursor ctxs listTypeBindPath tyBinds -> typeBindListPathToNode true Nil BITerm { ctxs, tyBinds, listTypeBindPath }
 
   cursorModeTermToNode :: Unit -> Node
   cursorModeTermToNode _ =
@@ -121,8 +119,7 @@ cursorModeToNode cursorMode =
         let chCtxs = downPathToCtxChange ctxs (reverse termPath) in
         let newCtxs = snd (getAllEndpoints chCtxs) in
         setNodeStyle makeQueryInsertTopStyle
-          $ termPathToNode false
-              BITerm
+          $ termPathToNode false Nil BITerm -- ideally we shouldn't have to specify Nil and BITerm here, as they are irrelevant. See refactors.
               { ctxs: newCtxs {-TODO: Jacob note: this is where it needs newCtxs-}, term, termPath, ty }
               ( setNodeStyle makeQueryInsertBotNodeStyle
                   if opts.isInline then
@@ -145,8 +142,7 @@ cursorModeToNode cursorMode =
     CompletionTypePath path' ch -> case cursorMode.cursorLocation of
       TypeCursor ctxs path ty ->
         setNodeStyle makeQueryInsertTopStyle
-          $ typePathToNode false
-              BITerm
+          $ typePathToNode false Nil BITerm -- ideally we shouldn't have to specify Nil and BITerm here, as they are irrelevant. See refactors.
               { ctxs, ty, typePath: path' }
               ( setNodeStyle makeQueryInsertBotNodeStyle
                   if opts.isInline then
