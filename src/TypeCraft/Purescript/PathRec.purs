@@ -163,6 +163,16 @@ recCtrPath args {ctxs, ctr, ctrPath: (CtrListCons1 {-Constructor-} ctrs) : listC
         {ctxs, ctrs}
 recCtrPath _ _ = unsafeThrow "Either wasn't a CtrPath or I forgot a case"
 
+type CtrParamPathRec a = {
+    ctrParamListCons1 :: ListCtrParamPathRecValue -> ListCtrParamRecValue -> a
+}
+
+recCtrParamPath :: forall a. CtrParamPathRec a -> CtrParamPathRecValue -> a
+recCtrParamPath args {ctxs, ctrParam, ctrParamPath: (CtrParamListCons1 {-ConstructorParam-} ctrParams) : listCtrParamPath} =
+    args.ctrParamListCons1 {ctxs, ctrParams: ctrParam : ctrParams, listCtrParamPath}
+        {ctxs, ctrParams}
+recCtrParamPath _ _ = unsafeThrow "Either wasn't a CtrPath or I forgot a case"
+
 type TypeArgPathRec a = {
     typeArgListCons1 :: ListTypeArgPathRecValue -> ListTypeArgRecValue -> a
 }

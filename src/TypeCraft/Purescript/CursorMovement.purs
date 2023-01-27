@@ -65,12 +65,24 @@ getCursorChildren (TypeCursor ctxs up ty) =
         ( { arrow: \md ty1 ty2 -> TypeCursor ty1.ctxs (Arrow1 md {--} ty2.ty : up) ty1.ty
             : TypeCursor ty2.ctxs (Arrow2 md ty1.ty {--} : up) ty2.ty: Nil
           , tHole: \md x -> Nil
-          , tNeu: \md x tyArgs -> hole' "getCursorChildren"
+          , tNeu: \md x tyArgs -> TypeArgListCursor tyArgs.ctxs (TNeu1 md x {--} : up) tyArgs.tyArgs : Nil
           }
         )
         {ctxs, ty}
-getCursorChildren (CtrListCursor _ _ _) = Nil -- hole
-getCursorChildren (CtrParamListCursor _ _ _) = Nil -- hole
+getCursorChildren (CtrListCursor ctxs up ctrs) =
+    recListCtr ({
+        cons: \ctr@{ctr: Constructor md tBind ctrParams} ctrs ->
+            TermBindCursor ctr.ctxs (Constructor1 md {--} ctrParams : CtrListCons1 {--} ctrs.ctrs : up) tBind
+            : CtrParamListCursor ctr.ctxs (Constructor2 md tBind {--} : CtrListCons1 {--} ctrs.ctrs : up) ctrParams
+            : CtrListCursor ctrs.ctxs (CtrListCons2 ctr.ctr {--} : up) ctrs.ctrs : Nil
+        , nil: Nil
+    }) {ctxs, ctrs}
+getCursorChildren (CtrParamListCursor ctxs up ctrParams) =
+    recListCtrParam ({
+        cons: \ctrParam@{ctrParam: (CtrParam md ty)} ctrParams -> TypeCursor ctrParam.ctxs (CtrParam1 md {--} : CtrParamListCons1 {--} ctrParams.ctrParams : up) ty
+            : CtrParamListCursor ctrParams.ctxs (CtrParamListCons2 ctrParam.ctrParam {--} : up) ctrParams.ctrParams : Nil
+        , nil: Nil
+    }) {ctxs, ctrParams}
 getCursorChildren (TypeArgListCursor ctxs up tyArgs) =
     recListTypeArg ({
         cons: \tyArg@{tyArg: (TypeArg md ty)} tyArgs -> TypeCursor tyArg.ctxs (TypeArg1 md {--} : TypeArgListCons1 {--} tyArgs.tyArgs : up) ty
@@ -130,14 +142,16 @@ parent (TermBindCursor ctxs termBindPath tBind) =
           \termPath md argTy body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (1 - 1)
       , let1:
           \termPath md tyBinds def defTy body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (1 - 1)
-      , constructor1:
-          \ctrPath md ctrParams -> hole' "parent"
+      , constructor1: \ctrPath md ctrParams ->
+          recCtrPath ({ -- We skip the constructor, and the cursor goes to the ctr list above it
+              ctrListCons1: \listCtrPath ctrs -> Just $ CtrListCursor listCtrPath.ctxs listCtrPath.listCtrPath listCtrPath.ctrs /\ (1 - 1) -- note that the numbering here is special
+          }) ctrPath
       } {ctxs, tBind, termBindPath}
 parent (TypeBindCursor ctxs typeBindPath tyBind) =
     recTypeBindPath {
         tLet1 : \termPath md {-tyBind-} tyBinds def body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (1 - 1)
         , data1 : \termPath md {-tyBind-} tyBinds ctrs body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (1 - 1)
-        , typeBindListCons1 : \listTypeBindPath {-tyBind-} tyBind -> hole' "parent"
+        , typeBindListCons1 : \listTypeBindPath {-tyBind-} tyBind -> Just $ TypeBindListCursor listTypeBindPath.ctxs listTypeBindPath.listTypeBindPath listTypeBindPath.tyBinds /\ (1 - 1)
     } {ctxs, typeBindPath, tyBind}
 parent (TypeCursor ctxs typePath ty) =
     recTypePath
@@ -147,19 +161,40 @@ parent (TypeCursor ctxs typePath ty) =
             \termPath md tBind tyBinds def {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (3 - 1)
         , buffer2: \termPath md def {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
         , tLet3: \termPath md tyBind tyBinds {-Type-} body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (3 - 1)
-        , ctrParam1: \ctrParamPath md {-Type-} -> (hole' "parent")
-        , typeArg1: \typeArgPath md {-Type-} -> (hole' "parent")
+        , ctrParam1: \ctrParamPath md {-Type-} ->
+            recCtrParamPath ({ -- We skip the CtrParam, and the cursor goes to the CtrParam list above it
+                ctrParamListCons1: \listCtrParamPath ctrParams -> Just $ CtrParamListCursor listCtrParamPath.ctxs listCtrParamPath.listCtrParamPath listCtrParamPath.ctrParams /\ (1 - 1)
+            }) ctrParamPath
+        , typeArg1: \tyArgPath md {-Type-} ->
+            recTypeArgPath ({ -- We skip the TypeArg, and the cursor goes to the TypeArg list above it
+                typeArgListCons1: \listTypeArgPath tyArgs -> Just $ TypeArgListCursor listTypeArgPath.ctxs listTypeArgPath.listTypeArgPath listTypeArgPath.tyArgs /\ (1 - 1)
+            }) tyArgPath
         , arrow1: \typePath md {-Type-} _ -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (1 - 1)
         , arrow2: \typePath md _ {-Type-} -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (2 - 1)
         } {ctxs, typePath, ty}
-parent (CtrListCursor _ _ _) = hole' "parent"
-parent (CtrParamListCursor _ _ _) = hole' "parent"
-parent (TypeArgListCursor _ _ _) = hole' "parent"
+parent (CtrListCursor ctxs listCtrPath ctrs) =
+    recListCtrPath {
+        data3: \termPath md tyBind tyBinds body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (3 - 1)
+        , ctrListCons2: \listCtrPath ctrs -> Just $ CtrListCursor listCtrPath.ctxs listCtrPath.listCtrPath listCtrPath.ctrs /\ (3 - 1) -- note that the numbering here is special
+    } {ctxs, listCtrPath, ctrs}
+parent (CtrParamListCursor ctxs listCtrParamPath ctrParams) =
+    recListCtrParamPath {
+        constructor2: \ctrPath md tBind ->
+            recCtrPath ({ -- We skip the constructor, and the cursor goes to the ctr list above it
+                ctrListCons1: \listCtrPath ctrs -> Just $ CtrListCursor listCtrPath.ctxs listCtrPath.listCtrPath listCtrPath.ctrs /\ (2 - 1) -- note that the numbering here is special
+            }) ctrPath
+        , ctrParamListCons2: \listCtrParamPath ctrParam -> Just $ CtrParamListCursor listCtrParamPath.ctxs listCtrParamPath.listCtrParamPath listCtrParamPath.ctrParams /\ (2 - 1)
+    } {ctxs, listCtrParamPath, ctrParams}
+parent (TypeArgListCursor ctxs listTypeArgPath tyArgs) =
+    recListTypeArgPath {
+        tNeu1: \typePath md x -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (1 - 1)
+        , typeArgListCons2: \listTypeArgPath tyArg -> Just $ TypeArgListCursor listTypeArgPath.ctxs listTypeArgPath.listTypeArgPath listTypeArgPath.tyArgs /\ (2 - 1)
+    } {ctxs, listTypeArgPath, tyArgs}
 parent (TypeBindListCursor ctxs listTypeBindPath tyBinds) =
     recListTypeBindPath ({
         data2 : \termPath md tyBind ctrs body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
         , tLet2 : \termPath md tyBind def body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
-        , typeBindListCons2 : \listTypeBindPath tyBind -> hole' "parent"
+        , typeBindListCons2 : \listTypeBindPath tyBind -> Just $ TypeBindListCursor listTypeBindPath.ctxs listTypeBindPath.listTypeBindPath listTypeBindPath.tyBinds /\ (2 - 1)
         , let2 : \termPath md tBind def defTy body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
     }) {ctxs, listTypeBindPath, tyBinds}
 parent _ = hole' "given an ill-typed upPath to parent function (or I missed a case)"
