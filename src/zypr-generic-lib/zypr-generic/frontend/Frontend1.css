@@ -179,6 +179,8 @@
   border-radius: 0.2rem;
   display: inline-block;
   white-space: pre;
-  border: 1px dashed black;
+  /* border: 1px dashed black; */
+  /* box-shadow: 0 0 0 1px black; */
   background-color: rgb(255, 224, 165);
+  box-shadow: 0 0 0 1px orange inset, 1px 1px 2px 0 black inset;
 }
