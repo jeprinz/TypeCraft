@@ -38,7 +38,11 @@ getCursorChildren (TermCursor ctxs ty up term) =
                 : TypeCursor defTy.ctxs (Let4 md tBind.tBind tBinds.tyBinds def.term body.term bodyTy : up) defTy.ty
                 : TermCursor def.ctxs def.ty (Let3 md tBind.tBind tBinds.tyBinds defTy.ty body.term bodyTy : up) def.term
                 : TermCursor body.ctxs body.ty (Let5 md tBind.tBind tBinds.tyBinds def.term defTy.ty bodyTy : up) body.term : Nil
-            , dataa : \md tBind tyBinds ctrs body bodyTy -> TermCursor body.ctxs body.ty (Data4 md tBind.tyBind tyBinds.tyBinds ctrs.ctrs bodyTy : up) body.term: Nil
+            , dataa : \md tyBind tyBinds ctrs body bodyTy ->
+                TypeBindCursor tyBind.ctxs (Data1 md {--} tyBinds.tyBinds ctrs.ctrs body.term bodyTy : up) tyBind.tyBind
+                : TypeBindListCursor tyBinds.ctxs (Data2 md tyBind.tyBind {--} ctrs.ctrs body.term bodyTy : up) tyBinds.tyBinds
+                : CtrListCursor ctrs.ctxs (Data3 md tyBind.tyBind tyBinds.tyBinds {--} body.term bodyTy : up) ctrs.ctrs
+                : TermCursor body.ctxs body.ty (Data4 md tyBind.tyBind tyBinds.tyBinds ctrs.ctrs bodyTy : up) body.term: Nil
             , tlet : \md tyBind tyBinds def body bodyTy ->
                 -- Add TypeBindList child!
                 TypeBindCursor tyBind.ctxs (TLet1 md {-tyBind-} tyBinds.tyBinds def.ty body.term bodyTy : up) tyBind.tyBind
@@ -54,8 +58,6 @@ getCursorChildren (TermCursor ctxs ty up term) =
               : TermCursor body.ctxs body.ty (Buffer3 md def.term defTy.ty bodyTy : up) body.term : Nil
         }
         {ctxs, ty, term}
-getCursorChildren (TypeCursor ctxs up (Arrow md t1 t2)) =
-    TypeCursor ctxs (Arrow1 md t2 : up) t1 : TypeCursor ctxs (Arrow2 md t1 : up) t2 : Nil
 getCursorChildren (TypeBindCursor ctxs up _) = Nil
 getCursorChildren (TermBindCursor ctxs up _) = Nil
 getCursorChildren (TypeCursor ctxs up ty) =
@@ -67,10 +69,20 @@ getCursorChildren (TypeCursor ctxs up ty) =
           }
         )
         {ctxs, ty}
-getCursorChildren (CtrListCursor _ _ _) = Nil
-getCursorChildren (CtrParamListCursor _ _ _) = Nil
-getCursorChildren (TypeArgListCursor _ _ _) = Nil
-getCursorChildren (TypeBindListCursor _ _ _) = Nil
+getCursorChildren (CtrListCursor _ _ _) = Nil -- hole
+getCursorChildren (CtrParamListCursor _ _ _) = Nil -- hole
+getCursorChildren (TypeArgListCursor ctxs up tyArgs) =
+    recListTypeArg ({
+        cons: \tyArg@{tyArg: (TypeArg md ty)} tyArgs -> TypeCursor tyArg.ctxs (TypeArg1 md {--} : TypeArgListCons1 {--} tyArgs.tyArgs : up) ty
+            : TypeArgListCursor tyArgs.ctxs (TypeArgListCons2 tyArg.tyArg {--} : up) tyArgs.tyArgs : Nil
+        , nil: Nil
+    }) {ctxs, tyArgs}
+getCursorChildren (TypeBindListCursor ctxs up tyBinds) =
+    recListTypeBind ({
+        cons: \tyBind tyBinds -> TypeBindCursor tyBind.ctxs (TypeBindListCons1 {--} tyBinds.tyBinds : up) tyBind.tyBind
+            : TypeBindListCursor tyBinds.ctxs (TypeBindListCons2 tyBind.tyBind {--} : up) tyBinds.tyBinds : Nil
+        , nil: Nil
+    }) {ctxs, tyBinds}
 
 -- the Int is what'th child the input is of the output
 parent :: CursorLocation -> Maybe (CursorLocation /\ Int)
@@ -124,7 +136,7 @@ parent (TermBindCursor ctxs termBindPath tBind) =
 parent (TypeBindCursor ctxs typeBindPath tyBind) =
     recTypeBindPath {
         tLet1 : \termPath md {-tyBind-} tyBinds def body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (1 - 1)
-        , data1 : \termPath md {-tyBind-} tyBinds ctrs body bodyTy -> hole' "parent"
+        , data1 : \termPath md {-tyBind-} tyBinds ctrs body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (1 - 1)
         , typeBindListCons1 : \listTypeBindPath {-tyBind-} tyBind -> hole' "parent"
     } {ctxs, typeBindPath, tyBind}
 parent (TypeCursor ctxs typePath ty) =
@@ -145,7 +157,7 @@ parent (CtrParamListCursor _ _ _) = hole' "parent"
 parent (TypeArgListCursor _ _ _) = hole' "parent"
 parent (TypeBindListCursor ctxs listTypeBindPath tyBinds) =
     recListTypeBindPath ({
-        data2 : \termPath md tyBind ctrs body bodyTy -> hole' "parent"
+        data2 : \termPath md tyBind ctrs body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
         , tLet2 : \termPath md tyBind def body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
         , typeBindListCons2 : \listTypeBindPath tyBind -> hole' "parent"
         , let2 : \termPath md tBind def defTy body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)

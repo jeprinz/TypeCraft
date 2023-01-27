@@ -193,19 +193,19 @@ type ListTypeArgRec a = {
     , nil :: a
 }
 
-recTypeArgParam :: forall a. ListTypeArgRec a -> ListTypeArgRecValue -> a
-recTypeArgParam args {ctxs, tyArgs: tyArg: tyArgs} =
+recListTypeArg :: forall a. ListTypeArgRec a -> ListTypeArgRecValue -> a
+recListTypeArg args {ctxs, tyArgs: tyArg: tyArgs} =
     args.cons {ctxs, tyArg}
         {ctxs, tyArgs}
-recTypeArgParam args {ctxs, tyArgs: Nil} = args.nil
+recListTypeArg args {ctxs, tyArgs: Nil} = args.nil
 
 type ListTypeBindRec a = {
     cons :: TypeBindRecValue -> ListTypeBindRecValue -> a
     , nil :: a
 }
 
-recTypeBindParam :: forall a. ListTypeBindRec a -> ListTypeBindRecValue -> a
-recTypeBindParam args {ctxs, tyBinds: tyBind: tyBinds} =
+recListTypeBind :: forall a. ListTypeBindRec a -> ListTypeBindRecValue -> a
+recListTypeBind args {ctxs, tyBinds: tyBind: tyBinds} =
     args.cons {ctxs, tyBind}
         {ctxs, tyBinds}
-recTypeBindParam args {ctxs, tyBinds: Nil} = args.nil
+recListTypeBind args {ctxs, tyBinds: Nil} = args.nil
