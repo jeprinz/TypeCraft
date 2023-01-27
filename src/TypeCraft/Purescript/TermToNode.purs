@@ -12,9 +12,10 @@ import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.CursorMovement (getMiddlePath)
 import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term(..), TermBind(..), Tooth(..), Type(..), TypeArg, TypeBind(..), UpPath)
 import TypeCraft.Purescript.Node (Node, NodeIndentation, NodeTag(..), getNodeTag, makeIndentNodeIndentation, makeInlineNodeIndentation, makeNewlineNodeIndentation, makeNode, setNodeIndentation, setNodeIsParenthesized, setNodeLabel, termToNodeTag, typeToNodeTag)
-import TypeCraft.Purescript.State (CursorLocation(..), Select(..), botSelectOrientation, makeCursorMode, makeSelectMode)
+import TypeCraft.Purescript.State (CursorLocation(..), Select(..), topSelectOrientation, makeCursorMode, makeSelectMode)
 import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListCtrRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, CtrParamRecValue, recTerm, recType)
 import TypeCraft.Purescript.Util (hole', justWhen, lookup')
+import Debug (trace)
 
 data AboveInfo syn
   = AICursor UpPath
@@ -22,12 +23,10 @@ data AboveInfo syn
 
 stepAI :: forall syn. Tooth -> AboveInfo syn -> AboveInfo syn
 stepAI tooth (AICursor path) = AICursor (tooth : path)
-
 stepAI tooth (AISelect topPath ctx term midPath) = AISelect topPath ctx term (tooth : midPath)
 
 aIOnlyCursor :: forall syn1 syn2. AboveInfo syn1 -> AboveInfo syn2
 aIOnlyCursor (AICursor path) = AICursor path
-
 aIOnlyCursor (AISelect topPath ctx term midPath) = AICursor (midPath <> topPath)
 
 aIGetPath :: forall syn. AboveInfo syn -> UpPath
@@ -174,13 +173,13 @@ termToNode isActive aboveInfo term =
           arrangeTerm args
             [ arrangeKidAI ai (termBindToNode isActive) tBind
             , arrangeKidAI ai (typeToNode isActive) ty
-            , arrangeKidAI ai (termToNode isActive) body
+            , arrangeKidAI aboveInfo (termToNode isActive) body
             ]
     , app:
         \md t1 t2 _argTy _outTy ->
           arrangeTerm args
-            [ arrangeKidAI ai (termToNode isActive) t1
-            , arrangeKidAI ai (termToNode isActive) t2
+            [ arrangeKidAI aboveInfo (termToNode isActive) t1
+            , arrangeKidAI aboveInfo (termToNode isActive) t2
             ]
     , var: \md x targs -> setNodeLabel (x `lookup'` term.ctxs.mdctx) $ arrangeTerm args []
     , lett:
@@ -189,8 +188,8 @@ termToNode isActive aboveInfo term =
             [ arrangeKidAI ai (termBindToNode isActive) tBind
             , arrangeKidAI ai (typeBindListToNode isActive) tyBinds
             , arrangeKidAI ai (typeToNode isActive) defTy
-            , arrangeKidAI ai (termToNode isActive) def
-            , arrangeKidAI ai (termToNode isActive) body
+            , arrangeKidAI aboveInfo (termToNode isActive) def
+            , arrangeKidAI aboveInfo (termToNode isActive) body
             ]
     , dataa:
         \md x tbinds ctrs body _bodyTy ->
@@ -198,7 +197,7 @@ termToNode isActive aboveInfo term =
             [ arrangeKidAI ai (typeBindToNode isActive) x
             , arrangeKidAI ai (typeBindListToNode isActive) tbinds
             , arrangeKidAI ai (ctrListToNode isActive) ctrs
-            , arrangeKidAI ai (termToNode isActive) body
+            , arrangeKidAI aboveInfo (termToNode isActive) body
             ]
     , tlet:
         \md tyBind tyBinds def body _bodyTy ->
@@ -206,26 +205,26 @@ termToNode isActive aboveInfo term =
             [ arrangeKidAI ai (typeBindToNode isActive) tyBind
             , arrangeKidAI ai (typeBindListToNode isActive) tyBinds
             , arrangeKidAI ai (typeToNode isActive) def
-            , arrangeKidAI ai (termToNode isActive) body
+            , arrangeKidAI aboveInfo (termToNode isActive) body
             ]
     , typeBoundary:
         \md ch t ->
           arrangeTerm args
-            [ arrangeKidAI ai (termToNode isActive) t
+            [ arrangeKidAI aboveInfo (termToNode isActive) t
             , arrangeKidAI ai (const changeToNode) { ch, ctxs: term.ctxs }
             ]
     , contextBoundary:
         \md x c t ->
           arrangeTerm args
-            [ arrangeKidAI ai (termToNode isActive) t
+            [ arrangeKidAI aboveInfo (termToNode isActive) t
             ]
     , hole: \md -> arrangeTerm args []
     , buffer:
         \md def defTy body _bodyTy ->
           arrangeTerm args
-            [ arrangeKidAI ai (termToNode isActive) def
+            [ arrangeKidAI aboveInfo (termToNode isActive) def
             , arrangeKidAI ai (typeToNode isActive) defTy
-            , arrangeKidAI ai (termToNode isActive) body
+            , arrangeKidAI aboveInfo (termToNode isActive) body
             ]
     }
     term
@@ -235,8 +234,8 @@ termToNode isActive aboveInfo term =
     , makeCursor: \_ -> Just $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
     , makeSelect:
         \_ -> case aboveInfo of
-          AICursor _path -> Nothing
-          AISelect topPath topCtx (topTerm /\ topTy) midPath -> Just $ TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term botSelectOrientation
+          AICursor _path -> trace "In cursor case!!!!!!!!!!!!!!!!" \_ -> Nothing
+          AISelect topPath topCtx (topTerm /\ topTy) midPath -> trace "In select case!!!!!!!!!!!!!!!!" \_ -> Just $ TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term topSelectOrientation
     , term
     }
 
@@ -284,8 +283,8 @@ typeToNode isActive aboveInfo ty =
     { arrow:
         \md ty1 ty2 ->
           arrangeType args
-            [ arrangeKidAI ai (typeToNode isActive) ty1
-            , arrangeKidAI ai (typeToNode isActive) ty2
+            [ arrangeKidAI aboveInfo (typeToNode isActive) ty1
+            , arrangeKidAI aboveInfo (typeToNode isActive) ty2
             ]
     , tNeu:
         \md x tyArgs ->
@@ -302,7 +301,7 @@ typeToNode isActive aboveInfo ty =
     , makeSelect:
         \_ -> case aboveInfo of
           AICursor _path -> Nothing
-          AISelect topPath topCtx topTy midPath -> Just $ TypeSelect topPath topCtx topTy midPath ty.ctxs ty.ty botSelectOrientation
+          AISelect topPath topCtx topTy midPath -> Just $ TypeSelect topPath topCtx topTy midPath ty.ctxs ty.ty topSelectOrientation
     , ty
     }
 

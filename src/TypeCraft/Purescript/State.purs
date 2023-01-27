@@ -115,9 +115,9 @@ data Clipboard
   -- Path clipboards:
   | TermPathClip AllContext Type UpPath AllContext Type
   | TypePathClip AllContext UpPath
-  | CtrListClip AllContext UpPath
-  | CtrParamList AllContext UpPath
-  | TypeArgList AllContext UpPath
+  | CtrListClip AllContext UpPath -- technically doesn't need term contexts but whatever
+  | CtrParamList AllContext UpPath -- technically doesn't need term contexts but whatever
+  | TypeArgList AllContext UpPath -- technically doesn't need term contexts but whatever
   | VarNameList AllContext UpPath -- for TypeBind Lists
 
 data CursorLocation
