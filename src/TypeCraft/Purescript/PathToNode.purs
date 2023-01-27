@@ -14,7 +14,7 @@ import TypeCraft.Purescript.Util (hole', justWhen)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
-  | BISelect DownPath term AllContext ty -- middle path, then bottom term. ctx and ty are the type and context of term.
+  | BISelect UpPath term AllContext ty -- middle path, then bottom term. ctx and ty are the type and context of term.
 
 {-
 stepBI :: forall gsort1 gsort2. Tooth -> BelowInfo gsort1 -> BelowInfo gsort2
@@ -27,8 +27,7 @@ stepBI = hole
 -- TODO: @jacob think about this
 stepBI :: forall syn synty. Tooth -> BelowInfo syn synty -> BelowInfo syn synty
 stepBI _tooth BITerm = BITerm
-
-stepBI tooth (BISelect middle bottom ctxs ty) = BISelect (tooth : middle) bottom ctxs ty
+stepBI tooth (BISelect middle bottom ctxs ty) = BISelect (middle <> (tooth : Nil)) bottom ctxs ty
 
 arrangeKid :: forall a recVal. UpPath -> (AboveInfo a -> recVal -> Node) -> recVal -> PreNode
 arrangeKid path k rv th = k (AICursor (th : path)) rv

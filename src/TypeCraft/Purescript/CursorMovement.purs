@@ -31,7 +31,7 @@ getCursorChildren (TermCursor ctxs ty up term) =
                 TermCursor body.ctxs body.ty (Lambda3 md x.tBind ty.ty bodyTy : up) body.term : Nil
             , app: \md t1 t2 tyArg tyOut -> TermCursor t1.ctxs t1.ty (App1 md t2.term tyArg tyOut : up) t1.term
                 : TermCursor t2.ctxs t2.ty (App2 md t1.term tyArg tyOut : up) t2.term : Nil
-            , var: \_ _ _ -> Nil
+            , var: \_ _ _ -> Nil -- TODO
             , lett: \md tBind tBinds def defTy body bodyTy ->
                 TermBindCursor tBind.ctxs (Let1 md {--} tBinds.tyBinds def.term defTy.ty body.term bodyTy : up) tBind.tBind
                 : TypeBindListCursor tBinds.ctxs (Let2 md tBind.tBind {--} def.term defTy.ty body.term bodyTy : up) tBinds.tyBinds
@@ -338,6 +338,7 @@ Then,
 moveSelectTopLeft t :: GrammaticalSort ->
 -}
 
+-- TODO: these two functions aren't being used, they can be deleted
 {-When you start a selection going left from a cursor, you always are going to the parent.-}
 selectLeftFromCursor :: CursorLocation -> Maybe Select
 selectLeftFromCursor cursor@(TermCursor ctxs ty (tooth : path) term) =
