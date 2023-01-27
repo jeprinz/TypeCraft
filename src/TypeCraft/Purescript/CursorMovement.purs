@@ -1,25 +1,25 @@
 module TypeCraft.Purescript.CursorMovement where
 
-import Data.Generic.Rep (class Generic)
-import Data.Eq.Generic (genericEq)
 import Prelude
 import Prim hiding (Type)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.PathRec
 import TypeCraft.Purescript.State
+import TypeCraft.Purescript.TermRec
 
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:), find, last, init)
+import Data.List (head)
 import Data.List (index)
 import Data.List (length)
 import Data.Maybe (Maybe(..))
 import Data.Maybe (Maybe)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Util (hole, hole', fromJust)
-import TypeCraft.Purescript.TermRec
+import TypeCraft.Purescript.Util (fromJust, hole, hole')
 import TypeCraft.Purescript.Util (head')
-import Data.List (head)
 
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor ctxs ty up term) =

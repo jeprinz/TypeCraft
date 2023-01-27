@@ -2,13 +2,14 @@ module TypeCraft.Purescript.TermToNode where
 
 import Prelude
 import Prim hiding (Type)
-
 import Data.Array as Array
 import Data.List (List(..), (:))
+import Data.List as List
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
+import TypeCraft.Purescript.CursorMovement (getMiddlePath)
 import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term(..), TermBind(..), Tooth(..), Type(..), TypeArg, TypeBind(..), UpPath)
 import TypeCraft.Purescript.Node (Node, NodeIndentation, NodeTag(..), getNodeTag, makeIndentNodeIndentation, makeInlineNodeIndentation, makeNewlineNodeIndentation, makeNode, setNodeIndentation, setNodeIsParenthesized, setNodeLabel, termToNodeTag, typeToNodeTag)
 import TypeCraft.Purescript.State (CursorLocation(..), Select(..), botSelectOrientation, makeCursorMode, makeSelectMode)
@@ -36,7 +37,7 @@ aIGetPath (AISelect top ctx term middle) = middle <> top
 
 -- don't indent inactive things (such as appear in query previews)
 newlineIf :: Boolean -> Boolean -> NodeIndentation
-newlineIf isActive isNewlined = if isNewlined &&  isActive then makeNewlineNodeIndentation else makeInlineNodeIndentation
+newlineIf isActive isNewlined = if isNewlined && isActive then makeNewlineNodeIndentation else makeInlineNodeIndentation
 
 -- don't indent inactive things (such as appear in query previews)
 indentIf :: Boolean -> Boolean -> NodeIndentation
@@ -58,20 +59,26 @@ arrangeNodeKids ::
   Array PreNode ->
   Node
 arrangeNodeKids args kids =
-  makeNode
-    { kids: args.stepKids kids
-    , getCursor:
-        join
-          $ justWhen args.isActive \_ -> do
-              cursorLocation <- args.makeCursor unit
-              Just (_ { mode = makeCursorMode cursorLocation })
-    , getSelect:
-        join
-          $ justWhen args.isActive \_ -> do
-              select <- args.makeSelect unit
-              Just (_ { mode = makeSelectMode select })
-    , tag: args.tag
-    }
+  let
+    getCursor =
+      join
+        $ justWhen args.isActive \_ -> do
+            cursorLocation <- args.makeCursor unit
+            Just (_ { mode = makeCursorMode cursorLocation })
+  in
+    makeNode
+      { kids: args.stepKids kids
+      , getCursor: getCursor
+      , getSelect:
+          join
+            $ justWhen args.isActive \_ -> do
+                select <- args.makeSelect unit
+                if List.null (getMiddlePath select) then
+                  getCursor 
+                else
+                  Just (_ { mode = makeSelectMode select })
+      , tag: args.tag
+      }
 
 arrangeKidAI :: forall a recVal. AboveInfo a -> (AboveInfo a -> recVal -> Node) -> recVal -> PreNode
 arrangeKidAI info k rv th = k (stepAI th info) rv
@@ -129,12 +136,13 @@ stepKidsTerm isActive term kids = case term of
       ]
   _ -> unsafeThrow $ "stepKidsTerm: wrong number of kids\nterm = " <> show term <> "\nlength kids = " <> show (Array.length kids)
 
-type TermNodeCursorInfo =
-  { isActive :: Boolean
-  , makeCursor :: Unit -> Maybe CursorLocation
-  , makeSelect :: Unit -> Maybe Select
-  , term :: TermRecValue
-  }
+type TermNodeCursorInfo
+  = { isActive :: Boolean
+    , makeCursor :: Unit -> Maybe CursorLocation
+    , makeSelect :: Unit -> Maybe Select
+    , term :: TermRecValue
+    }
+
 arrangeTerm ::
   TermNodeCursorInfo ->
   Array PreNode ->
@@ -250,12 +258,13 @@ stepKidsType isActive ty kids = case ty of
     | [] <- kids -> []
   _ -> unsafeThrow "stepKidsType: wrong number of kids"
 
-type TypeNodeCursorInfo =
-  { isActive :: Boolean
-  , ty :: TypeRecValue
-  , makeCursor :: Unit -> Maybe CursorLocation
-  , makeSelect :: Unit -> Maybe Select
-  }
+type TypeNodeCursorInfo
+  = { isActive :: Boolean
+    , ty :: TypeRecValue
+    , makeCursor :: Unit -> Maybe CursorLocation
+    , makeSelect :: Unit -> Maybe Select
+    }
+
 arrangeType ::
   TypeNodeCursorInfo ->
   Array PreNode ->
