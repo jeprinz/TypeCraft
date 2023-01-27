@@ -234,8 +234,8 @@ termToNode isActive aboveInfo term =
     , makeCursor: \_ -> Just $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
     , makeSelect:
         \_ -> case aboveInfo of
-          AICursor _path -> trace "In cursor case!!!!!!!!!!!!!!!!" \_ -> Nothing
-          AISelect topPath topCtx (topTerm /\ topTy) midPath -> trace "In select case!!!!!!!!!!!!!!!!" \_ -> Just $ TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term topSelectOrientation
+          AICursor _path -> Nothing
+          AISelect topPath topCtx (topTerm /\ topTy) midPath -> Just $ TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term topSelectOrientation
     , term
     }
 
