@@ -38,4 +38,5 @@ toggleIndentation = case _ of
         Arrow1 md cod -> Nothing
         Arrow2 md dom -> setTooth (Arrow2 md { codIndented = not md.codIndented } dom)
         _ -> unsafeThrow "malformed TypeCursor"
+  -- TODO: handle other syntax forms
   _ -> Nothing
