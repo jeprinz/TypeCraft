@@ -2,8 +2,8 @@ module TypeCraft.Purescript.PathToNode where
 
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.PathRec (ListCtrParamPathRecValue, ListCtrPathRecValue, ListTypeArgPathRecValue, ListTypeBindPathRecValue, TermBindPathRecValue, TermPathRecValue, TypeBindPathRecValue, TypePathRecValue, recListTypeBindPath, recTermBindPath, recTermPath, recTypeBindPath, recTypePath)
-import TypeCraft.Purescript.TermToNode (AboveInfo(..), PreNode, TermNodeCursorInfo, TypeNodeCursorInfo, arrangeTerm, arrangeType, ctrListToNode, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode)
+import TypeCraft.Purescript.PathRec
+import TypeCraft.Purescript.TermToNode
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Context (AllContext)
@@ -11,6 +11,7 @@ import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, Toot
 import TypeCraft.Purescript.Node (Node, NodeTag, makeNode)
 import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, topSelectOrientation)
 import TypeCraft.Purescript.Util (hole', justWhen)
+import TypeCraft.Purescript.Util (hole)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
@@ -228,18 +229,37 @@ typePathToNode isActive abovePath belowInfo typePath innerNode =
       )
       typePath
 
-constructorPathToNode :: Boolean -> UpPath -> AllContext -> BelowInfo Constructor Unit -> UpPath -> Node -> Node
-constructorPathToNode isActive ctxs belowInfo up innerNode = (hole' "constructorPathToNode isActive")
+makeCtrArgs :: Boolean -> CtrPathRecValue -> CtrNodeCursorInfo
+makeCtrArgs isActive ctr = {
+    isActive
+    , makeCursor: \_ -> Nothing
+    , makeSelect: \_ -> Nothing
+    , ctr: {ctxs: ctr.ctxs, ctr: ctr.ctr}
+}
+
+constructorPathToNode :: Boolean -> UpPath -> CtrPathRecValue -> Node -> Node
+constructorPathToNode isActive abovePath ctrPath innerNode = (hole' "constructorPathToNode isActive")
+
+makeCtrParamArgs :: Boolean -> CtrParamPathRecValue -> CtrParamNodeCursorInfo
+makeCtrParamArgs isActive ctrParam = {
+    isActive
+    , ctrParam: {ctxs: ctrParam.ctxs, ctrParam: ctrParam.ctrParam}
+}
 
 ctrParamPathToNode :: Boolean -> UpPath -> AllContext -> BelowInfo CtrParam Unit -> UpPath -> Node -> Node
 ctrParamPathToNode isActive ctxs belowInfo up innerNode = (hole' "ctrParamPathToNode isActive")
+
+makeTypeArgArgs :: Boolean -> TypeArgPathRecValue -> TypeArgNodeCursorInfo
+makeTypeArgArgs isActive tyArg = {
+    isActive
+    , tyArg: {ctxs: tyArg.ctxs, tyArg: tyArg.tyArg}
+}
 
 typeArgPathToNode :: Boolean -> UpPath -> AllContext -> BelowInfo TypeArg Unit -> UpPath -> Node -> Node
 typeArgPathToNode isActive ctxs belowInfo up innerNode = (hole' "typeArgPathToNode isActive")
 
 typeBindPathToNode :: Boolean -> UpPath -> TypeBindPathRecValue -> Node -> Node
 typeBindPathToNode isActive _abovePath { typeBindPath: Nil } innerNode = innerNode
-
 typeBindPathToNode isActive abovePath typeBindPath innerNode =
   let
     tyBind = typeBindPath.tyBind
@@ -280,7 +300,6 @@ typePathToNode isActive belowInfo typePath innerNode =
 -}
 termBindPathToNode :: Boolean -> UpPath -> TermBindPathRecValue -> Node -> Node
 termBindPathToNode isActive _abovePath { termBindPath: Nil } innerNode = innerNode
-
 termBindPathToNode isActive abovePath termBindPath innerNode =
   let
     tBind = termBindPath.tBind
@@ -312,16 +331,59 @@ termBindPathToNode isActive abovePath termBindPath innerNode =
                     ]
       , constructor1:
           \ctrPath md ctrParams ->
-            constructorPathToNode isActive abovePath ctrPath.ctxs (stepBI (Constructor1 md ctrParams.ctrParams) BITerm) ctrPath.ctrPath
+            constructorPathToNode isActive abovePath ctrPath
               $ hole' "termPathBindToNode"
       }
       termBindPath
 
+makeCtrListArgs :: Boolean -> UpPath -> BelowInfo (List Constructor) Unit -> ListCtrPathRecValue -> CtrListNodeCursorInfo
+makeCtrListArgs isActive abovePath belowInfo upRecVal =
+    { isActive
+    , makeCursor: \_ -> Just $ CtrListCursor upRecVal.ctxs (upRecVal.listCtrPath <> abovePath) upRecVal.ctrs
+    , makeSelect: \_ ->
+        case belowInfo of
+            BITerm -> Nothing
+            BISelect middlePath ctrs ctxs unit -> Just $ CtrListSelect (upRecVal.listCtrPath <> abovePath) upRecVal.ctxs upRecVal.ctrs middlePath ctxs ctrs topSelectOrientation
+    , ctrs: {ctxs: upRecVal.ctxs, ctrs: upRecVal.ctrs}
+    }
+
 ctrListPathToNode :: Boolean -> UpPath -> BelowInfo (List Constructor) Unit -> ListCtrPathRecValue -> Node -> Node
-ctrListPathToNode isActive abovePath belowInfo listCtrPath innerNode = (hole' "ctrListPathToNode")
+ctrListPathToNode isActive abovePath belowInfo {listCtrPath: Nil} innerNode = innerNode
+ctrListPathToNode isActive abovePath belowInfo listCtrPath innerNode =
+    let ctrs = listCtrPath.ctrs in
+    recListCtrPath {
+        data3: \termPath md tyBind tyBinds {-ctrs-} body bodyTy ->
+            let newBI = BITerm in
+            termPathToNode isActive abovePath newBI termPath
+                $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
+                    [ arrangeKid termPath.termPath abovePath (typeBindToNode isActive) tyBind
+                    , arrangeKid termPath.termPath abovePath (typeBindListToNode isActive) tyBinds
+                    , arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) ctrs
+                    , arrangeKid termPath.termPath abovePath (termToNode isActive) body
+                    ]
+        , ctrListCons2: \listCtrPath ctr {-ctrs-} ->
+            let newBI = stepBI (CtrListCons2 ctr.ctr) belowInfo in
+            ctrListPathToNode isActive abovePath newBI listCtrPath
+                $ arrangeCtrList (makeCtrListArgs isActive abovePath newBI listCtrPath)
+                    [ arrangeKid listCtrPath.listCtrPath abovePath (ctrToNode isActive) ctr
+                    , arrangeKid listCtrPath.listCtrPath abovePath (ctrListToNode isActive) {ctxs: listCtrPath.ctxs, ctrs}
+                    ]
+    } listCtrPath
 
 ctrParamListPathToNode :: Boolean -> UpPath -> BelowInfo (List CtrParam) Unit -> ListCtrParamPathRecValue -> Node -> Node
-ctrParamListPathToNode isActive abovePath belowInfo listCtrParamPath innerNode = (hole' "ctrParamListPathToNode")
+ctrParamListPathToNode isActive abovePath belowInfo {listCtrParamPath: Nil} innerNode = innerNode
+ctrParamListPathToNode isActive abovePath belowInfo listCtrParamPath innerNode =
+    let ctrParams = listCtrParamPath.ctrParams in
+    recListCtrParamPath {
+        constructor2: \ctrPath md tBind {-ctrParams-} ->
+            let newBI = BITerm in
+            constructorPathToNode isActive abovePath ctrPath
+                $ arrangeCtr (makeCtrArgs isActive ctrPath)
+                    [ arrangeKid ctrPath.ctrPath abovePath (termBindToNode isActive) tBind
+                    , arrangeKid ctrPath.ctrPath abovePath (\_ _ -> innerNode) ctrParams
+                    ]
+        , ctrParamListCons2: \listCtrParamPath ctrParam {-ctrParams-} -> hole
+    } listCtrParamPath
 
 typeArgListPathToNode :: Boolean -> UpPath -> BelowInfo (List TypeArg) Unit -> ListTypeArgPathRecValue -> Node -> Node
 typeArgListPathToNode isActive abovePath belowInfo listTypeArgPath innerNode = (hole' "typeArgListPathToNode")
@@ -332,12 +394,18 @@ typeBindListPathToNode isActive abovePath belowInfo typeBindListPath innerNode =
     tyBinds = typeBindListPath.tyBinds
   in
     recListTypeBindPath
-      ( { data2: \termPath md tyBind ctrs body bodyTy -> hole' "termBindPathToNode isActive"
+      ( { data2: \termPath md tyBind {-tyBinds-} ctrs body bodyTy ->
+            let newBI = BITerm in
+            termPathToNode isActive abovePath newBI termPath
+                $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
+                    [ arrangeKid termPath.termPath abovePath (typeBindToNode isActive) tyBind
+                    , arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) tyBinds
+                    , arrangeKid termPath.termPath abovePath (ctrListToNode isActive) ctrs
+                    , arrangeKid termPath.termPath abovePath (termToNode isActive) body
+                    ]
         , tLet2:
             \termPath md tyBind {-tyBinds-} def body bodyTy ->
-              let
-                newBI = BITerm
-              in
+              let newBI = BITerm in
                 termPathToNode isActive abovePath newBI termPath
                   $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
                       [ arrangeKid termPath.termPath abovePath (typeBindToNode isActive) tyBind
@@ -345,7 +413,11 @@ typeBindListPathToNode isActive abovePath belowInfo typeBindListPath innerNode =
                       , arrangeKid termPath.termPath abovePath (typeToNode isActive) def
                       , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                       ]
-        , typeBindListCons2: \listTypeBindPath tyBind -> hole' "termBindPathToNode isActive"
+        , typeBindListCons2: \listTypeBindPath tyBind ->
+            let newBI = stepBI (TypeBindListCons2 tyBind.tyBind {--}) belowInfo in
+             typeBindListPathToNode isActive abovePath newBI listTypeBindPath
+                (hole' "typeBindListPathToNode")
+--                $ arrangeTypeBindList
         , let2:
             \termPath md tBind def defTy body bodyTy ->
               let

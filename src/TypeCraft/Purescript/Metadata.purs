@@ -21,7 +21,7 @@ type LetMD
     }
 type GADTMD = {}
 type TermBindMD = { varName :: String }
-type TypeBindMD = { varName :: String }
+type TypeBindMD = { varName :: String}
 type CtrMD = { indented :: Boolean } -- refers to if the constructor is indented within its parent list of constructors
 type CtrParamMD = { paramName :: String, indented :: Boolean }
 type TypeBoundaryMD = {}

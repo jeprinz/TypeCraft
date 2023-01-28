@@ -216,6 +216,18 @@ ctrListToNodeTag :: List Constructor -> NodeTag
 ctrListToNodeTag Nil = ConstructorListNilNodeTag
 ctrListToNodeTag (_ : _) = ConstructorListConsNodeTag
 
+ctrParamListToNodeTag :: List CtrParam -> NodeTag
+ctrParamListToNodeTag Nil = CtrParamListNilNodeTag
+ctrParamListToNodeTag (_ : _) = CtrParamListConsNodeTag
+
+tyBindListToNodeTag :: List TypeBind -> NodeTag
+tyBindListToNodeTag Nil = TypeBindListNilNodeTag
+tyBindListToNodeTag (_ : _) = TypeBindListConsNodeTag
+
+tyArgListToNodeTag :: List TypeArg -> NodeTag
+tyArgListToNodeTag Nil = TypeArgListNilNodeTag
+tyArgListToNodeTag (_ : _) = TypeArgListConsNodeTag
+
 typeToNodeTag :: Type -> NodeTag
 typeToNodeTag = case _ of
     Arrow _ _ _ -> ArrowNodeTag
