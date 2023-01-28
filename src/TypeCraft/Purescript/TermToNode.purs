@@ -171,8 +171,8 @@ termToNode isActive aboveInfo term =
     { lambda:
         \md tBind ty body _bodyTy ->
           arrangeTerm args
-            [ arrangeKidAI ai (termBindToNode isActive) tBind
-            , arrangeKidAI ai (typeToNode isActive) ty
+            [ arrangeKidAI cursorOnlyInfo (termBindToNode isActive) tBind
+            , arrangeKidAI cursorOnlyInfo (typeToNode isActive) ty
             , arrangeKidAI aboveInfo (termToNode isActive) body
             ]
     , app:
@@ -185,33 +185,33 @@ termToNode isActive aboveInfo term =
     , lett:
         \md tBind tyBinds def defTy body _bodyTy ->
           arrangeTerm args
-            [ arrangeKidAI ai (termBindToNode isActive) tBind
-            , arrangeKidAI ai (typeBindListToNode isActive) tyBinds
-            , arrangeKidAI ai (typeToNode isActive) defTy
+            [ arrangeKidAI cursorOnlyInfo (termBindToNode isActive) tBind
+            , arrangeKidAI cursorOnlyInfo (typeBindListToNode isActive) tyBinds
+            , arrangeKidAI cursorOnlyInfo (typeToNode isActive) defTy
             , arrangeKidAI aboveInfo (termToNode isActive) def
             , arrangeKidAI aboveInfo (termToNode isActive) body
             ]
     , dataa:
         \md x tbinds ctrs body _bodyTy ->
           arrangeTerm args
-            [ arrangeKidAI ai (typeBindToNode isActive) x
-            , arrangeKidAI ai (typeBindListToNode isActive) tbinds
-            , arrangeKidAI ai (ctrListToNode isActive) ctrs
+            [ arrangeKidAI cursorOnlyInfo (typeBindToNode isActive) x
+            , arrangeKidAI cursorOnlyInfo (typeBindListToNode isActive) tbinds
+            , arrangeKidAI cursorOnlyInfo (ctrListToNode isActive) ctrs
             , arrangeKidAI aboveInfo (termToNode isActive) body
             ]
     , tlet:
         \md tyBind tyBinds def body _bodyTy ->
           arrangeTerm args
-            [ arrangeKidAI ai (typeBindToNode isActive) tyBind
-            , arrangeKidAI ai (typeBindListToNode isActive) tyBinds
-            , arrangeKidAI ai (typeToNode isActive) def
+            [ arrangeKidAI cursorOnlyInfo (typeBindToNode isActive) tyBind
+            , arrangeKidAI cursorOnlyInfo (typeBindListToNode isActive) tyBinds
+            , arrangeKidAI cursorOnlyInfo (typeToNode isActive) def
             , arrangeKidAI aboveInfo (termToNode isActive) body
             ]
     , typeBoundary:
         \md ch t ->
           arrangeTerm args
             [ arrangeKidAI aboveInfo (termToNode isActive) t
-            , arrangeKidAI ai (const changeToNode) { ch, ctxs: term.ctxs }
+            , arrangeKidAI cursorOnlyInfo (const changeToNode) { ch, ctxs: term.ctxs }
             ]
     , contextBoundary:
         \md x c t ->
@@ -223,7 +223,7 @@ termToNode isActive aboveInfo term =
         \md def defTy body _bodyTy ->
           arrangeTerm args
             [ arrangeKidAI aboveInfo (termToNode isActive) def
-            , arrangeKidAI ai (typeToNode isActive) defTy
+            , arrangeKidAI cursorOnlyInfo (typeToNode isActive) defTy
             , arrangeKidAI aboveInfo (termToNode isActive) body
             ]
     }
@@ -239,8 +239,8 @@ termToNode isActive aboveInfo term =
     , term
     }
 
-  ai :: forall a. AboveInfo a
-  ai = aIOnlyCursor aboveInfo
+  cursorOnlyInfo :: forall a. AboveInfo a
+  cursorOnlyInfo = aIOnlyCursor aboveInfo
 
 -- ** Type
 -- | here is where indentation and parenthesization happens

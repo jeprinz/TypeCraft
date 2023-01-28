@@ -29,8 +29,8 @@ stepBI :: forall syn synty. Tooth -> BelowInfo syn synty -> BelowInfo syn synty
 stepBI _tooth BITerm = BITerm
 stepBI tooth (BISelect middle bottom ctxs ty) = BISelect (middle <> (tooth : Nil)) bottom ctxs ty
 
-arrangeKid :: forall a recVal. UpPath -> (AboveInfo a -> recVal -> Node) -> recVal -> PreNode
-arrangeKid path k rv th = k (AICursor (th : path)) rv
+arrangeKid :: forall a recVal. UpPath -> UpPath -> (AboveInfo a -> recVal -> Node) -> recVal -> PreNode
+arrangeKid path abovePath k rv th = k (AICursor (th : path <> abovePath)) rv
 
 --arrangeKid :: forall term ty rc. BelowInfo term ty -> (BelowInfo term ty -> rc -> Node) -> rc -> PreNode
 --arrangeKid bi k rc ind th = setNodeIndentation ind $ k (stepBI th bi) rc
@@ -55,11 +55,11 @@ termPathToNode isActive abovePath belowInfo termPath innerNode =
             in
               termPathToNode isActive abovePath newBI upRecVal
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal)
-                    [ arrangeKid upRecVal.termPath (termBindToNode isActive) tBind
-                    , arrangeKid upRecVal.termPath (typeBindListToNode isActive) tyBinds
-                    , arrangeKid upRecVal.termPath (typeToNode isActive) ty
-                    , arrangeKid upRecVal.termPath (\_ _ -> innerNode) term
-                    , arrangeKid upRecVal.termPath (termToNode isActive) body
+                    [ arrangeKid upRecVal.termPath abovePath (termBindToNode isActive) tBind
+                    , arrangeKid upRecVal.termPath abovePath (typeBindListToNode isActive) tyBinds
+                    , arrangeKid upRecVal.termPath abovePath (typeToNode isActive) ty
+                    , arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
+                    , arrangeKid upRecVal.termPath abovePath (termToNode isActive) body
                     ]
       , app1:
           \upRecVal md {-Term-} t2 argTy bodyTy ->
@@ -68,8 +68,8 @@ termPathToNode isActive abovePath belowInfo termPath innerNode =
             in
               termPathToNode isActive abovePath newBI upRecVal
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal)
-                    [ arrangeKid upRecVal.termPath (\_ _ -> innerNode) term
-                    , arrangeKid upRecVal.termPath (termToNode isActive) t2
+                    [ arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
+                    , arrangeKid upRecVal.termPath abovePath (termToNode isActive) t2
                     ]
       , app2:
           \upRecVal md t1 {-Term-} argTy bodyTy ->
@@ -78,8 +78,8 @@ termPathToNode isActive abovePath belowInfo termPath innerNode =
             in
               termPathToNode isActive abovePath newBI upRecVal
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal)
-                    [ arrangeKid upRecVal.termPath (termToNode isActive) t1
-                    , arrangeKid upRecVal.termPath (\_ _ -> innerNode) term
+                    [ arrangeKid upRecVal.termPath abovePath (termToNode isActive) t1
+                    , arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
                     ]
       , lambda3:
           \upRecVal md tBind argTy {-body-} bodyTy ->
@@ -88,9 +88,9 @@ termPathToNode isActive abovePath belowInfo termPath innerNode =
             in
               termPathToNode isActive abovePath newBI upRecVal
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal)
-                    [ arrangeKid upRecVal.termPath (termBindToNode isActive) tBind
-                    , arrangeKid upRecVal.termPath (typeToNode isActive) argTy
-                    , arrangeKid upRecVal.termPath (\_ _ -> innerNode) term
+                    [ arrangeKid upRecVal.termPath abovePath (termBindToNode isActive) tBind
+                    , arrangeKid upRecVal.termPath abovePath (typeToNode isActive) argTy
+                    , arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
                     ]
       , buffer1: \upRecVal md {-Term-} bufTy body bodyTy -> hole' "termPathToNode 1"
       , buffer3: \upRecVal md buf bufTy {-Term-} bodyTy -> hole' "termPathToNode 2"
@@ -103,10 +103,10 @@ termPathToNode isActive abovePath belowInfo termPath innerNode =
             in
               termPathToNode isActive abovePath newBI upRecVal
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal)
-                    [ arrangeKid upRecVal.termPath (typeBindToNode isActive) { ctxs: upRecVal.ctxs, tyBind }
-                    , arrangeKid upRecVal.termPath (typeBindListToNode isActive) tyBinds
-                    , arrangeKid upRecVal.termPath (typeToNode isActive) def
-                    , arrangeKid upRecVal.termPath (\_ _ -> innerNode) term
+                    [ arrangeKid upRecVal.termPath abovePath (typeBindToNode isActive) { ctxs: upRecVal.ctxs, tyBind }
+                    , arrangeKid upRecVal.termPath abovePath (typeBindListToNode isActive) tyBinds
+                    , arrangeKid upRecVal.termPath abovePath (typeToNode isActive) def
+                    , arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
                     ]
       , let5:
           \upRecVal md tBind tyBinds def ty {-body-} bodyTy ->
@@ -115,11 +115,11 @@ termPathToNode isActive abovePath belowInfo termPath innerNode =
             in
               termPathToNode isActive abovePath newBI upRecVal
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal)
-                    [ arrangeKid upRecVal.termPath (termBindToNode isActive) tBind
-                    , arrangeKid upRecVal.termPath (typeBindListToNode isActive) tyBinds
-                    , arrangeKid upRecVal.termPath (typeToNode isActive) ty
-                    , arrangeKid upRecVal.termPath (termToNode isActive) def
-                    , arrangeKid upRecVal.termPath (\_ _ -> innerNode) term
+                    [ arrangeKid upRecVal.termPath abovePath (termBindToNode isActive) tBind
+                    , arrangeKid upRecVal.termPath abovePath (typeBindListToNode isActive) tyBinds
+                    , arrangeKid upRecVal.termPath abovePath (typeToNode isActive) ty
+                    , arrangeKid upRecVal.termPath abovePath (termToNode isActive) def
+                    , arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
                     ]
       , data4:
           \upRecVal md tyBind tyBinds ctrs {-body-} bodyTy ->
@@ -128,10 +128,10 @@ termPathToNode isActive abovePath belowInfo termPath innerNode =
             in
               termPathToNode isActive abovePath newBI upRecVal
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal)
-                    [ arrangeKid upRecVal.termPath (typeBindToNode isActive) tyBind
-                    , arrangeKid upRecVal.termPath (typeBindListToNode isActive) tyBinds
-                    , arrangeKid upRecVal.termPath (ctrListToNode isActive) ctrs
-                    , arrangeKid upRecVal.termPath (\_ _ -> innerNode) term
+                    [ arrangeKid upRecVal.termPath abovePath (typeBindToNode isActive) tyBind
+                    , arrangeKid upRecVal.termPath abovePath (typeBindListToNode isActive) tyBinds
+                    , arrangeKid upRecVal.termPath abovePath (ctrListToNode isActive) ctrs
+                    , arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
                     ]
       }
       termPath
@@ -172,9 +172,9 @@ typePathToNode isActive abovePath belowInfo typePath innerNode =
               in
                 termPathToNode isActive abovePath newBI termPath
                   $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
-                      [ arrangeKid termPath.termPath (termBindToNode isActive) tBind
-                      , arrangeKid termPath.termPath (\_ _ -> innerNode) ty
-                      , arrangeKid termPath.termPath (termToNode isActive) body
+                      [ arrangeKid termPath.termPath abovePath (termBindToNode isActive) tBind
+                      , arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) ty
+                      , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                       ]
         , let4:
             \termPath md tBind tyBinds def {-Type-} body bodyTy ->
@@ -183,11 +183,11 @@ typePathToNode isActive abovePath belowInfo typePath innerNode =
               in
                 termPathToNode isActive abovePath newBI termPath
                   $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
-                      [ arrangeKid termPath.termPath (termBindToNode isActive) tBind
-                      , arrangeKid termPath.termPath (typeBindListToNode isActive) tyBinds
-                      , arrangeKid termPath.termPath (\_ _ -> innerNode) ty
-                      , arrangeKid termPath.termPath (termToNode isActive) def
-                      , arrangeKid termPath.termPath (termToNode isActive) body
+                      [ arrangeKid termPath.termPath abovePath (termBindToNode isActive) tBind
+                      , arrangeKid termPath.termPath abovePath (typeBindListToNode isActive) tyBinds
+                      , arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) ty
+                      , arrangeKid termPath.termPath abovePath (termToNode isActive) def
+                      , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                       ]
         , buffer2: \termPath md def {-Type-} body bodyTy -> (hole' "typePathToNode isActive")
         , tLet3:
@@ -197,10 +197,10 @@ typePathToNode isActive abovePath belowInfo typePath innerNode =
               in
                 termPathToNode isActive abovePath newBI termPath
                   $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
-                      [ arrangeKid termPath.termPath (typeBindToNode isActive) tyBind
-                      , arrangeKid termPath.termPath (typeBindListToNode isActive) tyBinds
-                      , arrangeKid termPath.termPath (\_ _ -> innerNode) ty
-                      , arrangeKid termPath.termPath (termToNode isActive) body
+                      [ arrangeKid termPath.termPath abovePath (typeBindToNode isActive) tyBind
+                      , arrangeKid termPath.termPath abovePath (typeBindListToNode isActive) tyBinds
+                      , arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) ty
+                      , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                       ]
         , ctrParam1: \ctrParamPath md {-Type-} -> (hole' "typePathToNode isActive")
         , typeArg1: \typeArgPath md {-Type-} -> (hole' "typePathToNode isActive")
@@ -211,8 +211,8 @@ typePathToNode isActive abovePath belowInfo typePath innerNode =
               in
                 typePathToNode isActive abovePath newBI typePath
                   $ arrangeType (makeTypeArgs isActive abovePath newBI typePath)
-                      [ arrangeKid typePath.typePath (\_ _ -> innerNode) ty
-                      , arrangeKid typePath.typePath (typeToNode isActive) tyOut
+                      [ arrangeKid typePath.typePath abovePath (\_ _ -> innerNode) ty
+                      , arrangeKid typePath.typePath abovePath (typeToNode isActive) tyOut
                       ]
         , arrow2:
             \typePath md tyIn {-Type-} ->
@@ -221,8 +221,8 @@ typePathToNode isActive abovePath belowInfo typePath innerNode =
               in
                 typePathToNode isActive abovePath newBI typePath
                   $ arrangeType (makeTypeArgs isActive abovePath newBI typePath)
-                      [ arrangeKid typePath.typePath (typeToNode isActive) tyIn
-                      , arrangeKid typePath.typePath (\_ _ -> innerNode) ty
+                      [ arrangeKid typePath.typePath abovePath (typeToNode isActive) tyIn
+                      , arrangeKid typePath.typePath abovePath (\_ _ -> innerNode) ty
                       ]
         }
       )
@@ -252,10 +252,10 @@ typeBindPathToNode isActive abovePath typeBindPath innerNode =
             in
               termPathToNode isActive abovePath newBI termPath
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
-                    [ arrangeKid termPath.termPath (\_ _ -> innerNode) tyBind
-                    , arrangeKid termPath.termPath (typeBindListToNode isActive) tyBinds
-                    , arrangeKid termPath.termPath (typeToNode isActive) def
-                    , arrangeKid termPath.termPath (termToNode isActive) body
+                    [ arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) tyBind
+                    , arrangeKid termPath.termPath abovePath (typeBindListToNode isActive) tyBinds
+                    , arrangeKid termPath.termPath abovePath (typeToNode isActive) def
+                    , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                     ]
       , data1:
           \termPath md {-tyBind-} tyBinds ctrs body bodyTy ->
@@ -264,10 +264,10 @@ typeBindPathToNode isActive abovePath typeBindPath innerNode =
             in
               termPathToNode isActive abovePath BITerm termPath
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
-                    [ arrangeKid termPath.termPath (\_ _ -> innerNode) tyBind
-                    , arrangeKid termPath.termPath (typeBindListToNode isActive) tyBinds
-                    , arrangeKid termPath.termPath (ctrListToNode isActive) ctrs
-                    , arrangeKid termPath.termPath (termToNode isActive) body
+                    [ arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) tyBind
+                    , arrangeKid termPath.termPath abovePath (typeBindListToNode isActive) tyBinds
+                    , arrangeKid termPath.termPath abovePath (ctrListToNode isActive) ctrs
+                    , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                     ]
       , typeBindListCons1: \listTypeBindPath {-tyBind-} tyBind -> hole' "typeBindPathToNode"
       }
@@ -293,9 +293,9 @@ termBindPathToNode isActive abovePath termBindPath innerNode =
             in {- (stepBI (Lambda1 md argTy.ty body.term bodyTy) BITerm) -}
               termPathToNode isActive abovePath newBI termPath
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
-                    [ arrangeKid termPath.termPath (\_ _ -> innerNode) tBind
-                    , arrangeKid termPath.termPath (typeToNode isActive) argTy
-                    , arrangeKid termPath.termPath (termToNode isActive) body
+                    [ arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) tBind
+                    , arrangeKid termPath.termPath abovePath (typeToNode isActive) argTy
+                    , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                     ]
       , let1:
           \termPath md tyBinds def defTy body bodyTy ->
@@ -304,11 +304,11 @@ termBindPathToNode isActive abovePath termBindPath innerNode =
             in {- (stepBI (Let1 md tyBinds.tyBinds def.term defTy.ty body.term bodyTy) BITerm) -}
               termPathToNode isActive abovePath newBI termPath
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
-                    [ arrangeKid termPath.termPath (\_ _ -> innerNode) tBind
-                    , arrangeKid termPath.termPath (typeBindListToNode isActive) tyBinds
-                    , arrangeKid termPath.termPath (typeToNode isActive) defTy
-                    , arrangeKid termPath.termPath (termToNode isActive) def
-                    , arrangeKid termPath.termPath (termToNode isActive) body
+                    [ arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) tBind
+                    , arrangeKid termPath.termPath abovePath (typeBindListToNode isActive) tyBinds
+                    , arrangeKid termPath.termPath abovePath (typeToNode isActive) defTy
+                    , arrangeKid termPath.termPath abovePath (termToNode isActive) def
+                    , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                     ]
       , constructor1:
           \ctrPath md ctrParams ->
@@ -340,10 +340,10 @@ typeBindListPathToNode isActive abovePath belowInfo typeBindListPath innerNode =
               in
                 termPathToNode isActive abovePath newBI termPath
                   $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
-                      [ arrangeKid termPath.termPath (typeBindToNode isActive) tyBind
-                      , arrangeKid termPath.termPath (\_ _ -> innerNode) tyBinds
-                      , arrangeKid termPath.termPath (typeToNode isActive) def
-                      , arrangeKid termPath.termPath (termToNode isActive) body
+                      [ arrangeKid termPath.termPath abovePath (typeBindToNode isActive) tyBind
+                      , arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) tyBinds
+                      , arrangeKid termPath.termPath abovePath (typeToNode isActive) def
+                      , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                       ]
         , typeBindListCons2: \listTypeBindPath tyBind -> hole' "termBindPathToNode isActive"
         , let2:
@@ -353,11 +353,11 @@ typeBindListPathToNode isActive abovePath belowInfo typeBindListPath innerNode =
               in
                 termPathToNode isActive abovePath newBI termPath
                   $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
-                      [ arrangeKid termPath.termPath (termBindToNode isActive) tBind
-                      , arrangeKid termPath.termPath (\_ _ -> innerNode) tyBinds
-                      , arrangeKid termPath.termPath (typeToNode isActive) defTy
-                      , arrangeKid termPath.termPath (termToNode isActive) def
-                      , arrangeKid termPath.termPath (termToNode isActive) body
+                      [ arrangeKid termPath.termPath abovePath (termBindToNode isActive) tBind
+                      , arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) tyBinds
+                      , arrangeKid termPath.termPath abovePath (typeToNode isActive) defTy
+                      , arrangeKid termPath.termPath abovePath (termToNode isActive) def
+                      , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                       ]
         }
       )
