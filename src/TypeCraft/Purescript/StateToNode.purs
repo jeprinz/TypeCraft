@@ -19,6 +19,8 @@ import TypeCraft.Purescript.Util (fromJust', hole')
 import TypeCraft.Purescript.Dentist (downPathToCtxChange)
 import Data.Tuple (snd)
 import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
+import TypeCraft.Purescript.Util (hole)
+import Effect.Exception.Unsafe (unsafeThrow)
 
 {-
 TODO: Note from Jacob: Counterintuitvely, all cursor modes should use BISelect
@@ -154,6 +156,10 @@ cursorModeToNode cursorMode =
                     makeMetahole unit
               )
       _ -> hole' "completionToNode CompletionTypePath non-TypeCursor"
+    CompletionCtrListPath path' listCtrCh -> case cursorMode.cursorLocation of
+        CtrListCursor ctxs path ctrs -> hole
+        _ -> unsafeThrow "Shouldn't get here: non-CtrListCursor, but tried a CtrPath completion!"
+    _ -> hole' "This type of completion hasn't been implemented yet" -- TODO: remove this message once we implemented all the completions sorts
 
   makeMetahole :: Unit -> Node
   makeMetahole _ = case cursorMode.cursorLocation of

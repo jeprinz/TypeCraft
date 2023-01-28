@@ -349,3 +349,15 @@ instance showTooth :: Show Tooth where
   show x = genericShow x
 
 -- END DERIVATIONS
+
+-- BEGIN MORE DERIVATIONS, (hand written):
+
+derive instance genericListCtrParamChange :: Generic ListCtrParamChange _
+
+instance showListCtrParamChange :: Show ListCtrParamChange where
+    show x = genericShow x
+
+derive instance genericListCtrChange :: Generic ListCtrChange _
+
+instance showListCtrChange :: Show ListCtrChange where
+    show x = genericShow x

@@ -91,3 +91,7 @@ defaultTermBindMD = { varName: "placeholder" }
 
 defaultGADTMD :: GADTMD
 defaultGADTMD = {}
+
+-- Constructor
+defaultCtrMD :: CtrMD
+defaultCtrMD = {indented: false}

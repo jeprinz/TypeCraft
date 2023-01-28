@@ -102,8 +102,8 @@ recTermPath args {ctxs, ty, term, termPath: (TLet4 md tyBind@(TypeBind _ x) tyBi
 recTermPath args {ctxs, ty, term, termPath: (Data4 md tyBind@(TypeBind _ x) tyBinds ctrs {-Term-} bodyTy) : up} =
     let ctxs' = removeDataFromCtx ctxs tyBind tyBinds ctrs in
     args.data4 {ctxs: ctxs', ty: bodyTy, term: Data md tyBind tyBinds ctrs term bodyTy, termPath: up}
-        md {ctxs, tyBind} {ctxs, tyBinds}
-        {ctxs: ctxs', ctrs} bodyTy
+        md {ctxs: ctxs', tyBind} {ctxs: ctxs', tyBinds}
+        {ctxs, ctrs} bodyTy
 recTermPath _ _ = unsafeThrow "recTermPath given something that isn't a term path"
 
 type TypePathRec a = {
@@ -200,8 +200,8 @@ recTypeBindPath args {ctxs, tyBind: tyBind@(TypeBind xmd x), typeBindPath: (Data
     let ctxs' = addDataToCtx ctxs tyBind tyBinds ctrs in
     args.data1 {ctxs, ty: bodyTy, term: Data md tyBind tyBinds ctrs body bodyTy, termPath} md
         {ctxs, tyBinds}
-        {ctxs, ctrs}
-        {ctxs, ty: bodyTy, term: body} bodyTy
+        {ctxs: ctxs', ctrs}
+        {ctxs: ctxs', ty: bodyTy, term: body} bodyTy
 recTypeBindPath args {ctxs, tyBind, typeBindPath: (TypeBindListCons1 tyBinds) : listTypeBindPath} =
     args.typeBindListCons1 {ctxs, tyBinds: (tyBind : tyBinds), listTypeBindPath}
         {ctxs, tyBinds}

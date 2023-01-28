@@ -12,7 +12,7 @@ import Data.Show.Generic (genericShow)
 import Data.String as String
 import Type.Proxy (Proxy(..))
 import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
-import TypeCraft.Purescript.Grammar (Change, Constructor, CtrParam, Term(..), TermBind(..), Type(..), TypeArg, TypeBind, UpPath)
+import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
 import TypeCraft.Purescript.ShallowEmbed (exampleProg1, exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
 import TypeCraft.Purescript.Unification (Sub)
@@ -63,6 +63,9 @@ data Completion
   | CompletionTermPath UpPath Change
   | CompletionType Type
   | CompletionTypePath UpPath Change
+  | CompletionCtrListPath UpPath ListCtrChange
+  | CompletionCtrParamListPath UpPath ListCtrParamChange
+  | CompletionTypeBindListPath UpPath
 
 derive instance genericCompletion :: Generic Completion _
 

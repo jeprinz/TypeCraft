@@ -22,6 +22,10 @@ import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMod
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (lookup')
 import Debug (trace)
+import TypeCraft.Purescript.Context
+import Data.Tuple (fst)
+import TypeCraft.Purescript.ChangeTerm (chCtrList)
+
 
 isNonemptyQueryString :: Query -> Boolean
 isNonemptyQueryString query = not $ String.null query.string
@@ -173,6 +177,17 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionType (freshTHole unit)
               ]
             ]
+  CtrListCursor ctxs path ctrs ->
+    Writer.execWriter do
+        -- add a constructor
+        when (str `kindaStartsWithAny` ["|", "constructor", ","])
+            $ Writer.tell [[
+                let kctx = kCtxInject ctxs.kctx ctxs.actx in
+                let ctrCh = fst (chCtrList kctx ctrs) in
+                let newCtr = (Constructor defaultCtrMD (freshTermBind Nothing) List.Nil) in
+                CompletionCtrListPath (List.singleton $ CtrListCons2 newCtr)
+                    (ListCtrChangePlus newCtr ctrCh)
+            ]]
   _ -> [] -- TODO: impl
 
 makeEmptyTNeu :: TypeVarID -> Kind -> Type
