@@ -141,9 +141,15 @@ chCtrParamPath _ _ _ _ = hole' "chCtrParaPath"
 
 -- The Change by which a CtrListPath changes is the change by which the recursor
 chListCtrPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
---    Data3 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type
---    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
+chListCtrPath kctx ctx ch (Data3 md tyBind@(TypeBind _ x) tyBinds {-ctrs-} body bodyTy : termPath) =
+    let ctx' = adjustCtxByCtrChanges x (map (\(TypeBind _ x) -> x) tyBinds) ch ctx in
+    let termPath' = chTermPath kctx ctx' (tyInject bodyTy) termPath in
+    Data3 md tyBind tyBinds {--} body bodyTy : termPath'
 --    CtrListCons2 Constructor {-List Constructor-}
+chListCtrPath kctx ctx ch (CtrListCons2 ctr@(Constructor _ (TermBind _ x) ctrParams) {-ctrs-} : listCtrPath) =
+    let listCtrParamCh /\ ctrParams' = chParamList kctx ctrParams in
+    let listCtrPath' = chListCtrPath kctx ctx (ListCtrChangeCons x listCtrParamCh ch) listCtrPath in
+    (CtrListCons2 ctr {--}) : listCtrPath'
 chListCtrPath _ _ _ _ = hole' "chListCtrPath"
 
 chListCtrParamPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath

@@ -157,7 +157,22 @@ cursorModeToNode cursorMode =
               )
       _ -> hole' "completionToNode CompletionTypePath non-TypeCursor"
     CompletionCtrListPath path' listCtrCh -> case cursorMode.cursorLocation of
-        CtrListCursor ctxs path ctrs -> hole
+        CtrListCursor ctxs path ctrs ->
+            setNodeStyle makeQueryInsertTopStyle
+              $ ctrListPathToNode false Nil BITerm
+                  { ctxs, ctrs, listCtrPath: path'}
+                  ( setNodeStyle makeQueryInsertBotNodeStyle
+                        if opts.isInline then
+                            -- if inline, render with cursor type at head
+                            ctrListToNode true
+                              (AISelect (path' <> path) ctxs ctrs (path' <> path))
+                              { ctxs, ctrs }
+                          else
+                            setNodeStyle makeQueryMetaholeNodeStyle
+                                $ ctrListToNode false
+                                    (AISelect path ctxs ctrs Nil)
+                                    {ctxs, ctrs}
+                      )
         _ -> unsafeThrow "Shouldn't get here: non-CtrListCursor, but tried a CtrPath completion!"
     _ -> hole' "This type of completion hasn't been implemented yet" -- TODO: remove this message once we implemented all the completions sorts
 

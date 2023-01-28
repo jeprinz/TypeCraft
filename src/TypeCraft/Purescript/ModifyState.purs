@@ -8,7 +8,7 @@ import Data.Maybe (Maybe(..))
 import Data.Tuple (snd)
 import Debug (traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.ChangePath (chTermPath, chTypePath)
+import TypeCraft.Purescript.ChangePath
 import TypeCraft.Purescript.Context (ctxInject, kCtxInject)
 import TypeCraft.Purescript.CursorMovement (moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
 import TypeCraft.Purescript.Dentist (downPathToCtxChange)
@@ -22,6 +22,7 @@ import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation
 import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 import TypeCraft.Purescript.Unification (applySubType, subTermPath)
 import TypeCraft.Purescript.Util (hole')
+import TypeCraft.Purescript.Util (hole)
 
 handleKey :: Key -> State -> Maybe State
 handleKey key st = case st.mode of
@@ -119,6 +120,17 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
                 , query: emptyQuery
                 }
           _ -> unsafeThrow "tried to submit a non-CompletionType* completion at a TypeCursor"
+  CtrListCursor ctxs path ctrs ->
+    getCompletion cursorMode.query
+      >>= case _ of
+              CompletionCtrListPath pathNew ch ->
+--chListCtrPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
+                let path' = chListCtrPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
+                pure {
+                    cursorLocation: CtrListCursor ctxs (pathNew <> path') ctrs
+                    , query: emptyQuery
+                }
+              _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
   _ -> Nothing -- TODO: submit queries at other kinds of cursors?
 
 checkpoint :: State -> State
