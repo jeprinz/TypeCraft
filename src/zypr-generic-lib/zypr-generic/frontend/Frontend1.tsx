@@ -36,7 +36,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         if (getCursor !== undefined) {
           editor.setState(getCursor(editor.state))
           event.stopPropagation()
-        } 
+        }
         // else console.log(`getCursor is undefined for this '${node.tag.case}' node`)
       }
 
@@ -46,7 +46,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           // console.log(`getSelect for this '${node.tag.case}' node`)
           editor.setState(getSelect(editor.state))
           event.stopPropagation()
-        } 
+        }
         else console.log(`getSelect is undefined for this '${node.tag.case}' node`)
       }
 
@@ -141,7 +141,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           if (label.length > 0)
             return [<span className="label">{label}</span>]
           else
-          return [<span className="label label-empty">{" "}</span>]
+            return [<span className="label label-empty">{" "}</span>]
         } else {
           return [<span className="label">undefined label</span>]
         }
@@ -162,7 +162,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat(), indentationLevel) // TODO: render typechange
         case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
-        case 'tm hol': return go(node, ["tm_hol"], [Punc.interrogative].flat(), indentationLevel) // TODO: render type; is it a node child?
+        case 'tm hol': return go(node, ["tm_hol"], [<div className="tm_hol-inner">{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
+        // case 'tm hol': return go(node, ["tm_hol"], [Punc.interrogative].flat(), indentationLevel)
         case 'tm buf': return go(node, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'ty-bnd': return go(node, ["ty-bnd"], renderLabel(node.label), indentationLevel)
         case 'tm-bnd': return go(node, ["tm-bnd"], renderLabel(node.label), indentationLevel)

@@ -8,14 +8,6 @@
 
 .node.selectable {}
 
-.cursor-outer {
-  display: inline-block;
-  border-radius: 0.2rem;
-  box-shadow:
-    -2px 0 0 0 red,
-    2px 0 0 0 red;
-}
-
 .node.cursor {
   border-radius: 0.2rem;
   box-shadow:
@@ -49,6 +41,18 @@
   border-radius: 0.2rem;
   background-color: rgb(205, 205, 205);
   box-shadow: 0 0 0 1px black;
+}
+
+.node.tm_hol {
+  border-radius: 0.2rem;
+  padding: 0 0.2rem;
+}
+
+.tm_hol-inner {
+  display: inline-block;
+  border-radius: 0.2rem;
+  padding: 0 0.2rem;
+  box-shadow: 0 0 0 2px red inset;
 }
 
 /* query */

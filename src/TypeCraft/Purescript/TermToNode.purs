@@ -10,30 +10,37 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.CursorMovement (getMiddlePath)
-import TypeCraft.Purescript.Grammar
-import TypeCraft.Purescript.Node
+import TypeCraft.Purescript.Grammar (Change(..), Constructor(..), CtrParam(..), Term(..), TermBind(..), Tooth(..), Type(..), TypeArg(..), TypeBind(..), UpPath)
+import TypeCraft.Purescript.Node (Node, NodeIndentation, NodeTag(..), ctrListToNodeTag, getNodeTag, makeIndentNodeIndentation, makeInlineNodeIndentation, makeNewlineNodeIndentation, makeNode, setNodeIndentation, setNodeIsParenthesized, setNodeLabel, termToNodeTag, typeToNodeTag)
 import TypeCraft.Purescript.State (CursorLocation(..), Select(..), topSelectOrientation, makeCursorMode, makeSelectMode)
-import TypeCraft.Purescript.TermRec
+import TypeCraft.Purescript.TermRec (CtrParamRecValue, CtrRecValue, ListCtrParamRecValue, ListCtrRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, recCtr, recCtrParam, recListCtr, recTerm, recType, recTypeArg)
 import TypeCraft.Purescript.Util (hole', justWhen, lookup')
-import Debug (trace)
-import TypeCraft.Purescript.Util (hole)
 
 data AboveInfo syn
   = AICursor UpPath
   | AISelect UpPath AllContext syn UpPath -- top path, then program below, then middle path
+  | AINothing
 
 stepAI :: forall syn. Tooth -> AboveInfo syn -> AboveInfo syn
 stepAI tooth (AICursor path) = AICursor (tooth : path)
+
 stepAI tooth (AISelect topPath ctx term midPath) = AISelect topPath ctx term (tooth : midPath)
+
+stepAI tooth AINothing = AINothing
 
 aIOnlyCursor :: forall syn1 syn2. AboveInfo syn1 -> AboveInfo syn2
 aIOnlyCursor (AICursor path) = AICursor path
+
 aIOnlyCursor (AISelect topPath ctx term midPath) = AICursor (midPath <> topPath)
+
+aIOnlyCursor AINothing = AINothing
 
 aIGetPath :: forall syn. AboveInfo syn -> UpPath
 aIGetPath (AICursor path) = path
 
 aIGetPath (AISelect top ctx term middle) = middle <> top
+
+aIGetPath AINothing = unsafeThrow "aIGetPath AINothing"
 
 -- don't indent inactive things (such as appear in query previews)
 newlineIf :: Boolean -> Boolean -> NodeIndentation
@@ -74,7 +81,7 @@ arrangeNodeKids args kids =
             $ justWhen args.isActive \_ -> do
                 select <- args.makeSelect unit
                 if List.null (getMiddlePath select) then
-                  getCursor 
+                  getCursor
                 else
                   Just (_ { mode = makeSelectMode select })
       , tag: args.tag
@@ -128,6 +135,7 @@ stepKidsTerm isActive term kids = case term of
     | [ k_bod ] <- kids -> [ k_bod (ContextBoundary1 md x ch) ]
   Hole md
     | [] <- kids -> []
+    | [ _ ] <- kids -> []
   Buffer md imp sig bod ty
     | [ k_imp, k_sig, k_bod ] <- kids ->
       [ k_imp (Buffer1 md sig bod ty)
@@ -219,7 +227,28 @@ termToNode isActive aboveInfo term =
           arrangeTerm args
             [ arrangeKidAI aboveInfo (termToNode isActive) t
             ]
-    , hole: \md -> arrangeTerm args []
+    , hole:
+        \md ->
+          let
+            getCursor =
+              join
+                $ justWhen args.isActive \_ -> do
+                    cursorLocation <- args.makeCursor unit
+                    Just (_ { mode = makeCursorMode cursorLocation })
+          in
+            makeNode
+              { kids: [ typeToNode false AINothing { ctxs: term.ctxs, ty: term.ty } ]
+              , getCursor: getCursor
+              , getSelect:
+                  join
+                    $ justWhen args.isActive \_ -> do
+                        select <- args.makeSelect unit
+                        if List.null (getMiddlePath select) then
+                          getCursor
+                        else
+                          Just (_ { mode = makeSelectMode select })
+              , tag: termToNodeTag term.term
+              }
     , buffer:
         \md def defTy body _bodyTy ->
           arrangeTerm args
@@ -237,6 +266,7 @@ termToNode isActive aboveInfo term =
         \_ -> case aboveInfo of
           AICursor _path -> Nothing
           AISelect topPath topCtx (topTerm /\ topTy) midPath -> Just $ TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term topSelectOrientation
+          AINothing -> Nothing
     , term
     }
 
@@ -303,6 +333,7 @@ typeToNode isActive aboveInfo ty =
         \_ -> case aboveInfo of
           AICursor _path -> Nothing
           AISelect topPath topCtx topTy midPath -> Just $ TypeSelect topPath topCtx topTy midPath ty.ctxs ty.ty topSelectOrientation
+          AINothing -> Nothing
     , ty
     }
 
@@ -310,9 +341,11 @@ typeToNode isActive aboveInfo ty =
   ai = aIOnlyCursor aboveInfo
 
 stepKidsCtr :: Boolean -> Constructor -> Array PreNode -> Array Node
-stepKidsCtr isActive (Constructor md tBind ctrParams) [k_tBind, k_ctrParams] =
-    [ k_tBind (Constructor1 md {--} ctrParams)
-    , k_ctrParams (Constructor2 md tBind {--})]
+stepKidsCtr isActive (Constructor md tBind ctrParams) [ k_tBind, k_ctrParams ] =
+  [ k_tBind (Constructor1 md {--} ctrParams)
+  , k_ctrParams (Constructor2 md tBind {--})
+  ]
+
 stepKidsCtr _ _ _ = unsafeThrow "stepKidsCtr: wrong number of kids"
 
 type CtrNodeCursorInfo
@@ -338,21 +371,23 @@ arrangeCtr args =
 -- Constructor
 ctrToNode :: Boolean -> AboveInfo Constructor -> CtrRecValue -> Node
 ctrToNode isActive aboveInfo ctr =
-    recCtr {
-        ctr: \md tBind ctrParams ->
-            arrangeCtr {
-                isActive
-                , makeCursor: \_ -> Nothing
-                , makeSelect: \_ -> Nothing
-                , ctr
-            } [
-                arrangeKidAI cursorOnlyAI (termBindToNode isActive) tBind
-                , arrangeKidAI cursorOnlyAI (ctrParamListToNode isActive) ctrParams
+  recCtr
+    { ctr:
+        \md tBind ctrParams ->
+          arrangeCtr
+            { isActive
+            , makeCursor: \_ -> Nothing
+            , makeSelect: \_ -> Nothing
+            , ctr
+            }
+            [ arrangeKidAI cursorOnlyAI (termBindToNode isActive) tBind
+            , arrangeKidAI cursorOnlyAI (ctrParamListToNode isActive) ctrParams
             ]
-    } ctr
-    where
-    cursorOnlyAI :: forall a. AboveInfo a
-    cursorOnlyAI = aIOnlyCursor aboveInfo
+    }
+    ctr
+  where
+  cursorOnlyAI :: forall a. AboveInfo a
+  cursorOnlyAI = aIOnlyCursor aboveInfo
 
 -- CtrParam
 --
@@ -363,63 +398,71 @@ ctrToNode isActive aboveInfo ctr =
 --    , getCursor: Nothing
 --    , getSelect: Nothing
 --    , style: makeNormalNodeStyle
-
 stepKidsCtrParam :: Boolean -> CtrParam -> Array PreNode -> Array Node
-stepKidsCtrParam isActive (CtrParam md ty) [k_ty] =
-    [k_ty (CtrParam1 md {--})]
+stepKidsCtrParam isActive (CtrParam md ty) [ k_ty ] = [ k_ty (CtrParam1 md {--}) ]
+
 stepKidsCtrParam _ _ _ = unsafeThrow "stepKidsCtrParam: wrong number of kids"
 
 type CtrParamCursorInfo
-    = { isActive :: Boolean, ctrParam :: CtrParamRecValue }
+  = { isActive :: Boolean, ctrParam :: CtrParamRecValue }
 
 arrangeCtrParam :: CtrParamCursorInfo -> Array PreNode -> Node
-arrangeCtrParam args = arrangeNodeKids {
-    isActive: args.isActive
+arrangeCtrParam args =
+  arrangeNodeKids
+    { isActive: args.isActive
     , tag: CtrParamNodeTag
     , stepKids: stepKidsCtrParam args.isActive args.ctrParam.ctrParam
     , makeCursor: \_ -> Nothing
     , makeSelect: \_ -> Nothing
-}
+    }
 
 ctrParamToNode :: Boolean -> AboveInfo CtrParam -> CtrParamRecValue -> Node
-ctrParamToNode isActive aboveInfo ctrParam = recCtrParam {
-    ctrParam: \md ty ->
-        arrangeCtrParam {
-            isActive
+ctrParamToNode isActive aboveInfo ctrParam =
+  recCtrParam
+    { ctrParam:
+        \md ty ->
+          arrangeCtrParam
+            { isActive
             , ctrParam
-        } [
-            arrangeKidAI (aIOnlyCursor aboveInfo) (typeToNode isActive) ty
-        ]
-} ctrParam
+            }
+            [ arrangeKidAI (aIOnlyCursor aboveInfo) (typeToNode isActive) ty
+            ]
+    }
+    ctrParam
 
 stepKidsTypeArg :: Boolean -> TypeArg -> Array PreNode -> Array Node
-stepKidsTypeArg isActive (TypeArg md ty) [k_ty] =
-    [k_ty (TypeArg1 md {--})]
+stepKidsTypeArg isActive (TypeArg md ty) [ k_ty ] = [ k_ty (TypeArg1 md {--}) ]
+
 stepKidsTypeArg _ _ _ = unsafeThrow "stepKidsTypeArg: wrong number of kids"
 
-type TypeArgCursorInfo = {
-    isActive :: Boolean,
-    tyArg :: TypeArgRecValue
-}
+type TypeArgCursorInfo
+  = { isActive :: Boolean
+    , tyArg :: TypeArgRecValue
+    }
 
 -- TypeArg
 arrangeTypeArg :: TypeArgCursorInfo -> Array PreNode -> Node
-arrangeTypeArg args = arrangeNodeKids {
-    isActive: args.isActive
+arrangeTypeArg args =
+  arrangeNodeKids
+    { isActive: args.isActive
     , tag: TypeArgNodeTag
     , stepKids: stepKidsTypeArg args.isActive args.tyArg.tyArg
     , makeCursor: \_ -> Nothing
     , makeSelect: \_ -> Nothing
-}
+    }
 
 typeArgToNode :: Boolean -> AboveInfo TypeArg -> TypeArgRecValue -> Node
-typeArgToNode isActive aboveInfo tyArg = recTypeArg {
-    typeArg: \md ty -> arrangeTypeArg {
-        isActive, tyArg
-    } [
-        arrangeKidAI (aIOnlyCursor aboveInfo) (typeToNode isActive) ty
-    ]
-} tyArg
+typeArgToNode isActive aboveInfo tyArg =
+  recTypeArg
+    { typeArg:
+        \md ty ->
+          arrangeTypeArg
+            { isActive, tyArg
+            }
+            [ arrangeKidAI (aIOnlyCursor aboveInfo) (typeToNode isActive) ty
+            ]
+    }
+    tyArg
 
 -- TypeBind
 typeBindToNode :: Boolean -> AboveInfo TypeBind -> TypeBindRecValue -> Node
@@ -465,45 +508,51 @@ typeArgListToNode isActive aboveInfo tyArgs = hole' "typeArgListToNode"
 
 stepKidsCtrList :: Boolean -> List Constructor -> Array PreNode -> Array Node
 stepKidsCtrList isActive ctrs kids = case ctrs of
-    Nil | [] <- kids -> []
-    ctr@(Constructor md _ _) : ctrs' | [k_ctr, k_ctrs] <- kids -> [
-        k_ctr (CtrListCons1 {--} ctrs')
-        , setNodeIndentation (indentIf isActive md.indented) $ k_ctrs (CtrListCons2 ctr {--})
-    ]
-    _ -> unsafeThrow "stepKidsCtrList: wrong number of kids"
+  Nil
+    | [] <- kids -> []
+  ctr@(Constructor md _ _) : ctrs'
+    | [ k_ctr, k_ctrs ] <- kids ->
+      [ k_ctr (CtrListCons1 {--} ctrs')
+      , setNodeIndentation (indentIf isActive md.indented) $ k_ctrs (CtrListCons2 ctr {--})
+      ]
+  _ -> unsafeThrow "stepKidsCtrList: wrong number of kids"
 
-type CtrListNodeCursorInfo = {
-    isActive :: Boolean
+type CtrListNodeCursorInfo
+  = { isActive :: Boolean
     , makeCursor :: Unit -> Maybe CursorLocation
     , makeSelect :: Unit -> Maybe Select
     , ctrs :: ListCtrRecValue
-}
+    }
 
 arrangeCtrList :: CtrListNodeCursorInfo -> Array PreNode -> Node
-arrangeCtrList args = arrangeNodeKids {
-    isActive: args.isActive
+arrangeCtrList args =
+  arrangeNodeKids
+    { isActive: args.isActive
     , tag: ctrListToNodeTag args.ctrs.ctrs
     , stepKids: stepKidsCtrList args.isActive args.ctrs.ctrs
     , makeCursor: args.makeCursor
     , makeSelect: args.makeSelect
-}
+    }
 
 -- ConstructorList
 ctrListToNode :: Boolean -> AboveInfo (List Constructor) -> ListCtrRecValue -> Node
 ctrListToNode isActive aboveInfo ctrs =  -- TODO: This is just a placeholder implementation of this function
---  makeNode
---    { tag: ConstructorListNilNodeTag
---    , kids: []
---    , getCursor: justWhen isActive \_ -> _ { mode = makeCursorMode $ CtrListCursor ctrs.ctxs (aIGetPath aboveInfo) ctrs.ctrs }
---    , getSelect: Nothing
---    }
-  recListCtr {
-     cons: \ctr ctrs -> arrangeCtrList args [
-        arrangeKidAI (aIOnlyCursor aboveInfo) (ctrToNode isActive) ctr
-        , arrangeKidAI aboveInfo (ctrListToNode isActive) ctrs
-     ]
-     , nil: arrangeCtrList args []
-  } ctrs
+  --  makeNode
+  --    { tag: ConstructorListNilNodeTag
+  --    , kids: []
+  --    , getCursor: justWhen isActive \_ -> _ { mode = makeCursorMode $ CtrListCursor ctrs.ctxs (aIGetPath aboveInfo) ctrs.ctrs }
+  --    , getSelect: Nothing
+  --    }
+  recListCtr
+    { cons:
+        \ctr ctrs ->
+          arrangeCtrList args
+            [ arrangeKidAI (aIOnlyCursor aboveInfo) (ctrToNode isActive) ctr
+            , arrangeKidAI aboveInfo (ctrListToNode isActive) ctrs
+            ]
+    , nil: arrangeCtrList args []
+    }
+    ctrs
   where
   args =
     { isActive
@@ -512,6 +561,7 @@ ctrListToNode isActive aboveInfo ctrs =  -- TODO: This is just a placeholder imp
         \_ -> case aboveInfo of
           AICursor _path -> Nothing
           AISelect topPath topCtx topCtrs midPath -> Just $ CtrListSelect topPath topCtx topCtrs midPath ctrs.ctxs ctrs.ctrs topSelectOrientation
+          AINothing -> Nothing
     , ctrs
     }
 

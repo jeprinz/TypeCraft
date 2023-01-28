@@ -1,31 +1,26 @@
 module TypeCraft.Purescript.ModifyState where
 
-import Data.Tuple.Nested
 import Prelude
 import Data.Array ((:), uncons)
 import Data.Array as Array
 import Data.List as List
-import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import Data.String as String
+import Data.Tuple (snd)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.ChangePath (chTermPath, chTypePath)
-import TypeCraft.Purescript.ChangeTerm (chType, chTypeParamList)
 import TypeCraft.Purescript.Context (ctxInject, kCtxInject)
-import TypeCraft.Purescript.Context (kCtxInject)
 import TypeCraft.Purescript.CursorMovement (moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
-import TypeCraft.Purescript.Grammar (Change(..), TermBind(..), TypeBind(..), freshHole, freshTHole)
-import TypeCraft.Purescript.Grammar (tyInject)
+import TypeCraft.Purescript.Dentist (downPathToCtxChange)
+import TypeCraft.Purescript.Grammar (Change(..), TermBind(..), Tooth(..), TypeBind(..), freshHole, freshTHole)
 import TypeCraft.Purescript.Key (Key)
+import TypeCraft.Purescript.MD (defaultTypeBoundaryMD)
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
-import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select, State, botSelectOrientation, cursorLocationToSelect, emptyQuery, getCompletion, isEmptyQuery, makeCursorMode, makeSelectMode, selectToCursorLocation, topSelectOrientation)
+import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), State, botSelectOrientation, cursorLocationToSelect, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
+import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 import TypeCraft.Purescript.Unification (applySubType, subTermPath)
 import TypeCraft.Purescript.Util (hole')
-import TypeCraft.Purescript.Dentist (downPathToCtxChange)
-import Data.Tuple (snd)
-import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 
 handleKey :: Key -> State -> Maybe State
 handleKey key st = case st.mode of
@@ -57,11 +52,17 @@ handleKey key st = case st.mode of
           $ (checkpoint st { mode = CursorMode cursorMode { query { string = "" } } })
               { mode = CursorMode cursorMode' }
       | key.key == "Backspace" -> delete st
+      | key.key == "c" && (key.ctrlKey || key.metaKey) -> copy st
+      | key.key == "x" && (key.ctrlKey || key.metaKey) -> cut st
+      | key.key == "v" && (key.ctrlKey || key.metaKey) -> paste st
       | otherwise -> Nothing
   SelectMode selectMode
     | key.key == "Escape" -> pure $ st { mode = makeCursorMode (selectToCursorLocation selectMode.select) }
     | key.key == "ArrowLeft" && key.shiftKey -> moveSelectPrev st
     | key.key == "ArrowRight" && key.shiftKey -> moveSelectNext st
+    | key.key == "c" && (key.ctrlKey || key.metaKey) -> copy st
+    | key.key == "x" && (key.ctrlKey || key.metaKey) -> cut st
+    | key.key == "v" && (key.ctrlKey || key.metaKey) -> paste st
     | otherwise -> Nothing
 
 submitQuery :: CursorMode -> Maybe CursorMode
@@ -83,13 +84,19 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
                   , query: emptyQuery
                   }
           CompletionTermPath pathNew ch ->
-            let path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
-            let chCtxs = downPathToCtxChange ctxs (List.reverse pathNew) in
-            let newCtxs = snd (getAllEndpoints chCtxs) in
-              pure
-                { cursorLocation: TermCursor newCtxs ty (pathNew <> path') tm
-                , query: emptyQuery
-                }
+            let
+              path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
+            in
+              let
+                chCtxs = downPathToCtxChange ctxs (List.reverse pathNew)
+              in
+                let
+                  newCtxs = snd (getAllEndpoints chCtxs)
+                in
+                  pure
+                    { cursorLocation: TermCursor newCtxs ty (pathNew <> path') tm
+                    , query: emptyQuery
+                    }
           _ -> unsafeThrow "tried to submit a non-CompletionTerm* completion at a TermCursor"
   TypeCursor ctxs path ty ->
     getCompletion cursorMode.query
@@ -169,13 +176,66 @@ redo st = do
   pure $ st { mode = head, history = st.mode : st.history, future = tail }
 
 cut :: State -> Maybe State
-cut = hole' "cut"
+cut st = do
+  clip <- modeToClipboard st.mode
+  st <- delete st
+  pure $ st { clipboard = clip }
 
 copy :: State -> Maybe State
-copy = hole' "copy"
+copy st = do
+  clip <- modeToClipboard st.mode
+  pure $ st { clipboard = clip }
 
+modeToClipboard :: Mode -> Maybe Clipboard
+modeToClipboard = case _ of
+  CursorMode cursorMode -> case cursorMode.cursorLocation of
+    TermCursor ctxs ty tmPath tm -> pure $ TermClip ctxs ty tm
+    _ -> hole' "modeToClipboard"
+  SelectMode selectMode -> case selectMode.select of
+    TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori -> Just $ TermPathClip ctxs1 ty1 tmPath2 ctxs2 ty2
+    _ -> hole' "modeToClipboard"
+
+-- TODO: properly use contexts
 paste :: State -> Maybe State
-paste = hole' "paste"
+paste st = case st.clipboard of
+  EmptyClip -> Nothing
+  TermClip ctxs' ty' tm' -> case st.mode of
+    CursorMode cursorMode -> case cursorMode.cursorLocation of
+      TermCursor ctxs ty tmPath tm -> pure $ st { mode = makeCursorMode $ TermCursor ctxs ty (TypeBoundary1 defaultTypeBoundaryMD (Replace ty' ty) List.: tmPath) tm' }
+      _ -> Nothing
+    SelectMode selectMode -> Nothing
+  TermPathClip ctxs1' ty1' tmPath' ctxs2' ty2' -> case st.mode of
+    CursorMode cursorMode -> case cursorMode.cursorLocation of
+      TermCursor ctxs ty tmPath tm ->
+        pure
+          $ st
+              { mode =
+                makeCursorMode
+                  $ TermCursor ctxs ty
+                      ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty ty2'))
+                          <> tmPath'
+                          <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty))
+                          <> tmPath
+                      )
+                      tm
+              }
+      _ -> Nothing
+    SelectMode selectMode -> case selectMode.select of
+      TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
+        pure
+          $ st
+              { mode =
+                makeCursorMode
+                  $ TermCursor ctxs1 ty1
+                      ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty2 ty2'))
+                          <> tmPath2
+                          <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty1))
+                          <> tmPath1
+                      )
+                      tm2
+              }
+      _ -> Nothing
+  _ -> hole' "TODO: do other syntactic cases for paste"
 
 delete :: State -> Maybe State
 delete st = case st.mode of

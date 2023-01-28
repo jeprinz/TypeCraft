@@ -24,6 +24,7 @@ This file will contain possible states for the editor
 -- state of the editor
 type State
   = { mode :: Mode
+    , clipboard :: Clipboard
     , history :: Array Mode
     , future :: Array Mode
     }
@@ -94,6 +95,7 @@ makeSelectMode select = SelectMode { select }
 initState :: State
 initState =
   { mode
+  , clipboard: EmptyClip
   , history: [ mode ]
   , future: []
   }
