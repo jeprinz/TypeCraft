@@ -93,10 +93,34 @@ termPathToNode isActive abovePath belowInfo termPath innerNode =
                     , arrangeKid upRecVal.termPath abovePath (typeToNode isActive) argTy
                     , arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
                     ]
-      , buffer1: \upRecVal md {-Term-} bufTy body bodyTy -> hole' "termPathToNode 1"
-      , buffer3: \upRecVal md buf bufTy {-Term-} bodyTy -> hole' "termPathToNode 2"
-      , typeBoundary1: \upRecVal md change {-Term-} -> hole' "termPathToNode 3"
-      , contextBoundary1: \upRecVal md x change {-Term-} -> hole' "termPathToNode 4"
+      , buffer1: \upRecVal md {-Term-} bufTy body bodyTy ->
+        let newBI = stepBI (Buffer1 md {--} bufTy.ty body.term bodyTy) belowInfo in
+        termPathToNode isActive abovePath newBI upRecVal
+            $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal) [
+                arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
+                , arrangeKid upRecVal.termPath abovePath (typeToNode isActive) bufTy
+                , arrangeKid upRecVal.termPath abovePath (termToNode isActive) body
+            ]
+      , buffer3: \upRecVal md buf bufTy {-Term-} bodyTy ->
+        let newBI = stepBI (Buffer3 md buf.term bufTy.ty {--} bodyTy) belowInfo in
+        termPathToNode isActive abovePath newBI upRecVal
+            $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal) [
+                arrangeKid upRecVal.termPath abovePath (termToNode isActive) buf
+                , arrangeKid upRecVal.termPath abovePath (typeToNode isActive) bufTy
+                , arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
+            ]
+      , typeBoundary1: \upRecVal md change {-Term-} ->
+        let newBI = stepBI (TypeBoundary1 md change {--}) belowInfo in
+        termPathToNode isActive abovePath newBI upRecVal
+            $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal) [
+                arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
+            ]
+      , contextBoundary1: \upRecVal md x change {-Term-} ->
+        let newBI = stepBI (ContextBoundary1 md x change {--}) belowInfo in
+        termPathToNode isActive abovePath newBI upRecVal
+            $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal) [
+                arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
+            ]
       , tLet4:
           \upRecVal md tyBind tyBinds def {-Term-} bodyTy ->
             let
@@ -190,7 +214,14 @@ typePathToNode isActive abovePath belowInfo typePath innerNode =
                       , arrangeKid termPath.termPath abovePath (termToNode isActive) def
                       , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                       ]
-        , buffer2: \termPath md def {-Type-} body bodyTy -> (hole' "typePathToNode isActive")
+        , buffer2: \termPath md def {-Type-} body bodyTy ->
+            let newBI = BITerm in
+            termPathToNode isActive abovePath newBI termPath
+                $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath) [
+                    arrangeKid termPath.termPath abovePath (termToNode isActive) def
+                    , arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) ty
+                    , arrangeKid termPath.termPath abovePath (termToNode isActive) body
+                ]
         , tLet3:
             \termPath md tyBind tyBinds {-Type-} body bodyTy ->
               let
@@ -203,8 +234,18 @@ typePathToNode isActive abovePath belowInfo typePath innerNode =
                       , arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) ty
                       , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                       ]
-        , ctrParam1: \ctrParamPath md {-Type-} -> (hole' "typePathToNode isActive")
-        , typeArg1: \typeArgPath md {-Type-} -> (hole' "typePathToNode isActive")
+        , ctrParam1: \ctrParamPath md {-Type-} ->
+            let newBI = BITerm in -- TODO: This is one place where I have to go back and change things to make selection in type arguments work!
+            ctrParamPathToNode isActive abovePath newBI ctrParamPath
+                $ arrangeCtrParam (makeCtrParamArgs isActive ctrParamPath) [
+                      arrangeKid ctrParamPath.ctrParamPath abovePath (\_ _ -> innerNode) ty
+                ]
+        , typeArg1: \typeArgPath md {-Type-} ->
+            let newBI = BITerm in
+            typeArgPathToNode isActive abovePath newBI typeArgPath
+                $ arrangeTypeArg (makeTypeArgArgs isActive typeArgPath) [
+                      arrangeKid typeArgPath.typeArgPath abovePath (\_ _ -> innerNode) ty
+                ]
         , arrow1:
             \typePath md tyOut {-Type-} ->
               let
@@ -238,7 +279,18 @@ makeCtrArgs isActive ctr = {
 }
 
 constructorPathToNode :: Boolean -> UpPath -> CtrPathRecValue -> Node -> Node
-constructorPathToNode isActive abovePath ctrPath innerNode = (hole' "constructorPathToNode isActive")
+constructorPathToNode isActive abovePath {ctrPath : Nil} innerNode = innerNode
+constructorPathToNode isActive abovePath ctrPath innerNode =
+    let ctr = ctrPath.ctr in
+    recCtrPath {
+        ctrListCons1: \listCtrPath {-ctr-} ctrs ->
+            let newBI = BITerm in
+            ctrListPathToNode isActive abovePath newBI listCtrPath
+                $ arrangeCtrList (makeCtrListArgs isActive abovePath newBI listCtrPath) [
+                    arrangeKid listCtrPath.listCtrPath abovePath (\_ _ -> innerNode) ctr
+                    , arrangeKid listCtrPath.listCtrPath abovePath (ctrListToNode isActive) ctrs
+                ]
+    } ctrPath
 
 makeCtrParamArgs :: Boolean -> CtrParamPathRecValue -> CtrParamNodeCursorInfo
 makeCtrParamArgs isActive ctrParam = {
@@ -246,8 +298,19 @@ makeCtrParamArgs isActive ctrParam = {
     , ctrParam: {ctxs: ctrParam.ctxs, ctrParam: ctrParam.ctrParam}
 }
 
-ctrParamPathToNode :: Boolean -> UpPath -> AllContext -> BelowInfo CtrParam Unit -> UpPath -> Node -> Node
-ctrParamPathToNode isActive ctxs belowInfo up innerNode = (hole' "ctrParamPathToNode isActive")
+ctrParamPathToNode :: Boolean -> UpPath -> BelowInfo CtrParam Unit -> CtrParamPathRecValue -> Node -> Node
+ctrParamPathToNode isActive abovePath belowInfo {ctrParamPath : Nil} innerNode = innerNode
+ctrParamPathToNode isActive abovePath belowInfo ctrParamPath innerNode =
+    let ctrParam = ctrParamPath.ctrParam in
+    recCtrParamPath {
+        ctrParamListCons1: \listCtrParamPath {-ctrParam-} ctrParams ->
+            let newBI = BITerm in
+            ctrParamListPathToNode isActive abovePath newBI listCtrParamPath
+                $ arrangeCtrParamList (makeCtrParamListArgs isActive abovePath newBI listCtrParamPath) [
+                    arrangeKid listCtrParamPath.listCtrParamPath abovePath (\_ _ -> innerNode) ctrParam
+                    , arrangeKid listCtrParamPath.listCtrParamPath abovePath (ctrParamListToNode isActive) ctrParams
+                ]
+    } ctrParamPath
 
 makeTypeArgArgs :: Boolean -> TypeArgPathRecValue -> TypeArgNodeCursorInfo
 makeTypeArgArgs isActive tyArg = {
@@ -255,8 +318,19 @@ makeTypeArgArgs isActive tyArg = {
     , tyArg: {ctxs: tyArg.ctxs, tyArg: tyArg.tyArg}
 }
 
-typeArgPathToNode :: Boolean -> UpPath -> AllContext -> BelowInfo TypeArg Unit -> UpPath -> Node -> Node
-typeArgPathToNode isActive ctxs belowInfo up innerNode = (hole' "typeArgPathToNode isActive")
+typeArgPathToNode :: Boolean -> UpPath -> BelowInfo TypeArg Unit -> TypeArgPathRecValue -> Node -> Node
+typeArgPathToNode isActive abovePath belowInfo {typeArgPath : Nil} innerNode = innerNode
+typeArgPathToNode isActive abovePath belowInfo typeArgPath innerNode =
+    let tyArg = typeArgPath.tyArg in
+    recTypeArgPath {
+        typeArgListCons1: \listTypeArgPath {-tyArg-} tyArg ->
+            let newBI = BITerm in
+            typeArgListPathToNode isActive abovePath newBI listTypeArgPath
+                $ arrangeTypeArgList (makeTypeArgListArgs isActive abovePath newBI listTypeArgPath) [
+                    arrangeKid listTypeArgPath.listTypeArgPath abovePath (\_ _ -> innerNode) tyArg
+                    , arrangeKid listTypeArgPath.listTypeArgPath abovePath (typeArgListToNode isActive) tyArg
+                ]
+    } typeArgPath
 
 typeBindPathToNode :: Boolean -> UpPath -> TypeBindPathRecValue -> Node -> Node
 typeBindPathToNode isActive _abovePath { typeBindPath: Nil } innerNode = innerNode
@@ -267,9 +341,7 @@ typeBindPathToNode isActive abovePath typeBindPath innerNode =
     recTypeBindPath
       { tLet1:
           \termPath md {-tyBind-} tyBinds def body bodyTy ->
-            let
-              newBI = BITerm
-            in
+            let newBI = BITerm in
               termPathToNode isActive abovePath newBI termPath
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
                     [ arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) tyBind
@@ -279,9 +351,7 @@ typeBindPathToNode isActive abovePath typeBindPath innerNode =
                     ]
       , data1:
           \termPath md {-tyBind-} tyBinds ctrs body bodyTy ->
-            let
-              newBI = BITerm
-            in
+            let newBI = BITerm in
               termPathToNode isActive abovePath BITerm termPath
                 $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
                     [ arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) tyBind
@@ -289,7 +359,13 @@ typeBindPathToNode isActive abovePath typeBindPath innerNode =
                     , arrangeKid termPath.termPath abovePath (ctrListToNode isActive) ctrs
                     , arrangeKid termPath.termPath abovePath (termToNode isActive) body
                     ]
-      , typeBindListCons1: \listTypeBindPath {-tyBind-} tyBind -> hole' "typeBindPathToNode"
+      , typeBindListCons1: \listTypeBindPath {-tyBind-} tyBinds ->
+            let newBI = BITerm in
+            typeBindListPathToNode isActive abovePath BITerm listTypeBindPath
+                $ arrangeTypeBindList (makeTypeBindListArgs isActive abovePath newBI listTypeBindPath) [
+                    arrangeKid listTypeBindPath.listTypeBindPath abovePath (\_ _ -> innerNode) tyBind
+                    , arrangeKid listTypeBindPath.listTypeBindPath abovePath (typeBindListToNode isActive) tyBinds
+                ]
       }
       typeBindPath
 
@@ -403,7 +479,7 @@ ctrParamListPathToNode isActive abovePath belowInfo listCtrParamPath innerNode =
              ctrParamListPathToNode isActive abovePath newBI listCtrParamPath
                 $ arrangeCtrParamList (makeCtrParamListArgs isActive abovePath newBI listCtrParamPath)
                     [ arrangeKid listCtrParamPath.listCtrParamPath abovePath (ctrParamToNode isActive) ctrParam
-                    , hole
+                    , arrangeKid listCtrParamPath.listCtrParamPath abovePath (\_ _ -> innerNode) ctrParams
                     ]
     } listCtrParamPath
 
