@@ -14,8 +14,7 @@ import TypeCraft.Purescript.Grammar (Change(..), Constructor(..), CtrParam(..), 
 import TypeCraft.Purescript.Node
 import TypeCraft.Purescript.State
 import TypeCraft.Purescript.TermRec
-import TypeCraft.Purescript.Util (hole', justWhen, lookup')
-import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Util (justWhen, lookup')
 
 data AboveInfo syn
   = AICursor UpPath
