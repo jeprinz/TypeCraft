@@ -85,7 +85,7 @@ cursorModeToNode cursorMode =
     TypeCursor ctxs typePath ty -> typePathToNode true Nil BITerm { ctxs, ty, typePath }
     TypeBindCursor ctxs typeBindPath tyBind -> typeBindPathToNode true Nil {ctxs, typeBindPath, tyBind}
     TermBindCursor ctxs termBindPath tBind -> termBindPathToNode true Nil { ctxs, tBind, termBindPath }
-    TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListPathToNode true Nil BITerm { ctxs, listTypeArgPath, tyArgs } -- BITerm upPath
+--    TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListPathToNode true Nil BITerm { ctxs, listTypeArgPath, tyArgs } -- BITerm upPath
     CtrListCursor ctxs listCtrPath ctrs -> ctrListPathToNode true Nil BITerm { ctxs, ctrs, listCtrPath }
     CtrParamListCursor ctxs listCtrParamPath ctrParams -> ctrParamListPathToNode true Nil BITerm { ctxs, ctrParams, listCtrParamPath }
     TypeBindListCursor ctxs listTypeBindPath tyBinds -> typeBindListPathToNode true Nil BITerm { ctxs, tyBinds, listTypeBindPath }
@@ -97,7 +97,7 @@ cursorModeToNode cursorMode =
       TypeCursor ctxs typePath ty -> typeToNode true (AICursor typePath) { ctxs, ty }
       TypeBindCursor ctxs upPath tyBind -> typeBindToNode true (AICursor upPath) { ctxs, tyBind }
       TermBindCursor ctxs termBindPath tBind -> termBindToNode true (AICursor termBindPath) { ctxs, tBind }
-      TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListToNode true (AICursor listTypeArgPath) { ctxs, tyArgs }
+--      TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListToNode true (AICursor listTypeArgPath) { ctxs, tyArgs }
       CtrListCursor ctxs listCtrPath ctrs -> ctrListToNode true (AICursor listCtrPath) { ctxs, ctrs }
       CtrParamListCursor ctxs listCtrParamPath ctrParams -> ctrParamListToNode true (AICursor listCtrParamPath) { ctxs, ctrParams }
       TypeBindListCursor ctxs listTypeBindPath tyBinds -> typeBindListToNode true (AICursor listTypeBindPath) { ctxs, tyBinds }

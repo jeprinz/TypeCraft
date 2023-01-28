@@ -10,12 +10,13 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.CursorMovement (getMiddlePath)
-import TypeCraft.Purescript.Grammar (Change(..), Constructor, CtrParam, Term(..), TermBind(..), Tooth(..), Type(..), TypeArg, TypeBind(..), UpPath)
+import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Node (Node, NodeIndentation, NodeTag(..), getNodeTag, makeIndentNodeIndentation, makeInlineNodeIndentation, makeNewlineNodeIndentation, makeNode, setNodeIndentation, setNodeIsParenthesized, setNodeLabel, termToNodeTag, typeToNodeTag)
 import TypeCraft.Purescript.State (CursorLocation(..), Select(..), topSelectOrientation, makeCursorMode, makeSelectMode)
-import TypeCraft.Purescript.TermRec (ListCtrParamRecValue, ListCtrRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue, CtrParamRecValue, recTerm, recType)
+import TypeCraft.Purescript.TermRec
 import TypeCraft.Purescript.Util (hole', justWhen, lookup')
 import Debug (trace)
+import TypeCraft.Purescript.Util (hole)
 
 data AboveInfo syn
   = AICursor UpPath
@@ -181,7 +182,7 @@ termToNode isActive aboveInfo term =
             [ arrangeKidAI aboveInfo (termToNode isActive) t1
             , arrangeKidAI aboveInfo (termToNode isActive) t2
             ]
-    , var: \md x targs -> setNodeLabel (x `lookup'` term.ctxs.mdctx) $ arrangeTerm args []
+    , var: \md x targs -> setNodeLabel (x `lookup'` term.ctxs.mdctx) $ arrangeTerm args [] -- TODO: needs to have type arguments
     , lett:
         \md tBind tyBinds def defTy body _bodyTy ->
           arrangeTerm args
@@ -308,9 +309,50 @@ typeToNode isActive aboveInfo ty =
   ai :: forall a. AboveInfo a
   ai = aIOnlyCursor aboveInfo
 
+stepKidsCtr :: Boolean -> Constructor -> Array PreNode -> Array Node
+stepKidsCtr isActive (Constructor md tBind ctrParams) [k_tBind, k_ctrParams] =
+    [ k_tBind (Constructor1 md {--} ctrParams)
+    , k_ctrParams (Constructor2 md tBind {--})]
+stepKidsCtr _ _ _ = unsafeThrow "stepKidsCtr: wrong number of kids"
+
+type CtrNodeCursorInfo
+  = { isActive :: Boolean
+    , ctr :: CtrRecValue
+    , makeCursor :: Unit -> Maybe CursorLocation
+    , makeSelect :: Unit -> Maybe Select
+    }
+
+arrangeCtr ::
+  CtrNodeCursorInfo ->
+  Array PreNode ->
+  Node
+arrangeCtr args =
+  arrangeNodeKids
+    { isActive: args.isActive
+    , tag: ConstructorNodeTag -- There is only one tag for constructor
+    , stepKids: stepKidsCtr args.isActive args.ctr.ctr
+    , makeCursor: args.makeCursor
+    , makeSelect: args.makeSelect
+    }
+
 -- Constructor
-ctrToNode :: Boolean -> AboveInfo Constructor -> Constructor -> Node
-ctrToNode isActive aboveInfo ctr = hole' "ctrToNode"
+ctrToNode :: Boolean -> AboveInfo Constructor -> CtrRecValue -> Node
+ctrToNode isActive aboveInfo ctr =
+    recCtr {
+        ctr: \md tBind ctrParams ->
+            arrangeCtr {
+                isActive
+                , makeCursor: \_ -> Nothing
+                , makeSelect: \_ -> Nothing
+                , ctr
+            } [
+                arrangeKidAI cursorOnlyAI (termBindToNode isActive) tBind
+                , arrangeKidAI cursorOnlyAI (ctrParamListToNode isActive) ctrParams
+            ]
+    } ctr
+    where
+    cursorOnlyAI :: forall a. AboveInfo a
+    cursorOnlyAI = aIOnlyCursor aboveInfo
 
 -- CtrParam
 --

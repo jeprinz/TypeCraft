@@ -65,7 +65,7 @@ getCursorChildren (TypeCursor ctxs up ty) =
         ( { arrow: \md ty1 ty2 -> TypeCursor ty1.ctxs (Arrow1 md {--} ty2.ty : up) ty1.ty
             : TypeCursor ty2.ctxs (Arrow2 md ty1.ty {--} : up) ty2.ty: Nil
           , tHole: \md x -> Nil
-          , tNeu: \md x tyArgs -> TypeArgListCursor tyArgs.ctxs (TNeu1 md x {--} : up) tyArgs.tyArgs : Nil
+          , tNeu: \md x tyArgs -> Nil -- TODO: each type argument needs to be a child. --  TypeArgListCursor tyArgs.ctxs (TNeu1 md x {--} : up) tyArgs.tyArgs : Nil
           }
         )
         {ctxs, ty}
@@ -83,12 +83,12 @@ getCursorChildren (CtrParamListCursor ctxs up ctrParams) =
             : CtrParamListCursor ctrParams.ctxs (CtrParamListCons2 ctrParam.ctrParam {--} : up) ctrParams.ctrParams : Nil
         , nil: Nil
     }) {ctxs, ctrParams}
-getCursorChildren (TypeArgListCursor ctxs up tyArgs) =
-    recListTypeArg ({
-        cons: \tyArg@{tyArg: (TypeArg md ty)} tyArgs -> TypeCursor tyArg.ctxs (TypeArg1 md {--} : TypeArgListCons1 {--} tyArgs.tyArgs : up) ty
-            : TypeArgListCursor tyArgs.ctxs (TypeArgListCons2 tyArg.tyArg {--} : up) tyArgs.tyArgs : Nil
-        , nil: Nil
-    }) {ctxs, tyArgs}
+--getCursorChildren (TypeArgListCursor ctxs up tyArgs) =
+--    recListTypeArg ({
+--        cons: \tyArg@{tyArg: (TypeArg md ty)} tyArgs -> TypeCursor tyArg.ctxs (TypeArg1 md {--} : TypeArgListCons1 {--} tyArgs.tyArgs : up) ty
+--            : TypeArgListCursor tyArgs.ctxs (TypeArgListCons2 tyArg.tyArg {--} : up) tyArgs.tyArgs : Nil
+--        , nil: Nil
+--    }) {ctxs, tyArgs}
 getCursorChildren (TypeBindListCursor ctxs up tyBinds) =
     recListTypeBind ({
         cons: \tyBind tyBinds -> TypeBindCursor tyBind.ctxs (TypeBindListCons1 {--} tyBinds.tyBinds : up) tyBind.tyBind
@@ -165,10 +165,10 @@ parent (TypeCursor ctxs typePath ty) =
             recCtrParamPath ({ -- We skip the CtrParam, and the cursor goes to the CtrParam list above it
                 ctrParamListCons1: \listCtrParamPath ctrParams -> Just $ CtrParamListCursor listCtrParamPath.ctxs listCtrParamPath.listCtrParamPath listCtrParamPath.ctrParams /\ (1 - 1)
             }) ctrParamPath
-        , typeArg1: \tyArgPath md {-Type-} ->
-            recTypeArgPath ({ -- We skip the TypeArg, and the cursor goes to the TypeArg list above it
-                typeArgListCons1: \listTypeArgPath tyArgs -> Just $ TypeArgListCursor listTypeArgPath.ctxs listTypeArgPath.listTypeArgPath listTypeArgPath.tyArgs /\ (1 - 1)
-            }) tyArgPath
+        , typeArg1: \tyArgPath md {-Type-} -> hole' "parent" -- TODO: parent should be either the Var or TNeu bove the TypeArg list
+--            recTypeArgPath ({ -- We skip the TypeArg, and the cursor goes to the TypeArg list above it
+--                typeArgListCons1: \listTypeArgPath tyArgs -> Just $ TypeArgListCursor listTypeArgPath.ctxs listTypeArgPath.listTypeArgPath listTypeArgPath.tyArgs /\ (1 - 1)
+--            }) tyArgPath
         , arrow1: \typePath md {-Type-} _ -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (1 - 1)
         , arrow2: \typePath md _ {-Type-} -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (2 - 1)
         } {ctxs, typePath, ty}
@@ -185,11 +185,11 @@ parent (CtrParamListCursor ctxs listCtrParamPath ctrParams) =
             }) ctrPath
         , ctrParamListCons2: \listCtrParamPath ctrParam -> Just $ CtrParamListCursor listCtrParamPath.ctxs listCtrParamPath.listCtrParamPath listCtrParamPath.ctrParams /\ (2 - 1)
     } {ctxs, listCtrParamPath, ctrParams}
-parent (TypeArgListCursor ctxs listTypeArgPath tyArgs) =
-    recListTypeArgPath {
-        tNeu1: \typePath md x -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (1 - 1)
-        , typeArgListCons2: \listTypeArgPath tyArg -> Just $ TypeArgListCursor listTypeArgPath.ctxs listTypeArgPath.listTypeArgPath listTypeArgPath.tyArgs /\ (2 - 1)
-    } {ctxs, listTypeArgPath, tyArgs}
+--parent (TypeArgListCursor ctxs listTypeArgPath tyArgs) =
+--    recListTypeArgPath {
+--        tNeu1: \typePath md x -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ (1 - 1)
+--        , typeArgListCons2: \listTypeArgPath tyArg -> Just $ TypeArgListCursor listTypeArgPath.ctxs listTypeArgPath.listTypeArgPath listTypeArgPath.tyArgs /\ (2 - 1)
+--    } {ctxs, listTypeArgPath, tyArgs}
 parent (TypeBindListCursor ctxs listTypeBindPath tyBinds) =
     recListTypeBindPath ({
         data2 : \termPath md tyBind ctrs body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
@@ -248,7 +248,7 @@ moveSelectLeft(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 tru
 moveSelectLeft(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root)  = hole' "moveSelectTopUp"
 moveSelectLeft(CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root)  = hole' "moveSelectTopUp"
 moveSelectLeft(CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root)  = hole' "moveSelectTopUp"
-moveSelectLeft(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 root)  = hole' "moveSelectTopUp"
+--moveSelectLeft(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 root)  = hole' "moveSelectTopUp"
 moveSelectLeft(TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root)  = hole' "moveSelectTopUp"
 
 moveSelectRight :: Select -> Maybe Mode
@@ -274,7 +274,7 @@ moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 tr
 moveSelectRight(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root)  = hole' "moveSelectTopUp"
 moveSelectRight(CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root)  = hole' "moveSelectTopUp"
 moveSelectRight(CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root)  = hole' "moveSelectTopUp"
-moveSelectRight(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 root)  = hole' "moveSelectTopUp"
+--moveSelectRight(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 root)  = hole' "moveSelectTopUp"
 moveSelectRight(TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root)  = hole' "moveSelectTopUp"
 
 getMiddlePath :: Select -> UpPath
@@ -282,7 +282,7 @@ getMiddlePath(TermSelect _ _ _ _ middlePath _ _ _ _) = middlePath
 getMiddlePath(TypeSelect _ _ _ middlePath _ _ _) = middlePath
 getMiddlePath(CtrListSelect _ _ _ middlePath _ _ _) = middlePath
 getMiddlePath(CtrParamListSelect _ _ _ middlePath _ _ _) = middlePath
-getMiddlePath(TypeArgListSelect _ _ _ middlePath _ _ _) = middlePath
+--getMiddlePath(TypeArgListSelect _ _ _ middlePath _ _ _) = middlePath
 getMiddlePath(TypeBindListSelect _ _ _ middlePath _ _ _) = middlePath
 
 getPath :: CursorLocation -> UpPath
@@ -292,7 +292,7 @@ getPath(TypeBindCursor _ path _) = path
 getPath(TermBindCursor _ path _) = path
 getPath(CtrListCursor _ path _) = path
 getPath(CtrParamListCursor _ path _) = path
-getPath(TypeArgListCursor _ path _) = path
+--getPath(TypeArgListCursor _ path _) = path
 getPath(TypeBindListCursor _ path _) = path
 
 data GrammaticalSort = GSTerm | GSType | GSTypeBind | GSTermBind | GSCtrList | GSCtrParamList | GSTypeArgList | GSTypeBindList
@@ -307,7 +307,7 @@ getCursorSort(TypeBindCursor _ _ _) = GSTypeBind
 getCursorSort(TermBindCursor _ _ _) = GSTermBind
 getCursorSort(CtrListCursor _ _ _) = GSCtrList
 getCursorSort(CtrParamListCursor _ _ _) = GSCtrParamList
-getCursorSort(TypeArgListCursor _ _ _) = GSTypeArgList
+--getCursorSort(TypeArgListCursor _ _ _) = GSTypeArgList
 getCursorSort(TypeBindListCursor _ _ _) = GSTypeBindList
 
 -- If this returns Nothing, then should exit Select mode and go to Cursor mode
@@ -349,7 +349,7 @@ selectLeftFromCursor cursor@(TermCursor ctxs ty (tooth : path) term) =
 selectLeftFromCursor (TypeCursor ctxs (tooth : path) ty) = hole' "selectLeftFromCursor"
 selectLeftFromCursor (CtrListCursor ctxs (tooth : path) ctrs) = hole' "selectLeftFromCursor"
 selectLeftFromCursor (CtrParamListCursor ctxs (tooth : path) ctrParams) = hole' "selectLeftFromCursor"
-selectLeftFromCursor (TypeArgListCursor ctxs (tooth : path) tyArgs) = hole' "selectLeftFromCursor"
+--selectLeftFromCursor (TypeArgListCursor ctxs (tooth : path) tyArgs) = hole' "selectLeftFromCursor"
 selectLeftFromCursor (TypeBindListCursor ctxs (tooth : path) tyBinds) = hole' "selectLeftFromCursor"
 selectLeftFromCursor _ = Nothing
 
@@ -363,6 +363,6 @@ selectRightFromCursor cursor@(TermCursor ctxs ty path term) =
 selectRightFromCursor (TypeCursor ctxs (tooth : path) ty) = hole' "selectRightFromCursor"
 selectRightFromCursor (CtrListCursor ctxs (tooth : path) ctrs) = hole' "selectRightFromCursor"
 selectRightFromCursor (CtrParamListCursor ctxs (tooth : path) ctrParams) = hole' "selectRightFromCursor"
-selectRightFromCursor (TypeArgListCursor ctxs (tooth : path) tyArgs) = hole' "selectRightFromCursor"
+--selectRightFromCursor (TypeArgListCursor ctxs (tooth : path) tyArgs) = hole' "selectRightFromCursor"
 selectRightFromCursor (TypeBindListCursor ctxs (tooth : path) tyBinds) = hole' "selectRightFromCursor"
 selectRightFromCursor _ = Nothing

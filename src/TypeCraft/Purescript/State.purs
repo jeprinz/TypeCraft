@@ -117,7 +117,7 @@ data Clipboard
   | TypePathClip AllContext UpPath
   | CtrListClip AllContext UpPath -- technically doesn't need term contexts but whatever
   | CtrParamList AllContext UpPath -- technically doesn't need term contexts but whatever
-  | TypeArgList AllContext UpPath -- technically doesn't need term contexts but whatever
+--  | TypeArgList AllContext UpPath -- technically doesn't need term contexts but whatever
   | VarNameList AllContext UpPath -- for TypeBind Lists
 
 data CursorLocation
@@ -130,7 +130,7 @@ data CursorLocation
   | TermBindCursor AllContext UpPath TermBind
   | CtrListCursor AllContext UpPath (List Constructor)
   | CtrParamListCursor AllContext UpPath (List CtrParam)
-  | TypeArgListCursor AllContext UpPath (List TypeArg)
+--  | TypeArgListCursor AllContext UpPath (List TypeArg)
   | TypeBindListCursor AllContext UpPath (List TypeBind)
 
 derive instance genericCursorLocation :: Generic CursorLocation _
@@ -159,7 +159,7 @@ data Select
   | TypeSelect UpPath AllContext Type UpPath AllContext Type SelectOrientation
   | CtrListSelect UpPath AllContext (List Constructor) UpPath AllContext (List Constructor) SelectOrientation
   | CtrParamListSelect UpPath AllContext (List CtrParam) UpPath AllContext (List CtrParam) SelectOrientation
-  | TypeArgListSelect UpPath AllContext (List TypeArg) UpPath AllContext (List TypeArg) SelectOrientation
+--  | TypeArgListSelect UpPath AllContext (List TypeArg) UpPath AllContext (List TypeArg) SelectOrientation
   | TypeBindListSelect UpPath AllContext (List TypeBind) UpPath AllContext (List TypeBind) SelectOrientation
 
 type SelectOrientation = Boolean -- I didn't know how to match on a Variant, so I changed it back to a boolean. That way I can use an if expression like a normal person
