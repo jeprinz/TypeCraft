@@ -13,11 +13,12 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar (Kind(..), Term(..), Tooth, Type(..))
+import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Nullable (Nullable)
 import TypeCraft.Purescript.Nullable as Nullable
 import TypeCraft.Purescript.State (State)
 import TypeCraft.Purescript.Util (hole, hole')
+import Data.List (List(..), (:))
 
 -- Node
 foreign import data Node :: Prim.Type
@@ -210,6 +211,10 @@ termToNodeTag = case _ of
   ContextBoundary _ _ _ _ -> ContextBoundaryNodeTag
   Hole _ -> HoleNodeTag
   Buffer _ _ _ _ _ -> BufferNodeTag
+
+ctrListToNodeTag :: List Constructor -> NodeTag
+ctrListToNodeTag Nil = ConstructorListNilNodeTag
+ctrListToNodeTag (_ : _) = ConstructorListConsNodeTag
 
 typeToNodeTag :: Type -> NodeTag
 typeToNodeTag = case _ of
