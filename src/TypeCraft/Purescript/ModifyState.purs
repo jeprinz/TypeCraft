@@ -6,6 +6,7 @@ import Data.Array as Array
 import Data.List as List
 import Data.Maybe (Maybe(..))
 import Data.Tuple (snd)
+import Debug (traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.ChangePath (chTermPath, chTypePath)
 import TypeCraft.Purescript.Context (ctxInject, kCtxInject)
@@ -17,7 +18,7 @@ import TypeCraft.Purescript.MD (defaultTypeBoundaryMD)
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
-import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), State, botSelectOrientation, cursorLocationToSelect, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
+import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), SelectMode, State, botSelectOrientation, cursorLocationToSelect, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
 import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 import TypeCraft.Purescript.Unification (applySubType, subTermPath)
 import TypeCraft.Purescript.Util (hole')
@@ -177,12 +178,14 @@ redo st = do
 
 cut :: State -> Maybe State
 cut st = do
+  traceM "cut"
   clip <- modeToClipboard st.mode
   st <- delete st
   pure $ st { clipboard = clip }
 
 copy :: State -> Maybe State
 copy st = do
+  traceM "redo"
   clip <- modeToClipboard st.mode
   pure $ st { clipboard = clip }
 
@@ -195,47 +198,49 @@ modeToClipboard = case _ of
     TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori -> Just $ TermPathClip ctxs1 ty1 tmPath2 ctxs2 ty2
     _ -> hole' "modeToClipboard"
 
--- TODO: properly use contexts
+-- TODO: properly use contexts and freshen variables
 paste :: State -> Maybe State
-paste st = case st.clipboard of
-  EmptyClip -> Nothing
-  TermClip ctxs' ty' tm' -> case st.mode of
-    CursorMode cursorMode -> case cursorMode.cursorLocation of
-      TermCursor ctxs ty tmPath tm -> pure $ st { mode = makeCursorMode $ TermCursor ctxs ty (TypeBoundary1 defaultTypeBoundaryMD (Replace ty' ty) List.: tmPath) tm' }
-      _ -> Nothing
-    SelectMode selectMode -> Nothing
-  TermPathClip ctxs1' ty1' tmPath' ctxs2' ty2' -> case st.mode of
-    CursorMode cursorMode -> case cursorMode.cursorLocation of
-      TermCursor ctxs ty tmPath tm ->
-        pure
-          $ st
-              { mode =
-                makeCursorMode
-                  $ TermCursor ctxs ty
-                      ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty ty2'))
-                          <> tmPath'
-                          <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty))
-                          <> tmPath
-                      )
-                      tm
-              }
-      _ -> Nothing
-    SelectMode selectMode -> case selectMode.select of
-      TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
-        pure
-          $ st
-              { mode =
-                makeCursorMode
-                  $ TermCursor ctxs1 ty1
-                      ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty2 ty2'))
-                          <> tmPath2
-                          <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty1))
-                          <> tmPath1
-                      )
-                      tm2
-              }
-      _ -> Nothing
-  _ -> hole' "TODO: do other syntactic cases for paste"
+paste st = do
+  traceM "paste"
+  case st.clipboard of
+    EmptyClip -> Nothing
+    TermClip ctxs' ty' tm' -> case st.mode of
+      CursorMode cursorMode -> case cursorMode.cursorLocation of
+        TermCursor ctxs ty tmPath tm -> pure $ st { mode = makeCursorMode $ TermCursor ctxs ty (TypeBoundary1 defaultTypeBoundaryMD (Replace ty' ty) List.: tmPath) tm' }
+        _ -> Nothing
+      SelectMode selectMode -> Nothing
+    TermPathClip ctxs1' ty1' tmPath' ctxs2' ty2' -> case st.mode of
+      CursorMode cursorMode -> case cursorMode.cursorLocation of
+        TermCursor ctxs ty tmPath tm ->
+          pure
+            $ st
+                { mode =
+                  makeCursorMode
+                    $ TermCursor ctxs ty
+                        ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty ty2'))
+                            <> tmPath'
+                            <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty))
+                            <> tmPath
+                        )
+                        tm
+                }
+        _ -> Nothing
+      SelectMode selectMode -> case selectMode.select of
+        TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
+          pure
+            $ st
+                { mode =
+                  makeCursorMode
+                    $ TermCursor ctxs1 ty1
+                        ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty2 ty2'))
+                            <> tmPath2
+                            <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty1))
+                            <> tmPath1
+                        )
+                        tm2
+                }
+        _ -> Nothing
+    _ -> hole' "TODO: do other syntactic cases for paste"
 
 delete :: State -> Maybe State
 delete st = case st.mode of
@@ -250,8 +255,10 @@ delete st = case st.mode of
 
         cursorLocation' = TypeCursor ctxs (chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty' ty) path) ty'
       pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
-    _ -> Nothing
-  _ -> Nothing
+    _ -> hole' "delete: other syntactical kids of cursors"
+  SelectMode selectMode -> case selectMode.select of
+    TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori -> pure $ st { mode = makeCursorMode $ TermCursor ctxs1 ty1 ((TypeBoundary1 defaultTypeBoundaryMD (Replace ty2 ty1)) List.: tmPath1) tm2 }
+    _ -> hole' "delete: other syntactical kinds of selects"
 
 escape :: State -> Maybe State
 escape = hole' "escape"
