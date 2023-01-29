@@ -15,6 +15,8 @@ import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Context (addLetToCtx)
 import TypeCraft.Purescript.Util (delete')
+import Data.Tuple (fst, snd)
+import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints)
 
 type TermPathRecValue = {ctxs :: AllContext, ty :: Type, term :: Term, termPath :: UpPath}
 type TypePathRecValue = {ctxs :: AllContext, ty :: Type, typePath :: UpPath}
@@ -90,7 +92,8 @@ recTermPath args {ctxs, ty, term, termPath: (Buffer3 md buf bufTy {-Term-} bodyT
         md {ctxs, ty: bufTy, term: buf}
         {ctxs, ty: bufTy} bodyTy
 recTermPath args {ctxs, ty, term, termPath: (TypeBoundary1 md c {-Term-}) : up} =
-    args.typeBoundary1 {ctxs, ty: ty, term: TypeBoundary md c term, termPath: up} md c
+    if not (ty == fst (getEndpoints c)) then unsafeThrow ("shouldn't happen recTerm typebound. c is: " <> show c <> "and ty is: " <> show ty) else
+    args.typeBoundary1 {ctxs, ty: (snd (getEndpoints c)), term: TypeBoundary md c term, termPath: up} md c
 recTermPath args {ctxs, ty, term, termPath: (ContextBoundary1 md x c) : up} =
     let ctxs' = ctxs{ctx = alterCtxVarChange ctxs.ctx x (invertVarChange c)} in
     args.contextBoundary1 {ctxs: ctxs', ty: ty, term: ContextBoundary md x c term, termPath: up} md x c

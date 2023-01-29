@@ -131,7 +131,7 @@ stepKidsTerm isActive term kids = case term of
       , k_bod (TLet4 md bnd bnds sig ty)
       ]
   TypeBoundary md ch bod
-    | [ k_bod ] <- kids -> [ k_bod (TypeBoundary1 md ch) ]
+    | [ k_bod , k_ch ] <- kids -> [ k_bod (TypeBoundary1 md ch) , k_ch (TypeBoundary1 md ch) {-TODO: This is a dummy tooth because the change isn't a real node-} ]
   ContextBoundary md x ch bod
     | [ k_bod ] <- kids -> [ k_bod (ContextBoundary1 md x ch) ]
   Hole md

@@ -23,6 +23,7 @@ import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 import TypeCraft.Purescript.Unification (applySubType, subTermPath)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (hole)
+import Debug (trace)
 
 handleKey :: Key -> State -> Maybe State
 handleKey key st = case st.mode of
@@ -62,6 +63,7 @@ handleKey key st = case st.mode of
     | key.key == "Escape" -> pure $ st { mode = makeCursorMode (selectToCursorLocation selectMode.select) }
     | key.key == "ArrowLeft" && key.shiftKey -> moveSelectPrev st
     | key.key == "ArrowRight" && key.shiftKey -> moveSelectNext st
+    | key.key == "Backspace" -> delete st
     | key.key == "c" && (key.ctrlKey || key.metaKey) -> copy st
     | key.key == "x" && (key.ctrlKey || key.metaKey) -> cut st
     | key.key == "v" && (key.ctrlKey || key.metaKey) -> paste st
@@ -197,7 +199,7 @@ cut st = do
 
 copy :: State -> Maybe State
 copy st = do
-  traceM "redo"
+  traceM "copy"
   clip <- modeToClipboard st.mode
   pure $ st { clipboard = clip }
 
@@ -255,7 +257,7 @@ paste st = do
     _ -> hole' "TODO: do other syntactic cases for paste"
 
 delete :: State -> Maybe State
-delete st = case st.mode of
+delete st = trace "delete" \_ -> case st.mode of
   CursorMode cursorMode -> case cursorMode.cursorLocation of
     TermCursor ctxs ty path _tm -> do
       let
@@ -265,11 +267,12 @@ delete st = case st.mode of
       let
         ty' = (freshTHole unit)
 
-        cursorLocation' = TypeCursor ctxs (chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty' ty) path) ty'
+        cursorLocation' = TypeCursor ctxs (chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path) ty'
       pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
     _ -> hole' "delete: other syntactical kids of cursors"
   SelectMode selectMode -> case selectMode.select of
-    TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori -> pure $ st { mode = makeCursorMode $ TermCursor ctxs1 ty1 ((TypeBoundary1 defaultTypeBoundaryMD (Replace ty2 ty1)) List.: tmPath1) tm2 }
+    TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
+        pure $ st { mode = makeCursorMode $ TermCursor ctxs1 ty1 ((TypeBoundary1 defaultTypeBoundaryMD (Replace ty2 ty1)) List.: tmPath1) tm2 }
     _ -> hole' "delete: other syntactical kinds of selects"
 
 escape :: State -> Maybe State

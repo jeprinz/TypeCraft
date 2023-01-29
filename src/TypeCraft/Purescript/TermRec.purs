@@ -101,7 +101,7 @@ recTerm args {ctxs, ty, term : TLet md tyBind@(TypeBind xmd x) tyBinds def body 
         {ctxs: ctxs', ty: bodyTy, term: body}
         bodyTy
 recTerm args {ctxs, ty, term : TypeBoundary md c body} =
-    if not (ty == snd (getEndpoints c)) then unsafeThrow "shouldn't happen recTerm typebound" else
+    if not (ty == snd (getEndpoints c)) then unsafeThrow ("shouldn't happen recTerm typebound. c is: " <> show c <> "and ty is: " <> show ty) else
     args.typeBoundary md c {ctxs, ty: fst (getEndpoints c), term: body}
 recTerm args {ctxs, ty, term : ContextBoundary md x c body} =
     let ctxs' = ctxs{ctx = alterCtxVarChange ctxs.ctx x c} in

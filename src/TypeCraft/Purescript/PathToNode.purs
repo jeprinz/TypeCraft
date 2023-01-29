@@ -109,11 +109,12 @@ termPathToNode isActive abovePath belowInfo termPath innerNode =
                 , arrangeKid upRecVal.termPath abovePath (typeToNode isActive) bufTy
                 , arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
             ]
-      , typeBoundary1: \upRecVal md change {-Term-} ->
-        let newBI = stepBI (TypeBoundary1 md change {--}) belowInfo in
+      , typeBoundary1: \upRecVal md ch {-Term-} ->
+        let newBI = stepBI (TypeBoundary1 md ch {--}) belowInfo in
         termPathToNode isActive abovePath newBI upRecVal
             $ arrangeTerm (makeTermArgs isActive abovePath newBI upRecVal) [
                 arrangeKid upRecVal.termPath abovePath (\_ _ -> innerNode) term
+                , arrangeKid upRecVal.termPath abovePath (const changeToNode) { ch, ctxs: termPath.ctxs }
             ]
       , contextBoundary1: \upRecVal md x change {-Term-} ->
         let newBI = stepBI (ContextBoundary1 md x change {--}) belowInfo in

@@ -128,7 +128,7 @@ chTerm kctx ctx c t =
                 case lookup x kctx of
                     Just xChInCtx -> hole' "chTerm"
                     Nothing -> hole' "chTerm"
-            cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD (invert cin) t
+            cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
         )
     in
         doInsertArgs cRes tRes
