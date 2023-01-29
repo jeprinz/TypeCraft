@@ -19,6 +19,7 @@ import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.TypeChangeAlgebra (pGetEndpoints)
 import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)
+import Debug (trace)
 
 type TermRecValue = {ctxs :: AllContext, ty :: Type, term :: Term}
 type TypeRecValue = {ctxs :: AllContext, ty :: Type}
@@ -168,36 +169,36 @@ recTypeBind args {ctxs, tyBind: TypeBind md x} = args.typeBind md x
 
 type ListCtrRec a = {
     cons :: CtrRecValue -> ListCtrRecValue -> a
-    , nil :: a
+    , nil :: Unit -> a
 }
 
 recListCtr :: forall a. ListCtrRec a -> ListCtrRecValue -> a
 recListCtr args {ctxs, ctrs: ctr: ctrs} =
     args.cons {ctxs, ctr}
         {ctxs, ctrs}
-recListCtr args {ctxs, ctrs: Nil} = args.nil
+recListCtr args thing@{ctxs, ctrs: Nil} = trace ("in recListCtr nil case, ctrs is: " <> show thing.ctrs) \_ -> args.nil unit
 
 type ListCtrParamRec a = {
     cons :: CtrParamRecValue -> ListCtrParamRecValue -> a
-    , nil :: a
+    , nil :: Unit -> a
 }
 
 recListCtrParam :: forall a. ListCtrParamRec a -> ListCtrParamRecValue -> a
 recListCtrParam args {ctxs, ctrParams: ctrParam: ctrParams} =
     args.cons {ctxs, ctrParam}
         {ctxs, ctrParams}
-recListCtrParam args {ctxs, ctrParams: Nil} = args.nil
+recListCtrParam args {ctxs, ctrParams: Nil} = args.nil unit
 
 type ListTypeArgRec a = {
     cons :: TypeArgRecValue -> ListTypeArgRecValue -> a
-    , nil :: a
+    , nil :: Unit -> a
 }
 
 recListTypeArg :: forall a. ListTypeArgRec a -> ListTypeArgRecValue -> a
 recListTypeArg args {ctxs, tyArgs: tyArg: tyArgs} =
     args.cons {ctxs, tyArg}
         {ctxs, tyArgs}
-recListTypeArg args {ctxs, tyArgs: Nil} = args.nil
+recListTypeArg args {ctxs, tyArgs: Nil} = args.nil unit
 
 type ListTypeBindRec a = {
     cons :: TypeBindRecValue -> ListTypeBindRecValue -> a

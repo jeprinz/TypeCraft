@@ -75,13 +75,13 @@ getCursorChildren (CtrListCursor ctxs up ctrs) =
             TermBindCursor ctr.ctxs (Constructor1 md {--} ctrParams : CtrListCons1 {--} ctrs.ctrs : up) tBind
             : CtrParamListCursor ctr.ctxs (Constructor2 md tBind {--} : CtrListCons1 {--} ctrs.ctrs : up) ctrParams
             : CtrListCursor ctrs.ctxs (CtrListCons2 ctr.ctr {--} : up) ctrs.ctrs : Nil
-        , nil: Nil
+        , nil: \_ -> Nil
     }) {ctxs, ctrs}
 getCursorChildren (CtrParamListCursor ctxs up ctrParams) =
     recListCtrParam ({
         cons: \ctrParam@{ctrParam: (CtrParam md ty)} ctrParams -> TypeCursor ctrParam.ctxs (CtrParam1 md {--} : CtrParamListCons1 {--} ctrParams.ctrParams : up) ty
             : CtrParamListCursor ctrParams.ctxs (CtrParamListCons2 ctrParam.ctrParam {--} : up) ctrParams.ctrParams : Nil
-        , nil: Nil
+        , nil: \_ -> Nil
     }) {ctxs, ctrParams}
 --getCursorChildren (TypeArgListCursor ctxs up tyArgs) =
 --    recListTypeArg ({

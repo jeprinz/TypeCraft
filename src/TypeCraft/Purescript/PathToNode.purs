@@ -458,7 +458,7 @@ ctrListPathToNode isActive abovePath belowInfo listCtrPath innerNode =
             ctrListPathToNode isActive abovePath newBI listCtrPath
                 $ arrangeCtrList (makeCtrListArgs isActive abovePath newBI listCtrPath)
                     [ arrangeKid listCtrPath.listCtrPath abovePath (ctrToNode isActive) ctr
-                    , arrangeKid listCtrPath.listCtrPath abovePath (ctrListToNode isActive) {ctxs: listCtrPath.ctxs, ctrs}
+                    , arrangeKid listCtrPath.listCtrPath abovePath (\_ _ -> innerNode) ctrs
                     ]
     } listCtrPath
 

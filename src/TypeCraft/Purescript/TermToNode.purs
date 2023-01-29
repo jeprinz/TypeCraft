@@ -15,6 +15,7 @@ import TypeCraft.Purescript.Node
 import TypeCraft.Purescript.State
 import TypeCraft.Purescript.TermRec
 import TypeCraft.Purescript.Util (justWhen, lookup')
+import Debug (trace)
 
 data AboveInfo syn
   = AICursor UpPath
@@ -570,7 +571,7 @@ ctrParamListToNode isActive aboveInfo ctrParams =
                 [ arrangeKidAI (aIOnlyCursor aboveInfo) (ctrParamToNode isActive) ctrParam
                 , arrangeKidAI aboveInfo (ctrParamListToNode isActive) ctrParams
                 ]
-        , nil: arrangeCtrParamList args []
+        , nil: \_ -> arrangeCtrParamList args []
     } ctrParams
     where
     args = {
@@ -619,7 +620,7 @@ typeArgListToNode isActive aboveInfo tyArgs =
                 [ arrangeKidAI (aIOnlyCursor aboveInfo) (typeArgToNode isActive) tyArg
                 , arrangeKidAI aboveInfo (typeArgListToNode isActive) tyArgs
                 ]
-        , nil: arrangeTypeArgList args []
+        , nil: \_ -> arrangeTypeArgList args []
     } tyArgs
     where
     args = {
@@ -642,7 +643,7 @@ stepKidsCtrList isActive ctrs kids = case ctrs of
       [ k_ctr (CtrListCons1 {--} ctrs')
       , setNodeIndentation (indentIf isActive md.indented) $ k_ctrs (CtrListCons2 ctr {--})
       ]
-  _ -> unsafeThrow "stepKidsCtrList: wrong number of kids"
+  _ -> unsafeThrow ("stepKidsCtrList: wrong number of kids. Kids length is: " <> show (Array.length kids) <> "while ctrs is: " <> show ctrs)
 
 type CtrListNodeCursorInfo
   = { isActive :: Boolean
@@ -671,7 +672,7 @@ ctrListToNode isActive aboveInfo ctrs =
             [ arrangeKidAI (aIOnlyCursor aboveInfo) (ctrToNode isActive) ctr
             , arrangeKidAI aboveInfo (ctrListToNode isActive) ctrs
             ]
-    , nil: arrangeCtrList args []
+    , nil: \_ -> trace ("ctrs.ctrs is: " <> show ctrs.ctrs) \_ -> arrangeCtrList args []
     }
     ctrs
   where

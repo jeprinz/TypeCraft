@@ -31,7 +31,7 @@ handleKey key st = case st.mode of
       | Just varName <- manipulateString key md.varName -> pure $ st { mode = CursorMode cursorMode { cursorLocation = TypeBindCursor ctxs path (TypeBind md { varName = varName } tyVarId) } }
     TermBindCursor ctxs path (TermBind md tmVarId)
       | Just varName <- manipulateString key md.varName -> pure $ st { mode = CursorMode cursorMode { cursorLocation = TermBindCursor ctxs path (TermBind md { varName = varName } tmVarId) } }
-    CtrParamListCursor ctxs path ctrs -> hole' "handleKey CtrParamListCursor"
+--    CtrParamListCursor ctxs path ctrs -> hole' "handleKey CtrParamListCursor" -- Jacob Note: why was this line here? I'm not sure.
     _
       | Just query <- manipulateQuery key st cursorMode -> do
         -- not the we don't `checkpoint` here, since every little modification
