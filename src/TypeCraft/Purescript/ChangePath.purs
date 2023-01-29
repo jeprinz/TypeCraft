@@ -68,10 +68,12 @@ chTermPath kctx ctx c (Lambda3 md tBind@(TermBind _ x) ty {-Term-} bodyTy : up) 
     let up' = chTermPath kctx ctx' (CArrow (tyInject ty) c) up in
     Lambda3 md tBind ty {-Term-} (snd (getEndpoints c)) : up'
 chTermPath kctx ctx c (Buffer1 md {-Term-} defTy body bodyTy : up) =
+    -- TODO: should propagate context changes upwards?!
     if not (fst (getEndpoints c) == defTy) then unsafeThrow "shouldn't happen" else
     Buffer1 md {-Term-} (snd (getEndpoints c)) body bodyTy : up
-chTermPath kctx ctx c (TypeBoundary1 md ch {-Term-} : up) = -- TODO: this is one point where we can make different design descisions
-    TypeBoundary1 md (composeChange (invert c) ch) : up
+chTermPath kctx ctx c (TypeBoundary1 md ch {-Term-} : up) = -- TODO: this is one point where we can make different design decisions
+    let up' = chTermPath kctx ctx (tyInject (snd (getEndpoints c))) up in
+    TypeBoundary1 md (composeChange (invert c) ch) : up'
 chTermPath kctx ctx c (Buffer3 md def defTy {-Term-} bodyTy : up) =
     if not (fst (getEndpoints c) == bodyTy) then unsafeThrow "shouldn't happen" else
     let up' = chTermPath kctx ctx c up in

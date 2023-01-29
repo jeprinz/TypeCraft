@@ -107,7 +107,8 @@ composeChange (CNeu x1 args1) (CNeu x2 args2) | x1 == x2 =
 composeChange c1 c2 =
     let a /\ b = getEndpoints c1 in
     let b' /\ c = getEndpoints c2 in
-    if b == b' then Replace a c else unsafeThrow "composeChange is only valid to call on changes which share a type endpoint"
+    if b == b' then Replace a c else
+        unsafeThrow ("composeChange is only valid to call on changes which share a type endpoint. c1 is " <> show c1 <> "and c2 is " <> show c2)
 -- I'm not sure if this composeChange function captures all cases with Plus and Minus correctly
 
 composeParamChanges :: List ChangeParam -> List ChangeParam -> List ChangeParam

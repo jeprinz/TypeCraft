@@ -120,8 +120,8 @@ chTerm kctx ctx c t =
                 let c' /\ body' = chTerm kctx' ctx' c body in
                 c' /\ Data md tyBind tyBinds ctrs' body' (snd (getEndpoints c'))
             c /\ TypeBoundary md ch body ->
-                let ch' = composeChange ch (invert c) in
-                let tyChInside = tyInject (fst (getEndpoints c)) in
+                let ch' = composeChange ch c in
+                let tyChInside = tyInject (fst (getEndpoints ch)) in
                 let chBackUp /\ body' = chTerm kctx ctx tyChInside body in
                 tyChInside /\ TypeBoundary md (composeChange (invert chBackUp) ch') body'
             c /\ ContextBoundary md x vCh body ->
