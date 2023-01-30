@@ -98,7 +98,7 @@ stepKidsTerm isActive term kids = case term of
   App md apl arg ty1 ty2
     | [ k_apl, k_arg ] <- kids ->
       [ k_apl (App1 md arg ty1 ty2)
-      , setNodeIndentation (indentIf isActive md.argIndented) $ k_arg (App1 md apl ty1 ty2)
+      , setNodeIndentation (indentIf isActive md.argIndented) $ k_arg (App2 md apl ty1 ty2)
       ]
   Lambda md bnd sig body ty
     | [ k_bnd, k_ty, k_body ] <- kids ->
