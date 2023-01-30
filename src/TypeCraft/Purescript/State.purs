@@ -61,7 +61,7 @@ isEmptyQuery { string } = String.null string
 data Completion
   = CompletionTerm Term {-Type-} Sub -- I don't think we need a Type here? Aren't terms only filled when they are the correct type up to unification? (Or if not, at least make it a typechange?)
   | CompletionTermPath UpPath Change
-  | CompletionType Type
+  | CompletionType Type Sub
   | CompletionTypePath UpPath Change
   | CompletionCtrListPath UpPath ListCtrChange
   | CompletionCtrParamListPath UpPath ListCtrParamChange

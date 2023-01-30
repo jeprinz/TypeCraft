@@ -156,8 +156,12 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
         ( \(id /\ tyName) -> case Map.lookup id ctxs.kctx of
             Nothing -> unsafeThrow $ "the entry '" <> show (id /\ tyName) <> "' was found in the ctxs.mdkctx, but not in the ctxs.kctx: '" <> show ctxs.ctx <> "'"
             Just kind ->
-              when (str `kindaStartsWith` tyName) do
-                Writer.tell [ [CompletionType (makeEmptyTNeu id kind) ] ]
+              case ty of
+                THole md x ->
+                  when (str `kindaStartsWith` tyName) do
+                    let cTy = (makeEmptyTNeu id kind)
+                    Writer.tell [ [CompletionType cTy {subTypeVars: Map.empty, subTHoles: Map.insert x cTy Map.empty} ] ]
+                _ -> pure unit
         )
         (Map.toUnfoldable ctxs.mdkctx :: Array (UUID /\ String))
       -- Arrow
@@ -171,12 +175,12 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
                     (Plus thole (tyInject ty))
               ]
             ]
-      -- THole
-      when (str `kindaStartsWithAny` [ "hole", "?" ])
-        $ Writer.tell
-            [ [ CompletionType (freshTHole unit)
-              ]
-            ]
+      -- THole -- Jacob note: I don't think it makes sense to query holes. Instead, the delete/backspace button does that.
+--      when (str `kindaStartsWithAny` [ "hole", "?" ])
+--        $ Writer.tell
+--            [ [ CompletionType (freshTHole unit) emptySub
+--              ]
+--            ]
   CtrListCursor ctxs path ctrs ->
     Writer.execWriter do
         -- add a constructor

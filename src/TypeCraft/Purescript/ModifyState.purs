@@ -9,7 +9,7 @@ import Data.Tuple (snd)
 import Debug (traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.ChangePath
-import TypeCraft.Purescript.Context (ctxInject, kCtxInject)
+import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.CursorMovement (moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
 import TypeCraft.Purescript.Dentist (downPathToCtxChange)
 import TypeCraft.Purescript.Grammar (Change(..), TermBind(..), Tooth(..), TypeBind(..), freshHole, freshTHole)
@@ -20,7 +20,7 @@ import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
 import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), SelectMode, State, botSelectOrientation, cursorLocationToSelect, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
 import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
-import TypeCraft.Purescript.Unification (applySubType, subTermPath)
+import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (hole)
 import Debug (trace)
@@ -75,16 +75,11 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
     getCompletion cursorMode.query
       >>= case _ of
           CompletionTerm tm' {-ty'-} sub ->
-            let
-              ty' = applySubType sub ty
-            in
-              let
-                path' = subTermPath sub path
-              in
+            let ty' = applySubType sub ty in
+            let path' = subTermPath sub path in
+            let ctxs' = subAllCtx sub ctxs in
                 pure
-                  -- TODO: note from Jacob: always having Replace here doesn't seem right to me. Shouldn't terms only be filled in when they are the exact type (modulo unification) in the first place?
-                  -- As opposed to path completions, where you do have typechanges.
-                  { cursorLocation: TermCursor ctxs ty' path' tm'
+                  { cursorLocation: TermCursor ctxs' ty' path' tm'
                   , query: emptyQuery
                   }
           CompletionTermPath pathNew ch ->
@@ -105,12 +100,12 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
   TypeCursor ctxs path ty ->
     getCompletion cursorMode.query
       >>= case _ of
-          CompletionType ty' ->
-            let
-              path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path
-            in
+          CompletionType ty' sub ->
+            let path' = subTypePath sub path in
+            let ctxs' = subAllCtx sub ctxs in
+--            let path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path in
               pure
-                { cursorLocation: TypeCursor ctxs path' ty'
+                { cursorLocation: TypeCursor ctxs' path' ty'
                 , query: emptyQuery
                 }
           CompletionTypePath pathNew ch ->

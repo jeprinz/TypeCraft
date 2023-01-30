@@ -7,6 +7,10 @@ import Prim hiding (Type)
 
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Util (lookup')
+import TypeCraft.Purescript.Unification (applySubChange, applySubType)
+import Data.Map as Map
+import Data.List as List
+import TypeCraft.Purescript.MD (defaultTNeuMD)
 
 {-
 This file deals with issues of alpha-equivalence.
@@ -32,18 +36,25 @@ polyTypeEqImpl equiv (Forall x pt1) (Forall y pt2) = polyTypeEqImpl (Map.insert 
 polyTypeEqImpl equiv (PType ty1) (PType ty2) = (subType equiv ty1) == ty2
 polyTypeEqImpl _ _ _ = false
 
+--subType :: TyVarEquiv -> Type -> Type
+--subType equiv (Arrow md ty1 ty2) = Arrow md (subType equiv ty1) (subType equiv ty2)
+--subType equiv (THole md x) = THole md x
+--subType equiv (TNeu md x args) = TNeu md (lookup' x equiv) (map (subTypeArg equiv) args)
+
 subType :: TyVarEquiv -> Type -> Type
-subType equiv (Arrow md ty1 ty2) = Arrow md (subType equiv ty1) (subType equiv ty2)
-subType equiv (THole md x) = THole md x
-subType equiv (TNeu md x args) = TNeu md (lookup' x equiv) (map (subTypeArg equiv) args)
+subType equiv = applySubType { subTypeVars : (map (\x -> TNeu defaultTNeuMD x List.Nil) equiv) , subTHoles : Map.empty}
+
 
 subChange :: TyVarEquiv -> Change -> Change
-subChange equiv (CArrow c1 c2) = CArrow (subChange equiv c1) (subChange equiv c2)
-subChange equiv (CHole x) = CHole x
-subChange equiv (Replace t1 t2) = Replace (subType equiv t1) (subType equiv t2)
-subChange equiv (Plus t c) = Plus (subType equiv t) (subChange equiv c)
-subChange equiv (Minus t c) = Minus (subType equiv t) (subChange equiv c)
-subChange equiv (CNeu x chParams) = CNeu (lookup' x equiv) (map (subChangeParam equiv) chParams)
+subChange equiv = applySubChange { subTypeVars : (map (\x -> TNeu defaultTNeuMD x List.Nil) equiv) , subTHoles : Map.empty}
+
+--subChange :: TyVarEquiv -> Change -> Change
+--subChange equiv (CArrow c1 c2) = CArrow (subChange equiv c1) (subChange equiv c2)
+--subChange equiv (CHole x) = CHole x
+--subChange equiv (Replace t1 t2) = Replace (subType equiv t1) (subType equiv t2)
+--subChange equiv (Plus t c) = Plus (subType equiv t) (subChange equiv c)
+--subChange equiv (Minus t c) = Minus (subType equiv t) (subChange equiv c)
+--subChange equiv (CNeu x chParams) = CNeu (lookup' x equiv) (map (subChangeParam equiv) chParams)
 
 subChangeParam :: TyVarEquiv -> ChangeParam -> ChangeParam
 subChangeParam equiv (ChangeParam c) = ChangeParam (subChange equiv c)

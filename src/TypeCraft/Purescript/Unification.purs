@@ -9,13 +9,14 @@ import Data.Map as Map
 import TypeCraft.Purescript.Grammar
 import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.List as List
+import Data.List ((:))
 import Data.Either (Either(..))
 import Data.Foldable (and, traverse_)
 import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (hole')
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Context (TypeAliasContext)
+import TypeCraft.Purescript.Context
 
 -- * unification
 type Unify a
@@ -37,12 +38,17 @@ applySubType sub = case _ of
   ty@(TNeu md id List.Nil) -> applySubType sub $ maybe ty identity (Map.lookup id sub.subTypeVars)
   TNeu md id args -> TNeu md id ((\(TypeArg md ty) -> TypeArg md (applySubType sub ty)) <$> args)
 
+subTypeArg :: Sub -> TypeArg -> TypeArg
+subTypeArg sub (TypeArg md ty) = TypeArg md (applySubType sub ty)
+
 applySubChange :: Sub -> Change -> Change
 applySubChange sub = case _ of
   CArrow ty1 ty2 -> CArrow (applySubChange sub ty1) (applySubChange sub ty2)
   ty@(CHole hid) -> maybe ty tyInject (Map.lookup hid sub.subTHoles)
   -- Question from Jacob: Why is there a special case for Nil?
-  ty@(CNeu id List.Nil) -> applySubChange sub $ maybe ty tyInject (Map.lookup id sub.subTypeVars)
+  -- Note from Jacob: this former version of the line was causing an infinite loop
+--  ty@(CNeu id List.Nil) -> applySubChange sub $ maybe ty tyInject (Map.lookup id sub.subTypeVars)
+  ty@(CNeu id List.Nil) -> maybe ty tyInject (Map.lookup id sub.subTHoles)
   CNeu id args -> CNeu id (applySubChangeParam sub <$> args)
   Replace ty1 ty2 -> Replace (applySubType sub ty1) (applySubType sub ty2)
   Plus ty ch -> Plus (applySubType sub ty) (applySubChange sub ch)
@@ -171,6 +177,53 @@ subTermTooth sub tooth =
         Data4 md tyBind tyBinds ctrs {-Term-} bodyTy -> Data4 md tyBind tyBinds (map (subConstructor sub) ctrs) (st bodyTy)
         _ -> unsafeThrow "Either wasn't a term tooth, or I forgot a case in subTermTooth"
 
+--Need subTypeTooth as well...
+--
+--
+--Lambda2 LambdaMD TermBind {-Type-} Term Type
+--Let4 LetMD TermBind (List TypeBind) Term {-Type-} Term Type
+--Buffer2 BufferMD Term {-Type-} Term Type
+--TLet3 TLetMD TypeBind (List TypeBind) {-Type-} Term Type
+--Arrow1 ArrowMD {-Type-} Type
+--Arrow2 ArrowMD Type {-Type-}
+--TypeArg1 TypeArgMD {-Type-}
+--
+--
+--TNeu1 TNeuMD TypeVarID {-List TypeArg-}
+--TypeArgListCons2 (TypeArg) {-List TypeArg-}
+--
+--TypeArgListCons1 {-TypeArg-} (List TypeArg)
+
+subTypePath :: Sub -> UpPath -> UpPath
+subTypePath sub List.Nil = List.Nil
+subTypePath sub (tooth : teeth) =
+    let sterm = subTerm sub in
+    let stype = applySubType sub in
+    case tooth of
+        Lambda2 md tBind {--} body bodyTy -> (Lambda2 md tBind {--} (sterm body) (stype bodyTy)) : subTermPath sub teeth
+        Let4 md tBind tyBinds def {-defTy-} body bodyTy -> Let4 md tBind tyBinds (sterm def) {--} (sterm body) (stype bodyTy) : subTermPath sub teeth
+        Buffer2 md def {-defTy-} body bodyTy -> Buffer2 md (sterm def) {--} (sterm body) (stype bodyTy) : subTermPath sub teeth
+        TLet3 md tyBind tyBinds {-def-} body bodyTy -> TLet3 md tyBind tyBinds {--} (sterm body) (stype bodyTy) : subTermPath sub teeth
+        Arrow1 md {--} ty2 -> Arrow1 md {--} (stype ty2) : subTypePath sub teeth
+        Arrow2 md ty1 {--} -> Arrow1 md (stype ty1) {--} : subTypePath sub teeth
+        TypeArg1 md {--} -> TypeArg1 md {--} : subTypeArgPath sub teeth
+        _ -> unsafeThrow "Either wasn't a type path, or I forgot a case in subTypePath"
+
+subTypeArgPath :: Sub -> UpPath -> UpPath
+subTypeArgPath sub List.Nil = List.Nil
+subTypeArgPath sub (tooth : teeth) =
+    case tooth of
+        TypeArgListCons1 {--} tyArgs -> TypeArgListCons1 {--} (map (subTypeArg sub) tyArgs) : subTypeArgListPath sub teeth
+        _ -> unsafeThrow "Either wasn't a TypeArg path, or I forgot a case in subTypeArgPath"
+
+subTypeArgListPath :: Sub -> UpPath -> UpPath
+subTypeArgListPath sub List.Nil = List.Nil
+subTypeArgListPath sub (tooth : teeth) =
+    case tooth of
+        TypeArgListCons2 tyArg -> TypeArgListCons2 (subTypeArg sub tyArg) : subTypeArgListPath sub teeth
+        TNeu1 md x {--} -> TNeu1 md x : subTypeArgListPath sub teeth
+        _ -> unsafeThrow "Either wasn't a TypeArgList path, or I forgot a case in subTypeArgListPath"
+
 
 subPolyChange :: Sub -> PolyChange -> PolyChange
 subPolyChange sub polyChange =
@@ -212,3 +265,12 @@ normalizeType actx ty =
             let ids = map (\(TypeBind _ id) -> id) tyBinds in
             let sub = Map.fromFoldable (List.zip ids types) in
             normalizeType actx (applySubType {subTypeVars: sub, subTHoles: Map.empty} def)
+
+subCtx :: Sub -> TermContext -> TermContext
+subCtx sub ctx = map (subPolyType sub) ctx
+
+subTACtx :: Sub -> TypeAliasContext -> TypeAliasContext
+subTACtx sub actx = map (\(tyBinds /\ ty) -> tyBinds /\ applySubType sub ty) actx
+
+subAllCtx :: Sub -> AllContext -> AllContext
+subAllCtx sub ctxs = ctxs{ctx = subCtx sub ctxs.ctx, actx = subTACtx sub ctxs.actx}

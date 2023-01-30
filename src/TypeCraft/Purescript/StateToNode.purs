@@ -134,7 +134,7 @@ cursorModeToNode cursorMode =
                     makeMetahole unit
               )
       _ -> hole' "completionToNode CompletionPath non-TermCursor"
-    CompletionType ty -> case cursorMode.cursorLocation of
+    CompletionType ty _sub -> case cursorMode.cursorLocation of
       TypeCursor ctxs path _ty ->
         setNodeStyle makeQueryReplaceNewNodeStyle
           $ typeToNode false
