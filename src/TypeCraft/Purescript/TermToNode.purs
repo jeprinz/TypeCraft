@@ -118,10 +118,10 @@ stepKidsTerm isActive term kids = case term of
       ]
   Data md bnd bnds ctrs bod ty
     | [ k_bnd, k_bnds, k_ctrs, k_bod ] <- kids ->
-      [ k_bnd (Data1 md bnds ctrs bod ty)
+      [ setNodeIndentation (indentIf isActive md.varIndented) $ k_bnd (Data1 md bnds ctrs bod ty)
       , k_bnds (Data2 md bnd ctrs bod ty)
       , k_ctrs (Data3 md bnd bnds bod ty)
-      , k_bod (Data4 md bnd bnds ctrs ty)
+      , setNodeIndentation (newlineIf isActive md.bodyIndented) $ k_bod (Data4 md bnd bnds ctrs ty)
       ]
   TLet md bnd bnds sig bod ty
     | [ k_bnd, k_bnds, k_sig, k_bod ] <- kids ->
@@ -320,7 +320,7 @@ typeToNode isActive aboveInfo ty =
             ]
     , tNeu:
         \md x tyArgs ->
-          arrangeType args
+          setNodeLabel (x `lookup'` ty.ctxs.mdkctx) $ arrangeType args
             [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
             ]
     , tHole: \md x -> arrangeType args []

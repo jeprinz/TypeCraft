@@ -19,7 +19,7 @@ type LetMD
     , defIndented :: Boolean
     , bodyIndented :: Boolean
     }
-type GADTMD = {}
+type GADTMD = { varIndented :: Boolean, bodyIndented :: Boolean}
 type TermBindMD = { varName :: String }
 type TypeBindMD = { varName :: String}
 type CtrMD = { indented :: Boolean } -- refers to if the constructor is indented within its parent list of constructors
@@ -90,7 +90,7 @@ defaultTermBindMD :: TermBindMD
 defaultTermBindMD = { varName: "placeholder" }
 
 defaultGADTMD :: GADTMD
-defaultGADTMD = {}
+defaultGADTMD = { varIndented: false, bodyIndented: true}
 
 -- Constructor
 defaultCtrMD :: CtrMD

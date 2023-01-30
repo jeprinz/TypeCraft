@@ -150,7 +150,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       switch (node.tag.case) {
         case 'ty arr': return go(node, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat(), indentationLevel)
         case 'ty hol': return go(node, ["ty_hol"], [Punc.interrogative].flat(), indentationLevel)
-        case 'ty neu': throw go(node, ["ty_neu"], [kid(), [Punc.angleL], kid(), [Punc.angleR]].flat(), indentationLevel)
+        case 'ty neu': return go(node, ["ty_neu"], [renderLabel(node.label), [Punc.angleL], kid(), [Punc.angleR]].flat(), indentationLevel)
         case 'poly-ty forall': return go(node, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
         case 'poly-ty ty': return go(node, ["poly-ty_ty"], kid(), indentationLevel)
         case 'ty-arg': return go(node, ["ty-arg"], kid(), indentationLevel)
