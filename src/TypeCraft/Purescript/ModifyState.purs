@@ -83,15 +83,9 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
                   , query: emptyQuery
                   }
           CompletionTermPath pathNew ch ->
-            let
-              path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
-            in
-              let
-                chCtxs = downPathToCtxChange ctxs (List.reverse pathNew)
-              in
-                let
-                  newCtxs = snd (getAllEndpoints chCtxs)
-                in
+            let path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
+            let chCtxs = downPathToCtxChange ctxs (List.reverse pathNew) in
+            let newCtxs = snd (getAllEndpoints chCtxs) in
                   pure
                     { cursorLocation: TermCursor newCtxs ty (pathNew <> path') tm
                     , query: emptyQuery

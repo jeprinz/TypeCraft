@@ -176,7 +176,7 @@ recListCtr :: forall a. ListCtrRec a -> ListCtrRecValue -> a
 recListCtr args {ctxs, ctrs: ctr: ctrs} =
     args.cons {ctxs, ctr}
         {ctxs, ctrs}
-recListCtr args thing@{ctxs, ctrs: Nil} = trace ("in recListCtr nil case, ctrs is: " <> show thing.ctrs) \_ -> args.nil unit
+recListCtr args thing@{ctxs, ctrs: Nil} = args.nil unit
 
 type ListCtrParamRec a = {
     cons :: CtrParamRecValue -> ListCtrParamRecValue -> a

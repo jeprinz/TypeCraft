@@ -672,7 +672,7 @@ ctrListToNode isActive aboveInfo ctrs =
             [ arrangeKidAI (aIOnlyCursor aboveInfo) (ctrToNode isActive) ctr
             , arrangeKidAI aboveInfo (ctrListToNode isActive) ctrs
             ]
-    , nil: \_ -> trace ("ctrs.ctrs is: " <> show ctrs.ctrs) \_ -> arrangeCtrList args []
+    , nil: \_ -> arrangeCtrList args []
     }
     ctrs
   where
