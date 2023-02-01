@@ -151,9 +151,12 @@ chTypePath kctx ctx ch (Arrow2 md ty1 {-Type-} : typePath) =
 chTypePath _ _ ch path = hole' ("chTypePath. Path is:" <> show path <> "and ch is: " <> show ch)
 
 -- TODO: I believe that Constructors should change by a Change
-chCtrPath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
---    CtrListCons1 {-Constructor-} (List Constructor)
-chCtrPath _ _ _ _ = hole' "chCtrPath"
+chCtrPath :: KindChangeCtx -> ChangeCtx -> TermVarID -> ListCtrParamChange -> UpPath -> UpPath
+chCtrPath kctx ctx x ch (CtrListCons1 {-ctr-} ctrs : ctrListPath) =
+    let ctrsCh /\ ctrs' = chCtrList kctx ctrs in
+    let ctrListPath' = chListCtrPath kctx ctx (ListCtrChangeCons x ch ctrsCh) ctrListPath in
+    CtrListCons1 {--} ctrs' : ctrListPath'
+chCtrPath _ _ _ _ _ = hole' "chCtrPath"
 
 -- TODO: I believe that CtrParams should change by a Change
 chCtrParamPath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
@@ -179,18 +182,20 @@ chListCtrPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
 chListCtrPath kctx ctx ch (Data3 md tyBind@(TypeBind _ x) tyBinds {-ctrs-} body bodyTy : termPath) =
     let ctx' = adjustCtxByCtrChanges x (map (\(TypeBind _ x) -> x) tyBinds) ch ctx in
     let _ /\ termPath' = chTermPath kctx ctx' (tyInject bodyTy) termPath in
-    -- TODO: making an assumption that the context didn't change! (of course, subject to me fixing the issue with constructors not being present in context for themselves)
     Data3 md tyBind tyBinds {--} body bodyTy : termPath'
---    CtrListCons2 Constructor {-List Constructor-}
 chListCtrPath kctx ctx ch (CtrListCons2 ctr@(Constructor _ (TermBind _ x) ctrParams) {-ctrs-} : listCtrPath) =
     let listCtrParamCh /\ ctrParams' = chParamList kctx ctrParams in
     let listCtrPath' = chListCtrPath kctx ctx (ListCtrChangeCons x listCtrParamCh ch) listCtrPath in
     (CtrListCons2 ctr {--}) : listCtrPath'
 chListCtrPath _ _ _ _ = hole' "chListCtrPath"
 
-chListCtrParamPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
---    Constructor2 CtrMD TermBind {-List CtrParam-}
---    CtrParamListCons2 CtrParam {-List CtrParam-}
+chListCtrParamPath :: KindChangeCtx -> ChangeCtx -> ListCtrParamChange -> UpPath -> UpPath
+chListCtrParamPath kctx ctx ch (Constructor2 md tBind@(TermBind _ x) {-ctrParams-} : listCtrPath) =
+    let listCtrPath' = chCtrPath kctx ctx x ch listCtrPath in
+    Constructor2 md tBind {--} : listCtrPath'
+chListCtrParamPath kctx ctx ch (CtrParamListCons2 ctrParam@(CtrParam _ ty) {-ctrParams-}: listCtrParamPath) =
+    let listCtrParamPath' = chListCtrParamPath kctx ctx (ListCtrParamChangeCons (tyInject ty) ch) listCtrParamPath in
+    (CtrParamListCons2 ctrParam {--}) : listCtrParamPath'
 chListCtrParamPath _ _ _ _ = hole' "chListCtrParamPath"
 
 data ListTypeArgChange = ListTypeArgChangeNil | ListTypeArgChangeCons Change ListTypeArgChange

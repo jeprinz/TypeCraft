@@ -35,7 +35,8 @@ applySubType sub = case _ of
 --  ty@(THole md hid) -> applySubType sub $ maybe ty identity (Map.lookup hid sub.subTHoles)
   ty@(THole md hid) -> maybe ty identity (Map.lookup hid sub.subTHoles)
   -- Question from Jacob: Why is there a special case for Nil?
-  ty@(TNeu md id List.Nil) -> applySubType sub $ maybe ty identity (Map.lookup id sub.subTypeVars)
+--  ty@(TNeu md id List.Nil) -> applySubType sub $ maybe ty identity (Map.lookup id sub.subTypeVars)
+  ty@(TNeu md id List.Nil) -> maybe ty identity (Map.lookup id sub.subTypeVars)
   TNeu md id args -> TNeu md id ((\(TypeArg md ty) -> TypeArg md (applySubType sub ty)) <$> args)
 
 subTypeArg :: Sub -> TypeArg -> TypeArg

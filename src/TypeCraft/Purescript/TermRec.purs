@@ -88,7 +88,7 @@ recTerm args {ctxs, ty, term : Data md tyBind@(TypeBind xmd x) tyBinds ctrs body
     if not (ty == bodyTy) then unsafeThrow "shouldn't happen recTerm data" else
     let ctxs' = addDataToCtx ctxs tyBind tyBinds ctrs in
     args.dataa md {ctxs, tyBind}
-        {ctxs, tyBinds} {ctxs: ctxs', ctrs}
+        {ctxs, tyBinds} {ctxs: ctxs{kctx= ctxs'.kctx, mdkctx= ctxs'.mdkctx}, ctrs}
         -- TODO: on line below, don't just put Type for kind, actually use the list of tbinds to get the number of parameters!!!!
         -- TODO TODO TODO TODO: actually add constructors to the context!
         {ctxs: ctxs', ty: ty, term: body}

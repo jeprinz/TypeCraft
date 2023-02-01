@@ -203,7 +203,7 @@ recTypeBindPath args {ctxs, tyBind: tyBind@(TypeBind xmd x), typeBindPath: (Data
     let ctxs' = addDataToCtx ctxs tyBind tyBinds ctrs in
     args.data1 {ctxs, ty: bodyTy, term: Data md tyBind tyBinds ctrs body bodyTy, termPath} md
         {ctxs, tyBinds}
-        {ctxs: ctxs', ctrs}
+        {ctxs: ctxs{kctx= ctxs'.kctx, mdkctx= ctxs'.mdkctx}, ctrs}
         {ctxs: ctxs', ty: bodyTy, term: body} bodyTy
 recTypeBindPath args {ctxs, tyBind, typeBindPath: (TypeBindListCons1 tyBinds) : listTypeBindPath} =
     args.typeBindListCons1 {ctxs, tyBinds: (tyBind : tyBinds), listTypeBindPath}
@@ -246,7 +246,7 @@ recListCtrPath args {ctxs, ctrs, listCtrPath: (Data3 md tyBind tyBinds {-List Co
     args.data3 {ctxs: ctxs', ty: bodyTy, term: Data md tyBind tyBinds ctrs body bodyTy, termPath}
         md {ctxs: ctxs', tyBind}
         {ctxs: ctxs', tyBinds}
-        {ctxs, ty: bodyTy, term: body} bodyTy
+        {ctxs: addDataToCtx ctxs tyBind tyBinds ctrs, ty: bodyTy, term: body} bodyTy
 recListCtrPath args {ctxs, ctrs, listCtrPath: (CtrListCons2 ctr {-List Constructor-} : listCtrPath)} =
     args.ctrListCons2 {ctxs, ctrs: ctr: ctrs, listCtrPath}
         {ctxs, ctr}
@@ -292,7 +292,7 @@ recListTypeBindPath args {ctxs, tyBinds, listTypeBindPath: Data2 md tyBind ctrs 
     let ctxs' = addDataToCtx ctxs tyBind tyBinds ctrs in
     args.data2 {ctxs, ty: bodyTy, term: Data md tyBind tyBinds ctrs body bodyTy, termPath}
         md {ctxs, tyBind}
-        {ctxs: ctxs', ctrs}
+        {ctxs: ctxs{kctx= ctxs'.kctx, mdkctx= ctxs'.mdkctx}, ctrs}
         {ctxs: ctxs', ty: bodyTy, term: body} bodyTy
 recListTypeBindPath args {ctxs, tyBinds, listTypeBindPath: TLet2 md tyBind {-List TypeBind-} def body bodyTy : termPath} =
     let ctxs' = addTLetToCtx ctxs tyBind tyBinds def in
