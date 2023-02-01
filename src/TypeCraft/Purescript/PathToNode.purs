@@ -9,7 +9,7 @@ import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, Tooth(..), Type, TypeArg, TypeBind, UpPath)
 import TypeCraft.Purescript.Node (Node, NodeTag, makeNode)
-import TypeCraft.Purescript.State (CursorLocation(..), Mode(..), Select(..), makeCursorMode, topSelectOrientation)
+import TypeCraft.Purescript.State
 import TypeCraft.Purescript.Util (hole', justWhen)
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Node (setNodeLabel)
@@ -171,7 +171,7 @@ makeTermArgs isActive abovePath belowInfo upRecVal =
   , makeSelect:
       \_ -> case belowInfo of
         BITerm -> Nothing
-        BISelect middlePath term ctxs ty -> Just $ TermSelect (upRecVal.termPath <> abovePath) upRecVal.ctxs upRecVal.ty upRecVal.term middlePath ctxs ty term topSelectOrientation
+        BISelect middlePath term ctxs ty -> Just $ TermSelect (upRecVal.termPath <> abovePath) upRecVal.ctxs upRecVal.ty upRecVal.term middlePath ctxs ty term botSelectOrientation
   , term: { ctxs: upRecVal.ctxs, term: upRecVal.term, ty: upRecVal.ty }
   }
 
@@ -182,7 +182,7 @@ makeTypeArgs isActive abovePath belowInfo urv =
   , makeSelect:
       \_ -> case belowInfo of
         BITerm -> Nothing
-        BISelect middlePath ty ctxs _ -> Just $ TypeSelect (urv.typePath <> abovePath) urv.ctxs urv.ty middlePath ctxs ty topSelectOrientation
+        BISelect middlePath ty ctxs _ -> Just $ TypeSelect (urv.typePath <> abovePath) urv.ctxs urv.ty middlePath ctxs ty botSelectOrientation
   , ty: { ctxs: urv.ctxs, ty: urv.ty }
   }
 
@@ -427,7 +427,7 @@ makeCtrListArgs isActive abovePath belowInfo upRecVal =
     , makeSelect: \_ ->
         case belowInfo of
             BITerm -> Nothing
-            BISelect middlePath ctrs ctxs unit -> Just $ CtrListSelect (upRecVal.listCtrPath <> abovePath) upRecVal.ctxs upRecVal.ctrs middlePath ctxs ctrs topSelectOrientation
+            BISelect middlePath ctrs ctxs unit -> Just $ CtrListSelect (upRecVal.listCtrPath <> abovePath) upRecVal.ctxs upRecVal.ctrs middlePath ctxs ctrs botSelectOrientation
     , ctrs: {ctxs: upRecVal.ctxs, ctrs: upRecVal.ctrs}
     }
 
@@ -438,7 +438,7 @@ makeCtrParamListArgs isActive abovePath belowInfo upRecVal =
     , makeSelect: \_ ->
         case belowInfo of
             BITerm -> Nothing
-            BISelect middlePath ctrParams ctxs unit -> Just $ CtrParamListSelect (upRecVal.listCtrParamPath <> abovePath) upRecVal.ctxs upRecVal.ctrParams middlePath ctxs ctrParams topSelectOrientation
+            BISelect middlePath ctrParams ctxs unit -> Just $ CtrParamListSelect (upRecVal.listCtrParamPath <> abovePath) upRecVal.ctxs upRecVal.ctrParams middlePath ctxs ctrParams botSelectOrientation
     , ctrParams: {ctxs: upRecVal.ctxs, ctrParams: upRecVal.ctrParams}
     }
 
@@ -521,7 +521,7 @@ makeTypeBindListArgs isActive abovePath belowInfo upRecVal =
   , makeSelect:
       \_ -> case belowInfo of
         BITerm -> Nothing
-        BISelect middlePath tyBinds ctxs unit -> Just $ TypeBindListSelect (upRecVal.listTypeBindPath <> abovePath) upRecVal.ctxs upRecVal.tyBinds middlePath ctxs tyBinds topSelectOrientation
+        BISelect middlePath tyBinds ctxs unit -> Just $ TypeBindListSelect (upRecVal.listTypeBindPath <> abovePath) upRecVal.ctxs upRecVal.tyBinds middlePath ctxs tyBinds botSelectOrientation
   , tyBinds: { ctxs: upRecVal.ctxs, tyBinds: upRecVal.tyBinds}
   }
 
