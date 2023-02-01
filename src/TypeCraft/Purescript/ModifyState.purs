@@ -9,21 +9,23 @@ import Data.Tuple (snd)
 import Debug (traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.ChangePath
+import TypeCraft.Purescript.ChangeTerm
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.CursorMovement (moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
 import TypeCraft.Purescript.Dentist (downPathToCtxChange)
-import TypeCraft.Purescript.Grammar (Change(..), TermBind(..), Tooth(..), TypeBind(..), freshHole, freshTHole)
+import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Key (Key)
 import TypeCraft.Purescript.MD (defaultTypeBoundaryMD)
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
 import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), SelectMode, State, botSelectOrientation, cursorLocationToSelect, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
-import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
+import TypeCraft.Purescript.TypeChangeAlgebra
 import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (hole)
 import Debug (trace)
+import Data.Tuple.Nested
 
 handleKey :: Key -> State -> Maybe State
 handleKey key st = case st.mode of
@@ -83,11 +85,13 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
                   , query: emptyQuery
                   }
           CompletionTermPath pathNew ch ->
-            let path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
-            let chCtxs = downPathToCtxChange ctxs (List.reverse pathNew) in
+            let (kctx' /\ ctx') /\ path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
+            let ctxs' = ctxs{ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx')} in
+            let chCtxs = downPathToCtxChange ctxs' (List.reverse pathNew) in
+            let tm' = chTermBoundary kctx' ctx' (tyInject ty) tm in
             let newCtxs = snd (getAllEndpoints chCtxs) in
                   pure
-                    { cursorLocation: TermCursor newCtxs ty (pathNew <> path') tm
+                    { cursorLocation: TermCursor newCtxs ty (pathNew <> path') tm'
                     , query: emptyQuery
                     }
           _ -> unsafeThrow "tried to submit a non-CompletionTerm* completion at a TermCursor"
@@ -103,11 +107,10 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
                 , query: emptyQuery
                 }
           CompletionTypePath pathNew ch ->
-            let
-              path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
-            in
+            let (kctx' /\ ctx') /\ path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
+            let ctxs' = ctxs{ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx')} in
               pure
-                { cursorLocation: TypeCursor ctxs (pathNew <> path') ty
+                { cursorLocation: TypeCursor ctxs' (pathNew <> path') ty
                 , query: emptyQuery
                 }
           _ -> unsafeThrow "tried to submit a non-CompletionType* completion at a TypeCursor"
@@ -255,8 +258,9 @@ delete st = trace "delete" \_ -> case st.mode of
     TypeCursor ctxs path ty -> do
       let
         ty' = (freshTHole unit)
-
-        cursorLocation' = TypeCursor ctxs (chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path) ty'
+        (kctx' /\ ctx') /\ path' = (chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path)
+        ctxs' = ctxs{ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx')}
+        cursorLocation' = TypeCursor ctxs' path' ty'
       pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
     _ -> hole' "delete: other syntactical kids of cursors"
   SelectMode selectMode -> case selectMode.select of

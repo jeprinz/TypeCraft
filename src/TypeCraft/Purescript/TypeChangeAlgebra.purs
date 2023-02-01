@@ -22,6 +22,7 @@ import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
 import TypeCraft.Purescript.Alpha
 import TypeCraft.Purescript.Util (hole)
+import Data.Maybe (maybe)
 
 getEndpoints :: Change -> Type /\ Type
 getEndpoints (CArrow a b) =
@@ -192,6 +193,23 @@ pChIsId (CForall _ c) = pChIsId c
 pChIsId (PPlus _ _) = false
 pChIsId (PMinus _ _) = false
 pChIsId (PChange c) = chIsId c
+
+tVarChIsId :: TVarChange -> Boolean
+tVarChIsId (TVarKindChange kch tac) = kChIsId kch && maybe true taChIsId tac
+tVarChIsId _ = false
+
+taChIsId :: TypeAliasChange -> Boolean
+taChIsId (TAChange c) = chIsId c
+taChIsId (TAForall _ tac) = taChIsId tac
+taChIsId _ = false
+
+kChIsId :: KindChange -> Boolean
+kChIsId KCType = true
+kChIsId (KCArrow ch) = kChIsId ch
+kChIsId _ = false
+
+kCtxIsId :: KindChangeCtx -> Boolean
+kCtxIsId = all tVarChIsId
 
 {-
 Later, I need to figure out how to compose changes  more generally.
