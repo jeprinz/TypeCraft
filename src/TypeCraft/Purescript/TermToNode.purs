@@ -466,7 +466,7 @@ typeArgToNode isActive aboveInfo tyArg =
     tyArg
 
 -- TypeBind
-typeBindToNode :: Boolean -> AboveInfo TypeBind -> TypeBindRecValue -> Node
+typeBindToNode :: Boolean -> AboveInfo Unit -> TypeBindRecValue -> Node
 typeBindToNode isActive aboveInfo { ctxs, tyBind: tyBind@(TypeBind md x) } =
   setNodeLabel md.varName
     $ makeNode
@@ -525,7 +525,7 @@ typeBindListToNode isActive aboveInfo tyBinds =
     }
 
 -- TermBind
-termBindToNode :: Boolean -> AboveInfo TermBind -> TermBindRecValue -> Node
+termBindToNode :: Boolean -> AboveInfo Unit -> TermBindRecValue -> Node
 termBindToNode isActive aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
   setNodeLabel md.varName
     $ makeNode

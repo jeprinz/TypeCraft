@@ -50,8 +50,30 @@ stateToNode st = case st.mode of
             {ctxs: ctx2, ty: ty2, typePath: middlePath}
         $ setNodeStyle makeSelectBotNodeStyle
         $ typeToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2}
-
-    _ -> hole' "stateToNode" -- TODO: all the other selections...
+    { select: CtrListSelect topPath ctx1 ctrs1 middlePath ctx2 ctrs2 root } ->
+      ctrListPathToNode true Nil BITerm
+        { ctxs: ctx1, ctrs: ctrs1, listCtrPath: topPath}
+        $ setNodeStyle makeSelectTopNodeStyle
+        $ ctrListPathToNode true topPath BITerm
+            {ctxs: ctx2, ctrs: ctrs2, listCtrPath: middlePath}
+        $ setNodeStyle makeSelectBotNodeStyle
+        $ ctrListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ctrs: ctrs2}
+    { select: CtrParamListSelect topPath ctx1 ctrParams1 middlePath ctx2 ctrParams2 root } ->
+      ctrParamListPathToNode true Nil BITerm
+        { ctxs: ctx1, ctrParams: ctrParams1, listCtrParamPath: topPath}
+        $ setNodeStyle makeSelectTopNodeStyle
+        $ ctrParamListPathToNode true topPath BITerm
+            {ctxs: ctx2, ctrParams: ctrParams2, listCtrParamPath: middlePath}
+        $ setNodeStyle makeSelectBotNodeStyle
+        $ ctrParamListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ctrParams: ctrParams2}
+    { select: TypeBindListSelect topPath ctx1 tyBinds1 middlePath ctx2 tyBinds2 root } ->
+      typeBindListPathToNode true Nil BITerm
+        { ctxs: ctx1, tyBinds: tyBinds1, listTypeBindPath: topPath}
+        $ setNodeStyle makeSelectTopNodeStyle
+        $ typeBindListPathToNode true topPath BITerm
+            {ctxs: ctx2, tyBinds: tyBinds2, listTypeBindPath: middlePath}
+        $ setNodeStyle makeSelectBotNodeStyle
+        $ typeBindListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, tyBinds: tyBinds2}
 
 cursorModeToNode :: CursorMode -> Node
 cursorModeToNode cursorMode =
@@ -97,9 +119,9 @@ cursorModeToNode cursorMode =
     TypeBindCursor ctxs typeBindPath tyBind -> typeBindPathToNode true Nil {ctxs, typeBindPath, tyBind}
     TermBindCursor ctxs termBindPath tBind -> termBindPathToNode true Nil { ctxs, tBind, termBindPath }
 --    TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListPathToNode true Nil BITerm { ctxs, listTypeArgPath, tyArgs } -- BITerm upPath
-    CtrListCursor ctxs listCtrPath ctrs -> ctrListPathToNode true Nil BITerm { ctxs, ctrs, listCtrPath }
-    CtrParamListCursor ctxs listCtrParamPath ctrParams -> ctrParamListPathToNode true Nil BITerm { ctxs, ctrParams, listCtrParamPath }
-    TypeBindListCursor ctxs listTypeBindPath tyBinds -> typeBindListPathToNode true Nil BITerm { ctxs, tyBinds, listTypeBindPath }
+    CtrListCursor ctxs listCtrPath ctrs -> ctrListPathToNode true Nil (BISelect Nil ctrs ctxs unit) { ctxs, ctrs, listCtrPath }
+    CtrParamListCursor ctxs listCtrParamPath ctrParams -> ctrParamListPathToNode true Nil (BISelect Nil ctrParams ctxs unit) { ctxs, ctrParams, listCtrParamPath }
+    TypeBindListCursor ctxs listTypeBindPath tyBinds -> typeBindListPathToNode true Nil (BISelect Nil tyBinds ctxs unit) { ctxs, tyBinds, listTypeBindPath }
 
   cursorModeTermToNode :: Unit -> Node
   cursorModeTermToNode _ =
@@ -109,9 +131,9 @@ cursorModeToNode cursorMode =
       TypeBindCursor ctxs upPath tyBind -> typeBindToNode true (AICursor upPath) { ctxs, tyBind }
       TermBindCursor ctxs termBindPath tBind -> termBindToNode true (AICursor termBindPath) { ctxs, tBind }
 --      TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListToNode true (AICursor listTypeArgPath) { ctxs, tyArgs }
-      CtrListCursor ctxs listCtrPath ctrs -> ctrListToNode true (AICursor listCtrPath) { ctxs, ctrs }
-      CtrParamListCursor ctxs listCtrParamPath ctrParams -> ctrParamListToNode true (AICursor listCtrParamPath) { ctxs, ctrParams }
-      TypeBindListCursor ctxs listTypeBindPath tyBinds -> typeBindListToNode true (AICursor listTypeBindPath) { ctxs, tyBinds }
+      CtrListCursor ctxs listCtrPath ctrs -> ctrListToNode true (AISelect listCtrPath ctxs ctrs Nil) { ctxs, ctrs }
+      CtrParamListCursor ctxs listCtrParamPath ctrParams -> ctrParamListToNode true (AISelect listCtrParamPath ctxs ctrParams Nil) { ctxs, ctrParams }
+      TypeBindListCursor ctxs listTypeBindPath tyBinds -> typeBindListToNode true (AISelect listTypeBindPath ctxs tyBinds Nil) { ctxs, tyBinds }
 
   completionToNode :: { isInline :: Boolean } -> Completion -> Node
   completionToNode opts cmpl = case cmpl of
