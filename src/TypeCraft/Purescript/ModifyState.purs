@@ -11,7 +11,7 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.ChangePath
 import TypeCraft.Purescript.ChangeTerm
 import TypeCraft.Purescript.Context
-import TypeCraft.Purescript.CursorMovement (moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
+import TypeCraft.Purescript.CursorMovement
 import TypeCraft.Purescript.Dentist (downPathToCtxChange)
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Key (Key)
@@ -19,7 +19,7 @@ import TypeCraft.Purescript.MD (defaultTypeBoundaryMD)
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
-import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), SelectMode, State, botSelectOrientation, cursorLocationToSelect, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
+import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), SelectMode, State, botSelectOrientation, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
 import TypeCraft.Purescript.TypeChangeAlgebra
 import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Util (hole')
@@ -148,7 +148,7 @@ moveCursorNext st = case st.mode of
 moveSelectPrev :: State -> Maybe State
 moveSelectPrev st = do
   select <- case st.mode of
-    CursorMode { cursorLocation } -> pure $ cursorLocationToSelect botSelectOrientation cursorLocation
+    CursorMode { cursorLocation } -> cursorLocationToSelect botSelectOrientation cursorLocation
     SelectMode { select } -> pure select
   mode <- moveSelectLeft select
   pure $ st { mode = mode }
@@ -156,7 +156,9 @@ moveSelectPrev st = do
 moveSelectNext :: State -> Maybe State
 moveSelectNext st = do
   select <- case st.mode of
-    CursorMode { cursorLocation } -> pure $ cursorLocationToSelect topSelectOrientation cursorLocation
+    CursorMode { cursorLocation } ->
+        if (List.null (getCursorChildren cursorLocation)) then Nothing else
+        cursorLocationToSelect topSelectOrientation cursorLocation
     SelectMode { select } -> pure select
   mode <- moveSelectRight select
   pure $ st { mode = mode }

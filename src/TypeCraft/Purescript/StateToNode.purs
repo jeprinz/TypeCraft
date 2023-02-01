@@ -42,6 +42,15 @@ stateToNode st = case st.mode of
             { ctxs: ctx2, ty: ty2, term: term2, termPath: middlePath }
         $ setNodeStyle makeSelectBotNodeStyle
         $ termToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2, term: term2 }
+    { select: TypeSelect topPath ctx1 ty1 middlePath ctx2 ty2 root } ->
+      typePathToNode true Nil BITerm
+        { ctxs: ctx1, ty: ty1, typePath: topPath}
+        $ setNodeStyle makeSelectTopNodeStyle
+        $ typePathToNode true topPath BITerm
+            {ctxs: ctx2, ty: ty2, typePath: middlePath}
+        $ setNodeStyle makeSelectBotNodeStyle
+        $ typeToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2}
+
     _ -> hole' "stateToNode" -- TODO: all the other selections...
 
 cursorModeToNode :: CursorMode -> Node
@@ -84,7 +93,7 @@ cursorModeToNode cursorMode =
   cursorModePathToNode :: Node -> Node
   cursorModePathToNode = case cursorMode.cursorLocation of
     TermCursor ctxs ty termPath term -> termPathToNode true Nil (BISelect Nil term ctxs ty) { ctxs, term, termPath, ty }
-    TypeCursor ctxs typePath ty -> typePathToNode true Nil BITerm { ctxs, ty, typePath }
+    TypeCursor ctxs typePath ty -> typePathToNode true Nil (BISelect Nil ty ctxs unit) { ctxs, ty, typePath }
     TypeBindCursor ctxs typeBindPath tyBind -> typeBindPathToNode true Nil {ctxs, typeBindPath, tyBind}
     TermBindCursor ctxs termBindPath tBind -> termBindPathToNode true Nil { ctxs, tBind, termBindPath }
 --    TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListPathToNode true Nil BITerm { ctxs, listTypeArgPath, tyArgs } -- BITerm upPath
@@ -96,7 +105,7 @@ cursorModeToNode cursorMode =
   cursorModeTermToNode _ =
     setNodeStyle makeCursorNodeStyle case cursorMode.cursorLocation of
       TermCursor ctxs ty termPath term -> termToNode true (AISelect termPath ctxs (term /\ ty) Nil) { ctxs, term, ty }
-      TypeCursor ctxs typePath ty -> typeToNode true (AICursor typePath) { ctxs, ty }
+      TypeCursor ctxs typePath ty -> typeToNode true (AISelect typePath ctxs ty Nil) { ctxs, ty }
       TypeBindCursor ctxs upPath tyBind -> typeBindToNode true (AICursor upPath) { ctxs, tyBind }
       TermBindCursor ctxs termBindPath tBind -> termBindToNode true (AICursor termBindPath) { ctxs, tBind }
 --      TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListToNode true (AICursor listTypeArgPath) { ctxs, tyArgs }

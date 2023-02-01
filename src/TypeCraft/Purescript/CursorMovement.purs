@@ -20,6 +20,8 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Util (fromJust, hole, hole')
 import TypeCraft.Purescript.Util (head')
+import Debug (trace)
+import Data.Maybe (maybe)
 
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor ctxs ty up term) =
@@ -98,7 +100,8 @@ getCursorChildren (TypeBindListCursor ctxs up tyBinds) =
 
 -- the Int is what'th child the input is of the output
 parent :: CursorLocation -> Maybe (CursorLocation /\ Int)
-parent (TermCursor ctxs ty Nil term) = Nothing
+--parent (TermCursor ctxs ty Nil term) = Nothing
+parent cursor | (maybe false (\(_ /\ up /\ _) -> up == Nil) (getCursorParts cursor)) = Nothing -- if path is empty
 parent (TermCursor ctxs ty termPath term) =
     recTermPath
         {
@@ -230,53 +233,7 @@ getLastChild cursor =
         Nothing -> cursor
         Just child -> getLastChild child
 
-moveSelectLeft :: Select -> Maybe Mode
-moveSelectLeft (TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 false)  =
-    case topPath of
-    Nil -> Nothing
-    (tooth : topPath') ->
-        let middlePath' = middlePath <> (tooth : Nil) in
-        case parent (TermCursor ctxs1 ty1 topPath term1) of
-            Just (TermCursor ctxs1' ty1' topPath' term1' /\ _) ->
-                Just $ SelectMode {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 botSelectOrientation}
-            _ -> unsafeThrow "Shouldn't happen moveSelectLeft" -- This shouldn't happen because there can be nothing above a term other than more terms!
-moveSelectLeft(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 true)  =
-    case  (goLeftUntilSort GSTerm (TermCursor ctxs2 ty2 middlePath term2)) of
-        Just (TermCursor ctxs2' ty2' middlePath' term2') -> Just $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' topSelectOrientation} 
-        Nothing -> Just $ makeCursorMode $ TermCursor ctxs1 ty1 topPath term1 -- enter cursor mode
-        Just _ -> unsafeThrow "Shouldn't happen 1"
-moveSelectLeft(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root)  = hole' "moveSelectTopUp"
-moveSelectLeft(CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root)  = hole' "moveSelectTopUp"
-moveSelectLeft(CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root)  = hole' "moveSelectTopUp"
---moveSelectLeft(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 root)  = hole' "moveSelectTopUp"
-moveSelectLeft(TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root)  = hole' "moveSelectTopUp"
-
-moveSelectRight :: Select -> Maybe Mode
-moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 false)  =
-    case middlePath of
-    Nil -> unsafeThrow "Shouldn't be an empty selection"
-    (tooth : Nil) -> Just $ makeCursorMode $ TermCursor ctxs2 ty2 (tooth : topPath) term2 -- in this case, we exit select mode and enter cursor mode
-    middlePath ->
-        let tooth = fromJust $ last middlePath in
-        let middlePath' = fromJust $ init middlePath in
---        let topPath' = tooth : topPath in
-        let children = getCursorChildren (TermCursor ctxs1 ty1 topPath term1) in
-        let particularChild = fromJust $ find (\cursor -> head' (getPath cursor) == tooth) children in -- get the child who's top tooth is equal to "tooth"
-        case particularChild of
-            TermCursor ctxs1' ty1' topPath' term1' ->
-                Just $ SelectMode
-                    {select: TermSelect topPath' ctxs1' ty1' term1' middlePath' ctxs2 ty2 term2 botSelectOrientation}
-            _ -> unsafeThrow "SHouldn't happen"
-moveSelectRight(TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 true) =
-    case  (goRightUntilSort GSTerm (TermCursor ctxs2 ty2 middlePath term2)) of
-        TermCursor ctxs2' ty2' middlePath' term2' -> Just $ SelectMode $ {select: TermSelect topPath ctxs1 ty1 term1 middlePath' ctxs2' ty2' term2' topSelectOrientation}
-        badCursor -> unsafeThrow ("Shouldn't happen: got " <> show badCursor)
-moveSelectRight(TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root)  = hole' "moveSelectTopUp"
-moveSelectRight(CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root)  = hole' "moveSelectTopUp"
-moveSelectRight(CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root)  = hole' "moveSelectTopUp"
---moveSelectRight(TypeArgListSelect topPath ctxs1 tyArgs1 middlePath ctxs2 tyArgs2 root)  = hole' "moveSelectTopUp"
-moveSelectRight(TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root)  = hole' "moveSelectTopUp"
-
+-- TODO: review usages of this function.
 getMiddlePath :: Select -> UpPath
 getMiddlePath(TermSelect _ _ _ _ middlePath _ _ _ _) = middlePath
 getMiddlePath(TypeSelect _ _ _ middlePath _ _ _) = middlePath
@@ -299,6 +256,86 @@ data GrammaticalSort = GSTerm | GSType | GSTypeBind | GSTermBind | GSCtrList | G
 derive instance genericGrammaticalSort :: Generic GrammaticalSort _
 instance eqGrammaticalSort :: Eq GrammaticalSort where
   eq x = genericEq x
+
+data Syn = STerm Type Term | SType Type | SCtrList (List Constructor) | SCtrParamList (List CtrParam) | STypeBindList (List TypeBind)
+
+getCursorParts :: CursorLocation -> Maybe (AllContext /\ UpPath /\ Syn)
+getCursorParts (TermCursor ctxs ty up term) = Just $ ctxs /\ up /\ STerm ty term
+getCursorParts (TypeCursor ctxs up ty) = Just $ ctxs /\ up /\ SType ty
+getCursorParts (CtrListCursor ctxs up ctrs) = Just $ ctxs /\ up /\ SCtrList ctrs
+getCursorParts (CtrParamListCursor ctxs up ctrParams) = Just $ ctxs /\ up /\ SCtrParamList ctrParams
+getCursorParts (TypeBindListCursor ctxs up tyBinds) = Just $ ctxs /\ up /\ STypeBindList tyBinds
+getCursorParts _ = Nothing
+
+partsToCursor :: (AllContext /\ UpPath /\ Syn) -> CursorLocation
+partsToCursor (ctxs /\ up /\ syn) = case syn of
+    STerm ty term -> TermCursor ctxs ty up term
+    SType ty -> TypeCursor ctxs up ty
+    SCtrList ctrs -> CtrListCursor ctxs up ctrs
+    SCtrParamList ctrParams -> CtrParamListCursor ctxs up ctrParams
+    STypeBindList tyBinds -> TypeBindListCursor ctxs up tyBinds
+
+getSelectParts :: Select -> (UpPath /\ AllContext /\ Syn /\ UpPath /\ AllContext /\ Syn /\ Boolean)
+getSelectParts (TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 root) = topPath /\ ctxs1 /\ STerm ty1 term1 /\ middlePath /\ ctxs2 /\ STerm ty2 term2 /\ root
+getSelectParts (TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root) = topPath /\ ctxs1 /\ SType ty1 /\ middlePath /\ ctxs2 /\ SType ty2 /\ root
+getSelectParts (CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root) = topPath /\ ctxs1 /\ SCtrList ctrs1 /\ middlePath /\ ctxs2 /\ SCtrList ctrs2 /\ root
+getSelectParts (CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root) = topPath /\ ctxs1 /\ SCtrParamList ctrParams1 /\ middlePath /\ ctxs2 /\ SCtrParamList ctrParams2 /\ root
+getSelectParts (TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root) = topPath /\ ctxs1 /\ STypeBindList tyBinds1 /\ middlePath /\ ctxs2 /\ STypeBindList tyBinds2 /\ root
+
+partsToSelect :: (UpPath /\ AllContext /\ Syn /\ UpPath /\ AllContext /\ Syn /\ Boolean) -> Select
+partsToSelect (topPath /\ ctxs1 /\ syn1 /\ middlePath /\ ctxs2 /\ syn2 /\ root) = case syn1 /\ syn2 of
+    STerm ty1 term1 /\ STerm ty2 term2 -> TermSelect topPath ctxs1 ty1 term1 middlePath ctxs2 ty2 term2 root
+    SType ty1 /\ SType ty2-> TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 root
+    SCtrList ctrs1 /\ SCtrList ctrs2 -> CtrListSelect topPath ctxs1 ctrs1 middlePath ctxs2 ctrs2 root
+    SCtrParamList ctrParams1 /\ SCtrParamList ctrParams2 -> CtrParamListSelect topPath ctxs1 ctrParams1 middlePath ctxs2 ctrParams2 root
+    STypeBindList tyBinds1 /\ STypeBindList tyBinds2 -> TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 root
+    _ -> unsafeThrow "shouldn't happen in partsToSelect"
+
+moveSelectLeft :: Select -> Maybe Mode
+moveSelectLeft select =
+    let (topPath /\ ctxs1 /\ syn1 /\ middlePath /\ ctxs2 /\ syn2 /\ ori) = getSelectParts select in
+    case ori of
+        false {-botSelectOrientation-} -> case topPath of
+            Nil -> Nothing
+            (tooth : topPath') ->
+                let middlePath' = middlePath <> (tooth : Nil) in
+                let par /\ _ = fromJust $ parent (partsToCursor (ctxs1 /\ topPath /\ syn1)) in
+                if (getCursorSort par == sortFromSyn syn1) then
+                    let (ctxs1' /\ topPath' /\ syn1') = fromJust $ getCursorParts par in
+                    Just $ SelectMode {select: partsToSelect (topPath' /\ ctxs1' /\ syn1' /\ middlePath' /\ ctxs2 /\ syn2 /\ botSelectOrientation)}
+                else Nothing
+        true {-topSelectOrientation-} ->
+            case (goLeftUntilSort (sortFromSyn syn1) (partsToCursor (ctxs2 /\ middlePath /\ syn2))) of
+                Just cursor ->
+                    let (ctxs2' /\ middlePath' /\ syn2') = fromJust $ getCursorParts cursor in
+                    Just $ SelectMode $ {select: partsToSelect (topPath /\ ctxs1 /\ syn1 /\ middlePath' /\ ctxs2' /\ syn2' /\ topSelectOrientation)}
+                Nothing -> Just $ makeCursorMode $ (partsToCursor (ctxs1 /\ topPath /\ syn1))
+
+moveSelectRight :: Select -> Maybe Mode
+moveSelectRight select =
+    let (topPath /\ ctxs1 /\ syn1 /\ middlePath /\ ctxs2 /\ syn2 /\ ori) = getSelectParts select in
+    case ori of
+        false {-botSelectOrientation-} -> case middlePath of
+            Nil -> unsafeThrow "Shouldn't be an empty selection"
+            (tooth : Nil) -> Just $ makeCursorMode $ partsToCursor (ctxs2 /\ (tooth : topPath) /\ syn2)
+            middlePath ->
+                let tooth = fromJust $ last middlePath in
+                let middlePath' = fromJust $ init middlePath in
+                let children = getCursorChildren (partsToCursor (ctxs1 /\ topPath /\ syn1)) in
+                let particularChild = fromJust $ find (\cursor -> head' (getPath cursor) == tooth) children in -- get the child who's top tooth is equal to "tooth"
+                let (ctxs1' /\ topPath' /\ syn1') = fromJust $ getCursorParts particularChild in
+                Just $ SelectMode {select: partsToSelect (topPath' /\ ctxs1' /\ syn1' /\ middlePath' /\ ctxs2 /\ syn2 /\ botSelectOrientation)}
+        true {-topSelectOrientation-} ->
+            let cursor = (goRightUntilSort (sortFromSyn syn1) (partsToCursor (ctxs2 /\ middlePath /\ syn2))) in
+            let (ctxs2' /\ middlePath' /\ syn2') = fromJust $ getCursorParts cursor in
+            Just $ SelectMode {select: partsToSelect (topPath /\ ctxs1 /\ syn1 /\ middlePath' /\ ctxs2' /\ syn2' /\ topSelectOrientation)}
+
+sortFromSyn :: Syn -> GrammaticalSort
+sortFromSyn (STerm _ _) = GSTerm
+sortFromSyn (SType _) = GSType
+sortFromSyn (SCtrList _) = GSCtrList
+sortFromSyn (SCtrParamList _) = GSCtrParamList
+sortFromSyn (STypeBindList _) = GSTypeBindList
 
 getCursorSort :: CursorLocation -> GrammaticalSort
 getCursorSort(TermCursor _ _ _ _) = GSTerm
@@ -328,7 +365,6 @@ goRightUntilSort sort cursor =
     if not (getCursorSort cursor' == sort) then goRightUntilSort sort cursor'
     else cursor'
 
-
 {-
 Possible plan for writing the Cursor Movement code without quite so much repetition:
 GenericCursor t = GrammaticalSort x UpPath x t
@@ -338,31 +374,10 @@ Then,
 moveSelectTopLeft t :: GrammaticalSort ->
 -}
 
--- TODO: these two functions aren't being used, they can be deleted
-{-When you start a selection going left from a cursor, you always are going to the parent.-}
-selectLeftFromCursor :: CursorLocation -> Maybe Select
-selectLeftFromCursor cursor@(TermCursor ctxs ty (tooth : path) term) =
-    case parent cursor of
-        Nothing -> Nothing
-        Just (TermCursor ctxs1 ty1 path1 term1 /\ _) -> Just $ TermSelect path1 ctxs1 ty1 term1 (tooth : Nil) ctxs ty term botSelectOrientation
-        Just _ -> unsafeThrow "shouldn't happen"
-selectLeftFromCursor (TypeCursor ctxs (tooth : path) ty) = hole' "selectLeftFromCursor"
-selectLeftFromCursor (CtrListCursor ctxs (tooth : path) ctrs) = hole' "selectLeftFromCursor"
-selectLeftFromCursor (CtrParamListCursor ctxs (tooth : path) ctrParams) = hole' "selectLeftFromCursor"
---selectLeftFromCursor (TypeArgListCursor ctxs (tooth : path) tyArgs) = hole' "selectLeftFromCursor"
-selectLeftFromCursor (TypeBindListCursor ctxs (tooth : path) tyBinds) = hole' "selectLeftFromCursor"
-selectLeftFromCursor _ = Nothing
-
-selectRightFromCursor :: CursorLocation -> Maybe Select
-selectRightFromCursor cursor@(TermCursor ctxs ty path term) =
-    case head (getCursorChildren cursor) of
-        Nothing -> Nothing
-        Just (TermCursor ctxs1 ty1 (tooth : _path) term1) ->
-            Just $ TermSelect path ctxs ty term (tooth : Nil) ctxs1 ty1 term1 topSelectOrientation
-        Just _ -> unsafeThrow "shouldn't happen"
-selectRightFromCursor (TypeCursor ctxs (tooth : path) ty) = hole' "selectRightFromCursor"
-selectRightFromCursor (CtrListCursor ctxs (tooth : path) ctrs) = hole' "selectRightFromCursor"
-selectRightFromCursor (CtrParamListCursor ctxs (tooth : path) ctrParams) = hole' "selectRightFromCursor"
---selectRightFromCursor (TypeArgListCursor ctxs (tooth : path) tyArgs) = hole' "selectRightFromCursor"
-selectRightFromCursor (TypeBindListCursor ctxs (tooth : path) tyBinds) = hole' "selectRightFromCursor"
-selectRightFromCursor _ = Nothing
+cursorLocationToSelect :: SelectOrientation -> CursorLocation -> Maybe Select
+--cursorLocationToSelect ori = case _ of
+--  TermCursor ctxs ty tmPath tm -> TermSelect tmPath ctxs ty tm Nil ctxs ty tm ori
+--  _ -> hole' "cursorLocationToSelect: other cases"
+cursorLocationToSelect ori cursor = do
+    (ctxs /\ up /\ syn) <- getCursorParts cursor
+    pure $ partsToSelect (up /\ ctxs /\ syn /\ Nil /\ ctxs /\ syn /\ ori)

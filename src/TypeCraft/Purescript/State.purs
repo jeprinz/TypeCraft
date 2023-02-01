@@ -168,9 +168,9 @@ data Select
   | TypeBindListSelect UpPath AllContext (List TypeBind) UpPath AllContext (List TypeBind) SelectOrientation
 
 type SelectOrientation = Boolean -- I didn't know how to match on a Variant, so I changed it back to a boolean. That way I can use an if expression like a normal person
-topSelectOrientation :: Boolean
+topSelectOrientation :: Boolean -- the root of the seledction is at the top, so the bottom moves with shift-arrow keys
 topSelectOrientation = true
-botSelectOrientation :: Boolean
+botSelectOrientation :: Boolean -- the root of the selection is at the bottom, so the top moves with shift-arrow keys
 botSelectOrientation = false
 
 derive instance genericSelect :: Generic Select _
@@ -188,8 +188,3 @@ selectToCursorLocation = case _ of
     if ori then TermCursor ctxs1 ty1 tmPath1 tm1
         else TermCursor ctxs2 ty2 (tmPath2 <> tmPath1) tm2
   _ -> hole' "selectToCursorLocation: other cases"
-
-cursorLocationToSelect :: SelectOrientation -> CursorLocation -> Select
-cursorLocationToSelect ori = case _ of
-  TermCursor ctxs ty tmPath tm -> TermSelect tmPath ctxs ty tm Nil ctxs ty tm ori
-  _ -> hole' "cursorLocationToSelect: other cases"
