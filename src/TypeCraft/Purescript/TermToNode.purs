@@ -730,8 +730,8 @@ changeToNode val = case val.ch of
     makeChangeNode
       { tag: MinusNodeTag
       , kids:
-          [ typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty }
-          , changeToNode val { ch = ch }
+          [ changeToNode val { ch = ch }
+          , typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty }
           ]
       }
   CNeu id args ->
