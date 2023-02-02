@@ -89,6 +89,10 @@ defaultLetMD =
 defaultTermBindMD :: TermBindMD
 defaultTermBindMD = { varName: "placeholder" }
 
+-- typebind
+defaultTypeBindMD :: TypeBindMD
+defaultTypeBindMD = { varName: "placeholder" }
+
 defaultGADTMD :: GADTMD
 defaultGADTMD = { varIndented: false, bodyIndented: true}
 

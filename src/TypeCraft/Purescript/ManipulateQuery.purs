@@ -2,7 +2,12 @@ module TypeCraft.Purescript.ManipulateQuery where
 
 import Prelude
 import Prim hiding (Type)
+import TypeCraft.Purescript.ChangeTerm
+import TypeCraft.Purescript.Context
+import TypeCraft.Purescript.Grammar
+import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.Unification
+
 import Control.Monad.Writer as Writer
 import Data.Array (any)
 import Data.Either (Either(..))
@@ -11,20 +16,16 @@ import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.String as String
+import Data.Tuple (fst)
 import Data.Tuple.Nested (type (/\), (/\))
 import Data.UUID (UUID)
+import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Key (Key)
-import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State)
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (lookup')
-import Debug (trace)
-import TypeCraft.Purescript.Context
-import Data.Tuple (fst)
-import TypeCraft.Purescript.ChangeTerm
 
 
 isNonemptyQueryString :: Query -> Boolean
@@ -181,6 +182,13 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
 --            [ [ CompletionType (freshTHole unit) emptySub
 --              ]
 --            ]
+  TypeBindListCursor ctxs path tyBinds -> 
+    Writer.execWriter do
+      -- add a type bind
+      when (str `kindaStartsWithAny` [" ", ","])  
+        $ Writer.tell [
+          [CompletionTypeBindListPath <<< pure $ TypeBindListCons2 (freshTypeBind Nothing)]
+        ]
   CtrListCursor ctxs path ctrs ->
     Writer.execWriter do
         -- add a constructor
