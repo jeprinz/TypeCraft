@@ -25,7 +25,7 @@ export const mapsto = makePunc(["mapsto"], "↦")
 export const comma = makePunc(["comma"], ",")
 export const vertical = makePunc(["vertical"], "|")
 
-export const rewrite = makePunc(["rewrite"], "⟿")
+export const rewrite = makePunc(["rewrite"], "⇝")
 export const plus = makePunc(["plus"], "⊕")
 export const minus = makePunc(["minus"], "⊖")
 

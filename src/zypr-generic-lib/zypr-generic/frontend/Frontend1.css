@@ -84,6 +84,10 @@
   box-shadow: -2px 0 0 0 blue, 2px 0 0 0 blue, 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }
 
+.node.tm_ty-boundary-change {
+
+}
+
 /* query */
 
 .query {
@@ -190,6 +194,18 @@
 }
 
 .punctuation.assign {
+  margin: 0 0.5rem;
+}
+
+.punctuation.data {
+  margin: 0 0.5rem;
+}
+
+.punctuation.buffer {
+  margin: 0 0.5rem 0 0;
+}
+
+.punctuation.rewrite {
   margin: 0 0.5rem;
 }
 
