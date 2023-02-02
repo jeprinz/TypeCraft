@@ -116,8 +116,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       // assumes that kids are always rendered in the order of the node's
       // children
       var kid_i = -1
-      function kid(): JSX.Element[] {
-        kid_i++
+      function kid(skip = 0): JSX.Element[] {
+        kid_i += 1 + skip
         if (!(0 <= kid_i && kid_i < node.kids.length))
           throw new Error(`kid index ${kid_i} out of range for node tag '${node.tag.case}', which has ${node.kids.length} kids`);
 
@@ -159,7 +159,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm app': return go(node, ["tm_app"], [kid(), kid(), [Punc.application]].flat(), indentationLevel)
         case 'tm lam': return go(node, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
         case 'tm var': return go(node, ["tm_var"], renderLabel(node.label), indentationLevel)
-        case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.colon], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
+        case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR], [Punc.colon], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm dat': return go(node, ["tm_dat"], [[Punc.data], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat(), indentationLevel) // TODO: render typechange
@@ -185,8 +185,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'ctr-prm-list nil': return go(node, ["ctr-prm-list_nil"], [Punc.listNil], indentationLevel)
         // change
         case 'replace': return go(node, ["replace"], [kid(), [Punc.rewrite], kid()].flat(), indentationLevel)
-        case 'plus': return go(node, ["plus"], [[Punc.plus], kid(), [Punc.bracketL], kid(), [Punc.bracketR]].flat(), indentationLevel)
-        case 'minus': return go(node, ["minus"], [[Punc.minus], kid(), [Punc.bracketL], kid(), [Punc.bracketR]].flat(), indentationLevel)
+        case 'plus': return go(node, ["plus"], [kid(), [Punc.plus], [Punc.bracketL], kid(), [Punc.bracketR]].flat(), indentationLevel)
+        case 'minus': return go(node, ["minus"], [[Punc.bracketL], kid(), [Punc.bracketR], [Punc.minus], kid()].flat(), indentationLevel)
       }
     }
 
