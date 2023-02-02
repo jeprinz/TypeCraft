@@ -146,8 +146,8 @@ This is a tricky function to write. It needs to account for:
 - The list of type arguments needs to be altered according to the PolyChange. For example, arguments added or removed
 -}
 -- here, the output Change is the Change inside the input PolyChange.
-chTypeArgs :: KindChangeCtx -> List TypeArg -> PolyChange -> Change /\ (List TypeArg)
-chTypeArgs = hole' "cTypeArgs"
+--chTypeArgs :: KindChangeCtx -> List TypeArg -> PolyChange -> Change /\ (List TypeArg)
+--chTypeArgs = hole' "cTypeArgs"
 
 -- could avoid returning Type (because you can get it from the change with getEndpoints), if I put metadata into Change
 chType :: KindChangeCtx -> Type -> Type /\ Change

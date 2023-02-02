@@ -521,7 +521,7 @@ typeBindListToNode isActive aboveInfo tyBinds =
         , makeCursor: \_ -> Just $ TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
         , makeSelect: \_ -> case aboveInfo of
             AICursor _path -> Nothing
-            AISelect topPath topCtx topTyBinds midPath -> Just $ TypeBindListSelect topPath topCtx topTyBinds midPath tyBinds.ctxs tyBinds.tyBinds botSelectOrientation
+            AISelect topPath topCtx topTyBinds midPath -> Just $ TypeBindListSelect topPath topCtx topTyBinds midPath tyBinds.ctxs tyBinds.tyBinds topSelectOrientation
             AINothing -> Nothing
         , tyBinds
     }
