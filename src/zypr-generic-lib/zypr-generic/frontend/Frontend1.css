@@ -46,13 +46,42 @@
 .node.tm_hol {
   border-radius: 0.2rem;
   padding: 0 0.2rem;
+
+  background-color: rgb(255, 149, 114);
+  box-shadow:  0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
+}
+
+.node.tm_hol.cursor {
+  box-shadow: -2px 0 0 0 blue, 2px 0 0 0 blue, 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }
 
 .tm_hol-inner {
   display: inline-block;
+  /* border-radius: 0.2rem; */
+  /* padding: 0 0.2rem; */
+  /* background-color: rgb(255, 149, 114);
+  box-shadow: 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset; */
+}
+
+.node.ty_hol {
   border-radius: 0.2rem;
   padding: 0 0.2rem;
-  box-shadow: 0 0 0 2px red inset;
+
+  background-color: rgb(255, 149, 114);
+  box-shadow:  0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
+}
+
+.node.ty_hol.cursor {
+  box-shadow: -2px 0 0 0 blue, 2px 0 0 0 blue, 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
+}
+
+.ty_hol-inner {
+  display: inline;
+  white-space: pre;
+}
+
+.node.tm_hol.cursor {
+  box-shadow: -2px 0 0 0 blue, 2px 0 0 0 blue, 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }
 
 /* query */
@@ -181,10 +210,13 @@
 
 .label-empty {
   border-radius: 0.2rem;
+  padding: 0 0.2rem;
   display: inline-block;
   white-space: pre;
   /* border: 1px dashed black; */
   /* box-shadow: 0 0 0 1px black; */
-  background-color: rgb(255, 224, 165);
-  box-shadow: 0 0 0 1px orange inset, 1px 1px 2px 0 black inset;
+  /* background-color: rgb(255, 224, 165);
+  box-shadow: 0 0 0 1px orange inset, 1px 1px 2px 0 black inset; */
+  background-color: rgb(255, 149, 114);
+  box-shadow: 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }

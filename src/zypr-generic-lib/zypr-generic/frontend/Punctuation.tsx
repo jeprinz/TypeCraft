@@ -3,7 +3,7 @@ function makePunc(classnames: string[], label: string) {
 }
 
 export const [parenL, parenR] = [makePunc(["parenL"], "("), makePunc(["parenR"], ")")]
-export const [angleL, angleR] = [makePunc(["angleL"], "<"), makePunc(["angleR"], ">")]
+export const [angleL, angleR] = [makePunc(["angleL"], "⟨"), makePunc(["angleR"], "⟩")]
 export const [braceL, braceR] = [makePunc(["braceL"], "{"), makePunc(["braceR"], "}")]
 export const [bracketL, bracketR] = [makePunc(["bracketL"], "["), makePunc(["bracketR"], "]")]
 
