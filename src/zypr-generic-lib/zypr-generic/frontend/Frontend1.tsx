@@ -158,7 +158,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'ty-arg': return go(node, ["ty-arg"], kid(), indentationLevel)
         case 'tm app': return go(node, ["tm_app"], [kid(), kid(), [Punc.application]].flat(), indentationLevel)
         case 'tm lam': return go(node, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
-        case 'tm var': return go(node, ["tm_var"], renderLabel(node.label), indentationLevel)
+        case 'tm var': return go(node, ["tm_var"], [renderLabel(node.label), kid()].flat(), indentationLevel)
         case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR], [Punc.colon], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm dat': return go(node, ["tm_dat"], [[Punc.data], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)

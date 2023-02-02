@@ -7,7 +7,7 @@ import Data.Map.Internal (insert)
 import TypeCraft.Purescript.Grammar (Change, Constructor(..), CtrParam(..), PolyType(..), Term(..), TermBind(..), TermVarID, Tooth(..), Type(..), TypeArg(..), TypeBind(..), TypeVarID, UpPath, VarChange)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange, invertVarChange)
-import TypeCraft.Purescript.MD (AppMD, ArrowMD, BufferMD, ContextBoundaryMD, CtrMD, CtrParamMD, GADTMD, LambdaMD, LetMD, TLetMD, TNeuMD, TypeArgMD, TypeBoundaryMD, defaultArrowMD)
+import TypeCraft.Purescript.MD
 import Data.List (List, (:))
 import TypeCraft.Purescript.Context (AllContext, addDataToCtx, removeDataFromCtx, tyBindsWrapType)
 import TypeCraft.Purescript.TermRec (CtrParamRecValue, CtrRecValue, ListCtrParamRecValue, ListCtrRecValue, ListTypeArgRecValue, ListTypeBindRecValue, TermBindRecValue, TermRecValue, TypeArgRecValue, TypeBindRecValue, TypeRecValue)
@@ -17,6 +17,8 @@ import TypeCraft.Purescript.Context (addLetToCtx)
 import TypeCraft.Purescript.Util (delete')
 import Data.Tuple (fst, snd)
 import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints)
+import TypeCraft.Purescript.Util (lookup')
+import TypeCraft.Purescript.Alpha (polyTypeApply)
 
 type TermPathRecValue = {ctxs :: AllContext, ty :: Type, term :: Term, termPath :: UpPath}
 type TypePathRecValue = {ctxs :: AllContext, ty :: Type, typePath :: UpPath}
@@ -269,11 +271,15 @@ recListCtrParamPath _ _ = unsafeThrow "Either wasn't a ListCtrParamPath or I for
 type ListTypeArgPathRec a = {
     tNeu1 :: TypePathRecValue -> TNeuMD -> TypeVarID -> a
     , typeArgListCons2 :: ListTypeArgPathRecValue -> TypeArgRecValue -> a
+    , var1 :: TermPathRecValue -> VarMD -> TermVarID -> a
 }
 
 recListTypeArgPath :: forall a. ListTypeArgPathRec a -> ListTypeArgPathRecValue -> a
 recListTypeArgPath args {ctxs, tyArgs, listTypeArgPath: TNeu1 md x {-List TypeArg-} : typePath} =
     args.tNeu1 {ctxs, ty: TNeu md x tyArgs, typePath}
+        md x
+recListTypeArgPath args {ctxs, tyArgs, listTypeArgPath: Var1 md x {-List TypeArg-} : termPath} =
+    args.var1 {ctxs, ty: polyTypeApply (lookup' x ctxs.ctx) tyArgs, term: Var md x tyArgs , termPath}
         md x
 recListTypeArgPath args {ctxs, tyArgs, listTypeArgPath: TypeArgListCons2 tyArg {-List TypeArg-} : listTypeArgPath} =
     args.typeArgListCons2 {ctxs, tyArgs: tyArg : tyArgs, listTypeArgPath}

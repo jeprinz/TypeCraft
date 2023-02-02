@@ -513,6 +513,7 @@ typeArgListPathToNode isActive abovePath belowInfo listTypeArgPath innerNode =
                     arrangeKid listTypeArgPath.listTypeArgPath abovePath (typeArgToNode isActive) tyArg
                     , arrangeKid listTypeArgPath.listTypeArgPath abovePath (\_ _ -> innerNode) tyArgs
                 ]
+        , var1: \termPath md x -> hole' "typeArgListPathToNode"
     } listTypeArgPath
 
 makeTypeBindListArgs :: Boolean -> UpPath -> BelowInfo (List TypeBind) Unit -> ListTypeBindPathRecValue -> TypeBindListNodeCursorInfo

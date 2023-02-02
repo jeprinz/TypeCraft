@@ -105,6 +105,7 @@ data Tooth
   -- Term
   = App1 AppMD {-Term-} Term Type Type
   | App2 AppMD Term {-Term-} Type Type
+  | Var1 VarMD TermVarID {-List TypeArg-}
   | Lambda1 LambdaMD {-TermBind-} Type Term Type
   | Lambda2 LambdaMD TermBind {-Type-} Term Type
   | Lambda3 LambdaMD TermBind Type {-Term-} Type

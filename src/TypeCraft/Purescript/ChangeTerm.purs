@@ -140,6 +140,15 @@ doInsertArgs :: Change -> Term -> Change /\ Term
 doInsertArgs (Plus ty c) t = doInsertArgs c (App defaultAppMD t (Hole defaultHoleMD) ty (snd (getEndpoints c)))
 doInsertArgs c t = c /\ t
 
+{-
+This is a tricky function to write. It needs to account for:
+- If a type alias definition changed earlier, or a datatype was deleted, this needs to be reflected in the output Change
+- The list of type arguments needs to be altered according to the PolyChange. For example, arguments added or removed
+-}
+-- here, the output Change is the Change inside the input PolyChange.
+chTypeArgs :: KindChangeCtx -> List TypeArg -> PolyChange -> Change /\ (List TypeArg)
+chTypeArgs = hole' "cTypeArgs"
+
 -- could avoid returning Type (because you can get it from the change with getEndpoints), if I put metadata into Change
 chType :: KindChangeCtx -> Type -> Type /\ Change
 chType kctx (Arrow md t1 t2) =

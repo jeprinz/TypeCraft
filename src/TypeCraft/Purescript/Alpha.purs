@@ -7,10 +7,12 @@ import Prim hiding (Type)
 
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Util (lookup')
-import TypeCraft.Purescript.Unification (applySubChange, applySubType)
+import TypeCraft.Purescript.Unification (applySubChange, applySubType, Sub)
 import Data.Map as Map
 import Data.List as List
 import TypeCraft.Purescript.MD (defaultTNeuMD)
+import Data.Tuple.Nested
+import Effect.Exception.Unsafe (unsafeThrow)
 
 {-
 This file deals with issues of alpha-equivalence.
@@ -36,25 +38,11 @@ polyTypeEqImpl equiv (Forall x pt1) (Forall y pt2) = polyTypeEqImpl (Map.insert 
 polyTypeEqImpl equiv (PType ty1) (PType ty2) = (subType equiv ty1) == ty2
 polyTypeEqImpl _ _ _ = false
 
---subType :: TyVarEquiv -> Type -> Type
---subType equiv (Arrow md ty1 ty2) = Arrow md (subType equiv ty1) (subType equiv ty2)
---subType equiv (THole md x) = THole md x
---subType equiv (TNeu md x args) = TNeu md (lookup' x equiv) (map (subTypeArg equiv) args)
-
 subType :: TyVarEquiv -> Type -> Type
 subType equiv = applySubType { subTypeVars : (map (\x -> TNeu defaultTNeuMD x List.Nil) equiv) , subTHoles : Map.empty}
 
-
 subChange :: TyVarEquiv -> Change -> Change
 subChange equiv = applySubChange { subTypeVars : (map (\x -> TNeu defaultTNeuMD x List.Nil) equiv) , subTHoles : Map.empty}
-
---subChange :: TyVarEquiv -> Change -> Change
---subChange equiv (CArrow c1 c2) = CArrow (subChange equiv c1) (subChange equiv c2)
---subChange equiv (CHole x) = CHole x
---subChange equiv (Replace t1 t2) = Replace (subType equiv t1) (subType equiv t2)
---subChange equiv (Plus t c) = Plus (subType equiv t) (subChange equiv c)
---subChange equiv (Minus t c) = Minus (subType equiv t) (subChange equiv c)
---subChange equiv (CNeu x chParams) = CNeu (lookup' x equiv) (map (subChangeParam equiv) chParams)
 
 subChangeParam :: TyVarEquiv -> ChangeParam -> ChangeParam
 subChangeParam equiv (ChangeParam c) = ChangeParam (subChange equiv c)
@@ -63,5 +51,16 @@ subChangeParam equiv (MinusParam t) = MinusParam (subType equiv t)
 
 subTypeArg :: TyVarEquiv -> TypeArg -> TypeArg
 subTypeArg equiv (TypeArg md ty) = TypeArg md (subType equiv ty)
+
+polyTypeApply :: PolyType -> List.List TypeArg -> Type
+polyTypeApply pty args =
+    let sub /\ ty = polyTypeImpl pty args in
+    applySubType {subTypeVars: sub, subTHoles: Map.empty} ty
+polyTypeImpl :: PolyType -> List.List TypeArg -> Map.Map TypeVarID Type /\ Type
+polyTypeImpl (Forall x pt) ((TypeArg _ ty) List.: args) =
+    let sub /\ ty = polyTypeImpl pt args in
+    Map.insert x ty sub /\ ty
+polyTypeImpl (PType ty) List.Nil = Map.empty /\ ty
+polyTypeImpl _ _ = unsafeThrow "in polyTypeApply, wrong number of args"
 
 --data PolyType = Forall TypeVarID PolyType | PType Type -- doesn't appear in source code. Instead, source code has lists of type parameters.

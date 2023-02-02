@@ -223,7 +223,7 @@ chListTypeBindPath kctx ctx ch (Let2 md tBind@(TermBind _ x) {-tyBinds-} def def
     let polyTyCh = listTypeBindChWrapPolyChange ch (tyInject defTy) in
     let ctx' = insert x (VarTypeChange polyTyCh) ctx in
     let def' = chTermBoundary kctx ctx' (tyInject defTy) def in
-    let body' = chTermBoundary kctx ctx' (tyInject defTy) body in
+    let body' = chTermBoundary kctx ctx' (tyInject bodyTy) body in
     Let2 md tBind {--} def' defTy body' bodyTy : termPath'
 chListTypeBindPath kctx ctx ch (TypeBindListCons2 tyBind {-tyBinds-} : listTypeBindPath) =
     let listTypeBindPath' = chListTypeBindPath kctx ctx (ListTypeBindChangeCons tyBind ch) listTypeBindPath in
