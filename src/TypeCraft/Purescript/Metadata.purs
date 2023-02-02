@@ -95,3 +95,7 @@ defaultGADTMD = { varIndented: false, bodyIndented: true}
 -- Constructor
 defaultCtrMD :: CtrMD
 defaultCtrMD = {indented: false}
+
+-- CtrParam
+defaultCtrParamMD :: CtrParamMD
+defaultCtrParamMD = {paramName: "", indented: false}

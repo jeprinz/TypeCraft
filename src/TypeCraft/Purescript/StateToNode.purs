@@ -186,7 +186,25 @@ cursorModeToNode cursorMode =
                   else
                     makeMetahole unit
               )
-      _ -> hole' "completionToNode CompletionTypePath non-TypeCursor"
+      _ -> unsafeThrow "completionToNode CompletionTypePath non-TypeCursor"
+    CompletionCtrParamListPath path' ch -> case cursorMode.cursorLocation of
+        CtrParamListCursor ctxs path ctrParams ->
+            setNodeStyle makeQueryInsertTopStyle
+              $ ctrParamListPathToNode false Nil BITerm
+                  { ctxs, ctrParams, listCtrParamPath: path'}
+                  ( setNodeStyle makeQueryInsertBotNodeStyle
+                        if opts.isInline then
+                            -- if inline, render with cursor type at head
+                            ctrParamListToNode true
+                              (AISelect (path' <> path) ctxs ctrParams (path' <> path))
+                              { ctxs, ctrParams }
+                          else
+                            setNodeStyle makeQueryMetaholeNodeStyle
+                                $ ctrParamListToNode false
+                                    (AISelect path ctxs ctrParams Nil)
+                                    {ctxs, ctrParams}
+                      )
+        _ -> unsafeThrow "Shouldn't get here: non-CtrParamListCursor, but tried a CtrParamListPath completion!"
     CompletionCtrListPath path' listCtrCh -> case cursorMode.cursorLocation of
         CtrListCursor ctxs path ctrs ->
             setNodeStyle makeQueryInsertTopStyle

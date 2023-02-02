@@ -118,10 +118,19 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
     getCompletion cursorMode.query
       >>= case _ of
               CompletionCtrListPath pathNew ch ->
---chListCtrPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
                 let path' = chListCtrPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
                 pure {
                     cursorLocation: CtrListCursor ctxs (pathNew <> path') ctrs
+                    , query: emptyQuery
+                }
+              _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
+  CtrParamListCursor ctxs path ctrParams ->
+    getCompletion cursorMode.query
+      >>= case _ of
+              CompletionCtrParamListPath pathNew ch ->
+                let path' = chListCtrParamPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
+                pure {
+                    cursorLocation: CtrParamListCursor ctxs (pathNew <> path') ctrParams
                     , query: emptyQuery
                 }
               _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"

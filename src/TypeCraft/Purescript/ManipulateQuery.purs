@@ -24,7 +24,7 @@ import TypeCraft.Purescript.Util (lookup')
 import Debug (trace)
 import TypeCraft.Purescript.Context
 import Data.Tuple (fst)
-import TypeCraft.Purescript.ChangeTerm (chCtrList)
+import TypeCraft.Purescript.ChangeTerm
 
 
 isNonemptyQueryString :: Query -> Boolean
@@ -191,6 +191,17 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
                 let newCtr = (Constructor defaultCtrMD (freshTermBind Nothing) List.Nil) in
                 CompletionCtrListPath (List.singleton $ CtrListCons2 newCtr)
                     (ListCtrChangePlus newCtr ctrCh)
+            ]]
+  CtrParamListCursor ctxs path ctrParams ->
+    Writer.execWriter do
+        -- add a constructor param
+        when (str `kindaStartsWithAny` [" ", ","])
+            $ Writer.tell [[
+                let kctx = kCtxInject ctxs.kctx ctxs.actx in
+                let ctrParamCh = fst (chParamList kctx ctrParams) in
+                let newCtrParam = (CtrParam defaultCtrParamMD (freshTHole unit)) in
+                CompletionCtrParamListPath (List.singleton $ CtrParamListCons2 newCtrParam)
+                    (ListCtrParamChangePlus newCtrParam ctrParamCh)
             ]]
   _ -> [] -- TODO: impl
 

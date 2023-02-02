@@ -161,6 +161,10 @@ chCtrPath _ _ _ _ _ = hole' "chCtrPath"
 -- TODO: I believe that CtrParams should change by a Change
 chCtrParamPath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> UpPath
 --    CtrParamListCons1 {-CtrParam-} (List CtrParam)
+chCtrParamPath kctx ctx ch (CtrParamListCons1 {-ctrParam-} ctrParams : listCtrParamPath) =
+    let ctrParamsCh /\ ctrParams' = chParamList kctx ctrParams in
+    let listCtrParamListPath' = chListCtrParamPath kctx ctx ctrParamsCh listCtrParamPath in
+    CtrParamListCons1 {--} ctrParams' : listCtrParamListPath'
 chCtrParamPath _ _ _ _ = hole' "chCtrParaPath"
 
 
