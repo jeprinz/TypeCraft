@@ -511,7 +511,7 @@ typeBindListToNode isActive aboveInfo tyBinds =
             arrangeKidAI (aIOnlyCursor aboveInfo) (typeBindToNode isActive) tyBind
             , arrangeKidAI aboveInfo (typeBindListToNode isActive) tyBinds
         ]
-        , nil: arrangeTypeBindList args []
+        , nil: \_ -> arrangeTypeBindList args []
     } tyBinds
     where
     args = {

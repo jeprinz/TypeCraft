@@ -9,6 +9,7 @@ import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.TypeChangeAlgebra
 
 import Data.List (List(..), (:))
+import Data.Maybe (Maybe (..))
 import Data.Map.Internal (empty, lookup, insert, delete)
 import Data.Tuple (fst)
 import Data.Tuple (snd)
@@ -185,6 +186,7 @@ chCtrParamPath _ _ _ _ = hole' "chCtrParaPath"
 chListCtrPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
 chListCtrPath kctx ctx ch (Data3 md tyBind@(TypeBind _ x) tyBinds {-ctrs-} body bodyTy : termPath) =
     let ctx' = adjustCtxByCtrChanges x (map (\(TypeBind _ x) -> x) tyBinds) ch ctx in
+    -- TODO: here I make an assumption that the context hasn't changed above!
     let _ /\ termPath' = chTermPath kctx ctx' (tyInject bodyTy) termPath in
     Data3 md tyBind tyBinds {--} body bodyTy : termPath'
 chListCtrPath kctx ctx ch (CtrListCons2 ctr@(Constructor _ (TermBind _ x) ctrParams) {-ctrs-} : listCtrPath) =
@@ -210,16 +212,20 @@ chListTypeArgPath :: KindChangeCtx -> ChangeCtx -> ListTypeArgChange -> UpPath -
 chListTypeArgPath = hole' "chListTypeArgPath"
 
 
-
-data ListTypeBindChange = ListTypeBindChangeCons TypeBind ListTypeBindChange
-    | ListTypeBindChangePlus TypeBind ListTypeBindChange
-    | ListTypeBindChangeMinus TypeBind ListTypeBindChange
-    | ListTypeBindChangeNil
-
 -- This function should enable adding type parameters to lets
 chListTypeBindPath :: KindChangeCtx -> ChangeCtx -> ListTypeBindChange -> UpPath -> UpPath
 --    TLet2 TLetMD TypeBind {-List TypeBind-} Type Term Type
---    TypeBindListCons2 (TypeBind) {-List TypeBind-}
 --    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
 --    Let2 LetMD TermBind {-List TypeBind-} Term Type Term Type
-chListTypeBindPath = hole' "chTypeBindPath"
+chListTypeBindPath kctx ctx ch (Let2 md tBind@(TermBind _ x) {-tyBinds-} def defTy body bodyTy : termPath) =
+    -- TODO: here I make an assumption that the context hasn't changed above!
+    let _ /\ termPath' = chTermPath kctx ctx (tyInject bodyTy) termPath in
+    let polyTyCh = listTypeBindChWrapPolyChange ch (tyInject defTy) in
+    let ctx' = insert x (VarTypeChange polyTyCh) ctx in
+    let def' = chTermBoundary kctx ctx' (tyInject defTy) def in
+    let body' = chTermBoundary kctx ctx' (tyInject defTy) body in
+    Let2 md tBind {--} def' defTy body' bodyTy : termPath'
+chListTypeBindPath kctx ctx ch (TypeBindListCons2 tyBind {-tyBinds-} : listTypeBindPath) =
+    let listTypeBindPath' = chListTypeBindPath kctx ctx (ListTypeBindChangeCons tyBind ch) listTypeBindPath in
+    TypeBindListCons2 tyBind {--} : listTypeBindPath'
+chListTypeBindPath _ _ _ _ = hole' "chTypeBindPath"

@@ -204,6 +204,10 @@ chParamList kctx (param : params) =
     let chs /\ params' = chParamList kctx params in
     (ListCtrParamChangeCons ch chs) /\ param' : params'
 
+chTypeBindList :: List TypeBind -> ListTypeBindChange
+chTypeBindList Nil = ListTypeBindChangeNil
+chTypeBindList (tyBind : tyBinds) = ListTypeBindChangePlus tyBind (chTypeBindList tyBinds)
+
 chTypeParamList :: KindChangeCtx -> List TypeArg -> List Change /\ List TypeArg
 chTypeParamList = hole' "chTypeParamList"
 

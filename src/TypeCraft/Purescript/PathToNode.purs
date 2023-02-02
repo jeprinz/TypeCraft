@@ -495,6 +495,7 @@ makeTypeArgListArgs isActive abovePath belowInfo upRecVal =
   }
 
 typeArgListPathToNode :: Boolean -> UpPath -> BelowInfo (List TypeArg) Unit -> ListTypeArgPathRecValue -> Node -> Node
+typeArgListPathToNode _ _ _ {listTypeArgPath: Nil} innerNode = innerNode
 typeArgListPathToNode isActive abovePath belowInfo listTypeArgPath innerNode =
     let tyArgs = listTypeArgPath.tyArgs in
     recListTypeArgPath {
@@ -526,6 +527,7 @@ makeTypeBindListArgs isActive abovePath belowInfo upRecVal =
   }
 
 typeBindListPathToNode :: Boolean -> UpPath -> BelowInfo (List TypeBind) Unit -> ListTypeBindPathRecValue -> Node -> Node
+typeBindListPathToNode _ _ _ {listTypeBindPath: Nil} innerNode = innerNode
 typeBindListPathToNode isActive abovePath belowInfo typeBindListPath innerNode =
   let
     tyBinds = typeBindListPath.tyBinds

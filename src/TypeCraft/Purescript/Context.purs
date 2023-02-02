@@ -134,6 +134,13 @@ tyVarIdsWrapType :: List TypeVarID -> Type -> PolyType
 tyVarIdsWrapType Nil ty = PType ty
 tyVarIdsWrapType (x : xs) ty = Forall x (tyVarIdsWrapType xs ty)
 
+listTypeBindChWrapPolyChange :: ListTypeBindChange -> Change -> PolyChange
+listTypeBindChWrapPolyChange (ListTypeBindChangeCons tyBind@(TypeBind _ x) ch) pch = CForall x (listTypeBindChWrapPolyChange ch pch)
+listTypeBindChWrapPolyChange (ListTypeBindChangePlus tyBind@(TypeBind _ x) ch) pch = PPlus x (listTypeBindChWrapPolyChange ch pch)
+listTypeBindChWrapPolyChange (ListTypeBindChangeMinus tyBind@(TypeBind _ x) ch) pch = PMinus x (listTypeBindChWrapPolyChange ch pch)
+listTypeBindChWrapPolyChange ListTypeBindChangeNil pch = PChange pch
+
+
 constructorTypes :: TypeBind -> List TypeBind -> List Constructor -> Map TermVarID PolyType
 constructorTypes (TypeBind _ dataType) tyBinds ctrs =
     let tyVarIds = map (\(TypeBind _ x) -> x) tyBinds in

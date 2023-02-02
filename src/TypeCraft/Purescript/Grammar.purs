@@ -189,6 +189,11 @@ data ListCtrParamChange = ListCtrParamChangeNil | ListCtrParamChangeCons Change 
     | ListCtrParamChangePlus CtrParam ListCtrParamChange
     | ListCtrParamChangeMinus CtrParam ListCtrParamChange
 
+data ListTypeBindChange = ListTypeBindChangeCons TypeBind ListTypeBindChange
+    | ListTypeBindChangePlus TypeBind ListTypeBindChange
+    | ListTypeBindChangeMinus TypeBind ListTypeBindChange
+    | ListTypeBindChangeNil
+
 -- TODO: move the below stuff into a separate file
 tyInject :: Type -> Change
 tyInject (Arrow _ ty1 ty2) = CArrow (tyInject ty1) (tyInject ty2)
@@ -360,4 +365,9 @@ instance showListCtrParamChange :: Show ListCtrParamChange where
 derive instance genericListCtrChange :: Generic ListCtrChange _
 
 instance showListCtrChange :: Show ListCtrChange where
+    show x = genericShow x
+
+derive instance genericListTypeBindChange :: Generic ListTypeBindChange _
+
+instance showListTypeBindChange :: Show ListTypeBindChange where
     show x = genericShow x

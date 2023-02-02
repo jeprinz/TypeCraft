@@ -65,7 +65,7 @@ data Completion
   | CompletionTypePath UpPath Change
   | CompletionCtrListPath UpPath ListCtrChange
   | CompletionCtrParamListPath UpPath ListCtrParamChange
-  | CompletionTypeBindListPath UpPath
+  | CompletionTypeBindListPath UpPath ListTypeBindChange
 
 derive instance genericCompletion :: Generic Completion _
 

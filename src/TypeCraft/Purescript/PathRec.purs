@@ -309,7 +309,7 @@ recListTypeBindPath args {ctxs, tyBinds, listTypeBindPath: Let2 md tBind {-List 
 recListTypeBindPath args {ctxs, tyBinds, listTypeBindPath: TypeBindListCons2 tyBind {-List TypeBind-} : listTypeBindPath} =
     args.typeBindListCons2 {ctxs, tyBinds: tyBind : tyBinds, listTypeBindPath}
         {ctxs, tyBind}
-recListTypeBindPath _ _ = unsafeThrow "Either wasn't a ListTypeArgPath or I forgot a case"
+recListTypeBindPath _ listTypeBindPath = unsafeThrow ("Either wasn't a ListTypeBindPath or I forgot a case. path is: " <> show listTypeBindPath.listTypeBindPath)
 
 -- List TypeBind
 --    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
