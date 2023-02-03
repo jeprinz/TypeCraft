@@ -119,14 +119,14 @@ stepKidsTerm isActive term kids = case term of
   Data md bnd bnds ctrs bod ty
     | [ k_bnd, k_bnds, k_ctrs, k_bod ] <- kids ->
       [ setNodeIndentation (indentIf isActive md.varIndented) $ k_bnd (Data1 md bnds ctrs bod ty)
-      , k_bnds (Data2 md bnd ctrs bod ty)
-      , k_ctrs (Data3 md bnd bnds bod ty)
+      , addNodeStyle (NodeStyle "list-head") $ k_bnds (Data2 md bnd ctrs bod ty)
+      , addNodeStyle (NodeStyle "list-head") $ k_ctrs (Data3 md bnd bnds bod ty)
       , setNodeIndentation (newlineIf isActive md.bodyIndented) $ k_bod (Data4 md bnd bnds ctrs ty)
       ]
   TLet md bnd bnds sig bod ty
     | [ k_bnd, k_bnds, k_sig, k_bod ] <- kids ->
       [ k_bnd (TLet1 md bnds sig bod ty)
-      , k_bnds (TLet2 md bnd sig bod ty)
+      , addNodeStyle (NodeStyle "list-head") $ k_bnds (TLet2 md bnd sig bod ty)
       , k_sig (TLet3 md bnd bnds bod ty)
       , k_bod (TLet4 md bnd bnds sig ty)
       ]
@@ -350,7 +350,7 @@ typeToNode isActive aboveInfo ty =
 stepKidsCtr :: Boolean -> Constructor -> Array PreNode -> Array Node
 stepKidsCtr isActive (Constructor md tBind ctrParams) [ k_tBind, k_ctrParams ] =
   [ k_tBind (Constructor1 md {--} ctrParams)
-  , k_ctrParams (Constructor2 md tBind {--})
+  , addNodeStyle (NodeStyle "list-head") $ k_ctrParams (Constructor2 md tBind {--})
   ]
 
 stepKidsCtr _ _ _ = unsafeThrow "stepKidsCtr: wrong number of kids"
