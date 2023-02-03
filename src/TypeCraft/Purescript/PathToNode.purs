@@ -495,6 +495,7 @@ makeTypeArgListArgs isActive abovePath belowInfo upRecVal =
   }
 
 typeArgListPathToNode :: Boolean -> UpPath -> BelowInfo (List TypeArg) Unit -> ListTypeArgPathRecValue -> Node -> Node
+typeArgListPathToNode _ _ _ {listTypeArgPath: Nil} innerNode = innerNode
 typeArgListPathToNode isActive abovePath belowInfo listTypeArgPath innerNode =
     let tyArgs = listTypeArgPath.tyArgs in
     recListTypeArgPath {
@@ -512,6 +513,7 @@ typeArgListPathToNode isActive abovePath belowInfo listTypeArgPath innerNode =
                     arrangeKid listTypeArgPath.listTypeArgPath abovePath (typeArgToNode isActive) tyArg
                     , arrangeKid listTypeArgPath.listTypeArgPath abovePath (\_ _ -> innerNode) tyArgs
                 ]
+        , var1: \termPath md x -> hole' "typeArgListPathToNode"
     } listTypeArgPath
 
 makeTypeBindListArgs :: Boolean -> UpPath -> BelowInfo (List TypeBind) Unit -> ListTypeBindPathRecValue -> TypeBindListNodeCursorInfo
@@ -526,6 +528,7 @@ makeTypeBindListArgs isActive abovePath belowInfo upRecVal =
   }
 
 typeBindListPathToNode :: Boolean -> UpPath -> BelowInfo (List TypeBind) Unit -> ListTypeBindPathRecValue -> Node -> Node
+typeBindListPathToNode _ _ _ {listTypeBindPath: Nil} innerNode = innerNode
 typeBindListPathToNode isActive abovePath belowInfo typeBindListPath innerNode =
   let
     tyBinds = typeBindListPath.tyBinds

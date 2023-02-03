@@ -187,7 +187,8 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
       -- add a type bind
       when (str `kindaStartsWithAny` [" ", ","])  
         $ Writer.tell [
-          [CompletionTypeBindListPath <<< pure $ TypeBindListCons2 (freshTypeBind Nothing)]
+          let newTyBind = (freshTypeBind Nothing) in
+          [CompletionTypeBindListPath (List.singleton $ TypeBindListCons2 newTyBind) (ListTypeBindChangePlus newTyBind (chTypeBindList tyBinds))]
         ]
   CtrListCursor ctxs path ctrs ->
     Writer.execWriter do

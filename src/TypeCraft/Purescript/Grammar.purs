@@ -105,6 +105,7 @@ data Tooth
   -- Term
   = App1 AppMD {-Term-} Term Type Type
   | App2 AppMD Term {-Term-} Type Type
+  | Var1 VarMD TermVarID {-List TypeArg-}
   | Lambda1 LambdaMD {-TermBind-} Type Term Type
   | Lambda2 LambdaMD TermBind {-Type-} Term Type
   | Lambda3 LambdaMD TermBind Type {-Term-} Type
@@ -188,6 +189,11 @@ data ListCtrChange = ListCtrChangeNil | ListCtrChangeCons TermVarID ListCtrParam
 data ListCtrParamChange = ListCtrParamChangeNil | ListCtrParamChangeCons Change ListCtrParamChange
     | ListCtrParamChangePlus CtrParam ListCtrParamChange
     | ListCtrParamChangeMinus CtrParam ListCtrParamChange
+
+data ListTypeBindChange = ListTypeBindChangeCons TypeBind ListTypeBindChange
+    | ListTypeBindChangePlus TypeBind ListTypeBindChange
+    | ListTypeBindChangeMinus TypeBind ListTypeBindChange
+    | ListTypeBindChangeNil
 
 -- TODO: move the below stuff into a separate file
 tyInject :: Type -> Change
@@ -360,4 +366,9 @@ instance showListCtrParamChange :: Show ListCtrParamChange where
 derive instance genericListCtrChange :: Generic ListCtrChange _
 
 instance showListCtrChange :: Show ListCtrChange where
+    show x = genericShow x
+
+derive instance genericListTypeBindChange :: Generic ListTypeBindChange _
+
+instance showListTypeBindChange :: Show ListTypeBindChange where
     show x = genericShow x

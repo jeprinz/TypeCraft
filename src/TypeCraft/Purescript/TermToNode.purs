@@ -107,7 +107,7 @@ stepKidsTerm isActive term kids = case term of
       , setNodeIndentation (indentIf isActive md.bodyIndented) $ k_body (Lambda3 md bnd sig ty)
       ]
   Var md x args
-    | [] <- kids -> []
+    | [k_tyargs] <- kids -> [k_tyargs (Var1 md x {-args-})]
   Let md bnd bnds imp sig bod ty
     | [ k_bnd, k_bnds, k_sig, k_imp, k_bod ] <- kids ->
       [ k_bnd (Let1 md bnds imp sig bod ty)
@@ -191,7 +191,9 @@ termToNode isActive aboveInfo term =
             [ arrangeKidAI aboveInfo (termToNode isActive) t1
             , arrangeKidAI aboveInfo (termToNode isActive) t2
             ]
-    , var: \md x targs -> setNodeLabel (x `lookup'` term.ctxs.mdctx) $ arrangeTerm args [] -- TODO: needs to have type arguments
+    , var: \md x targs -> setNodeLabel (x `lookup'` term.ctxs.mdctx) $ arrangeTerm args [
+            arrangeKidAI cursorOnlyInfo (typeArgListToNode isActive) targs
+        ] -- TODO: needs to have type arguments
     , lett:
         \md tBind tyBinds def defTy body _bodyTy ->
           arrangeTerm args
@@ -511,7 +513,7 @@ typeBindListToNode isActive aboveInfo tyBinds =
             arrangeKidAI (aIOnlyCursor aboveInfo) (typeBindToNode isActive) tyBind
             , arrangeKidAI aboveInfo (typeBindListToNode isActive) tyBinds
         ]
-        , nil: arrangeTypeBindList args []
+        , nil: \_ -> arrangeTypeBindList args []
     } tyBinds
     where
     args = {
@@ -519,7 +521,7 @@ typeBindListToNode isActive aboveInfo tyBinds =
         , makeCursor: \_ -> Just $ TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
         , makeSelect: \_ -> case aboveInfo of
             AICursor _path -> Nothing
-            AISelect topPath topCtx topTyBinds midPath -> Just $ TypeBindListSelect topPath topCtx topTyBinds midPath tyBinds.ctxs tyBinds.tyBinds botSelectOrientation
+            AISelect topPath topCtx topTyBinds midPath -> Just $ TypeBindListSelect topPath topCtx topTyBinds midPath tyBinds.ctxs tyBinds.tyBinds topSelectOrientation
             AINothing -> Nothing
         , tyBinds
     }

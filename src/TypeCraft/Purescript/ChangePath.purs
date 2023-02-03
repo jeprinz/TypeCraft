@@ -9,6 +9,7 @@ import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.TypeChangeAlgebra
 
 import Data.List (List(..), (:))
+import Data.Maybe (Maybe (..))
 import Data.Map.Internal (empty, lookup, insert, delete)
 import Data.Tuple (fst)
 import Data.Tuple (snd)
@@ -18,6 +19,7 @@ import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (lookup')
+import Debug (trace)
 
 -- For now, I won't do anything with upwards ChangeCtx. But I can implement that in the future.
 
@@ -130,27 +132,24 @@ chTypePath kctx ctx ch (Let4 md tBind@(TermBind _ x) tyBinds def {-Type-} body b
     let body' = chTermBoundary kctx ctx' (tyInject bodyTy) body in -- TODO TODO TODO TODO:::: There are various other design descisions that could be made here. The issue is that we may want to call chTerm on the body first to get a TypeChange, but then we would need to call it again with the context change gotten from the path above.
     let def' = chTermBoundary kctx ctx' ch def in
     (kctx /\ ctx') /\ Let4 md tBind tyBinds def' body' bodyTy : termPath
---    Lambda2 LambdaMD TermBind {-Type-} Term Type
 chTypePath kctx ctx ch (Lambda2 md tBind@(TermBind _ x) {-Type-} body bodyTy : termPath) =
     let ctx' = insert x (VarTypeChange (PChange ch)) ctx in
     let c /\ body' = chTerm kctx ctx' (tyInject bodyTy) body in
     let (kctx' /\ ctx2) /\ termPath' = chTermPath kctx ctx (CArrow c (tyInject bodyTy)) termPath in
     if not (kCtxIsId kctx') then unsafeThrow "ktx assumptinon violated" else
     (kctx' /\ ctx2) /\ Lambda2 md tBind {-Type-} body' (snd (getEndpoints c)) : termPath'
---    Let4 LetMD TermBind (List TypeBind) Term {-Type-} Term Type
---    Buffer2 BufferMD Term {-Type-} Term Type
 chTypePath kctx ctx ch (Arrow1 md {-Type-} ty2 : typePath) =
     let (kctx' /\ ctx') /\ typePath' = chTypePath kctx ctx (CArrow ch (tyInject ty2)) typePath in
     (kctx' /\ ctx') /\ Arrow1 md {-Type-} ty2 : typePath'
 chTypePath kctx ctx ch (Arrow2 md ty1 {-Type-} : typePath) =
     let (kctx' /\ ctx') /\ typePath' = chTypePath kctx ctx (CArrow (tyInject ty1) ch) typePath in
     (kctx' /\ ctx') /\ Arrow2 md ty1 {-Type-} : typePath'
+--    Buffer2 BufferMD Term {-Type-} Term Type
 --    CtrParam1 CtrParamMD {-Type-}
 --    TypeArg1 TypeArgMD {-Type-}
 --    TLet3 TLetMD TypeBind (List TypeBind) {-Type-} Term Type
 chTypePath _ _ ch path = hole' ("chTypePath. Path is:" <> show path <> "and ch is: " <> show ch)
 
--- TODO: I believe that Constructors should change by a Change
 chCtrPath :: KindChangeCtx -> ChangeCtx -> TermVarID -> ListCtrParamChange -> UpPath -> UpPath
 chCtrPath kctx ctx x ch (CtrListCons1 {-ctr-} ctrs : ctrListPath) =
     let ctrsCh /\ ctrs' = chCtrList kctx ctrs in
@@ -185,8 +184,10 @@ chCtrParamPath _ _ _ _ = hole' "chCtrParaPath"
 chListCtrPath :: KindChangeCtx -> ChangeCtx -> ListCtrChange -> UpPath -> UpPath
 chListCtrPath kctx ctx ch (Data3 md tyBind@(TypeBind _ x) tyBinds {-ctrs-} body bodyTy : termPath) =
     let ctx' = adjustCtxByCtrChanges x (map (\(TypeBind _ x) -> x) tyBinds) ch ctx in
+    -- TODO: here I make an assumption that the context hasn't changed above!
     let _ /\ termPath' = chTermPath kctx ctx' (tyInject bodyTy) termPath in
-    Data3 md tyBind tyBinds {--} body bodyTy : termPath'
+    let body' = chTermBoundary kctx ctx' (tyInject bodyTy) body in
+    Data3 md tyBind tyBinds {--} body' bodyTy : termPath'
 chListCtrPath kctx ctx ch (CtrListCons2 ctr@(Constructor _ (TermBind _ x) ctrParams) {-ctrs-} : listCtrPath) =
     let listCtrParamCh /\ ctrParams' = chParamList kctx ctrParams in
     let listCtrPath' = chListCtrPath kctx ctx (ListCtrChangeCons x listCtrParamCh ch) listCtrPath in
@@ -210,16 +211,20 @@ chListTypeArgPath :: KindChangeCtx -> ChangeCtx -> ListTypeArgChange -> UpPath -
 chListTypeArgPath = hole' "chListTypeArgPath"
 
 
-
-data ListTypeBindChange = ListTypeBindChangeCons TypeBind ListTypeBindChange
-    | ListTypeBindChangePlus TypeBind ListTypeBindChange
-    | ListTypeBindChangeMinus TypeBind ListTypeBindChange
-    | ListTypeBindChangeNil
-
 -- This function should enable adding type parameters to lets
 chListTypeBindPath :: KindChangeCtx -> ChangeCtx -> ListTypeBindChange -> UpPath -> UpPath
 --    TLet2 TLetMD TypeBind {-List TypeBind-} Type Term Type
---    TypeBindListCons2 (TypeBind) {-List TypeBind-}
 --    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
 --    Let2 LetMD TermBind {-List TypeBind-} Term Type Term Type
-chListTypeBindPath = hole' "chTypeBindPath"
+chListTypeBindPath kctx ctx ch (Let2 md tBind@(TermBind _ x) {-tyBinds-} def defTy body bodyTy : termPath) =
+    -- TODO: here I make an assumption that the context hasn't changed above!
+    let _ /\ termPath' = chTermPath kctx ctx (tyInject bodyTy) termPath in
+    let polyTyCh = listTypeBindChWrapPolyChange ch (tyInject defTy) in
+    let ctx' = insert x (VarTypeChange polyTyCh) ctx in
+    let def' = chTermBoundary kctx ctx' (tyInject defTy) def in
+    let body' = chTermBoundary kctx ctx' (tyInject bodyTy) body in
+    Let2 md tBind {--} def' defTy body' bodyTy : termPath'
+chListTypeBindPath kctx ctx ch (TypeBindListCons2 tyBind {-tyBinds-} : listTypeBindPath) =
+    let listTypeBindPath' = chListTypeBindPath kctx ctx (ListTypeBindChangeCons tyBind ch) listTypeBindPath in
+    TypeBindListCons2 tyBind {--} : listTypeBindPath'
+chListTypeBindPath _ _ _ _ = hole' "chTypeBindPath"

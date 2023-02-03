@@ -65,7 +65,7 @@ data Completion
   | CompletionTypePath UpPath Change
   | CompletionCtrListPath UpPath ListCtrChange
   | CompletionCtrParamListPath UpPath ListCtrParamChange
-  | CompletionTypeBindListPath UpPath
+  | CompletionTypeBindListPath UpPath ListTypeBindChange
 
 derive instance genericCompletion :: Generic Completion _
 
@@ -181,10 +181,17 @@ instance showSelect :: Show Select where
 selectToCursorLocation :: Select -> CursorLocation
 selectToCursorLocation = case _ of
   TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
---    (ori # _) <<< (case_ # _) <<< onMatch
---      $ { top: const $ TermCursor ctxs1 ty1 tmPath1 tm1
---        , bot: const $ TermCursor ctxs2 ty2 (tmPath2 <> tmPath1) tm2
---        }
-    if ori then TermCursor ctxs1 ty1 tmPath1 tm1
-        else TermCursor ctxs2 ty2 (tmPath2 <> tmPath1) tm2
-  _ -> hole' "selectToCursorLocation: other cases"
+    if ori then TermCursor ctxs2 ty2 (tmPath2 <> tmPath1) tm2
+           else TermCursor ctxs1 ty1 tmPath1 tm1
+  TypeSelect path1 ctxs1 ty1 path2 ctxs2 ty2 ori ->
+    if ori then TypeCursor ctxs2 (path2 <> path1) ty2
+           else TypeCursor ctxs1 path1 ty1
+  CtrListSelect path1 ctxs1 ctrs1 path2 ctxs2 ctrs2 ori ->
+    if ori then CtrListCursor ctxs2 (path2 <> path1) ctrs2
+           else CtrListCursor ctxs1 path1 ctrs1
+  CtrParamListSelect path1 ctxs1 ctrParams1 path2 ctxs2 ctrParams2 ori ->
+    if ori then CtrParamListCursor ctxs2 (path2 <> path1) ctrParams2
+           else CtrParamListCursor ctxs1 path1 ctrParams1
+  TypeBindListSelect path1 ctxs1 tyBinds1 path2 ctxs2 tyBinds2 ori ->
+    if ori then TypeBindListCursor ctxs2 (path2 <> path1) tyBinds2
+           else TypeBindListCursor ctxs1 path1 tyBinds1

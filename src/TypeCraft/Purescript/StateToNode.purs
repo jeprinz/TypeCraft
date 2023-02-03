@@ -222,7 +222,7 @@ cursorModeToNode cursorMode =
                         $ ctrListToNode false (AISelect path ctxs ctrs Nil) { ctxs, ctrs }
               )
       _ -> unsafeThrow "Shouldn't get here: non-CtrListCursor, but tried a CtrPath completion!"
-    CompletionTypeBindListPath path' -> case cursorMode.cursorLocation of
+    CompletionTypeBindListPath path' listTyBindCh -> case cursorMode.cursorLocation of
       TypeBindListCursor ctxs path tyBinds ->
         setNodeStyle makeQueryInsertTopStyle
           $ typeBindListPathToNode false Nil BITerm { ctxs, tyBinds, listTypeBindPath: path' }

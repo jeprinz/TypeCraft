@@ -19,7 +19,7 @@ import TypeCraft.Purescript.MD (defaultTypeBoundaryMD)
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
-import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), SelectMode, State, botSelectOrientation, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
+import TypeCraft.Purescript.State
 import TypeCraft.Purescript.TypeChangeAlgebra
 import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Util (hole')
@@ -131,6 +131,16 @@ submitQuery cursorMode = case cursorMode.cursorLocation of
                 let path' = chListCtrParamPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
                 pure {
                     cursorLocation: CtrParamListCursor ctxs (pathNew <> path') ctrParams
+                    , query: emptyQuery
+                }
+              _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
+  TypeBindListCursor ctxs path tyBinds ->
+    getCompletion cursorMode.query
+      >>= case _ of
+              CompletionTypeBindListPath pathNew ch ->
+                let path' = chListTypeBindPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
+                pure {
+                    cursorLocation: TypeBindListCursor ctxs (pathNew <> path') tyBinds
                     , query: emptyQuery
                 }
               _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"

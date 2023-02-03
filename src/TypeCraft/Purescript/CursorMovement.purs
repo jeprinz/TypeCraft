@@ -95,7 +95,7 @@ getCursorChildren (TypeBindListCursor ctxs up tyBinds) =
     recListTypeBind ({
         cons: \tyBind tyBinds -> TypeBindCursor tyBind.ctxs (TypeBindListCons1 {--} tyBinds.tyBinds : up) tyBind.tyBind
             : TypeBindListCursor tyBinds.ctxs (TypeBindListCons2 tyBind.tyBind {--} : up) tyBinds.tyBinds : Nil
-        , nil: Nil
+        , nil: \_ -> Nil
     }) {ctxs, tyBinds}
 
 -- the Int is what'th child the input is of the output

@@ -202,11 +202,11 @@ recListTypeArg args {ctxs, tyArgs: Nil} = args.nil unit
 
 type ListTypeBindRec a = {
     cons :: TypeBindRecValue -> ListTypeBindRecValue -> a
-    , nil :: a
+    , nil :: Unit -> a
 }
 
 recListTypeBind :: forall a. ListTypeBindRec a -> ListTypeBindRecValue -> a
 recListTypeBind args {ctxs, tyBinds: tyBind: tyBinds} =
     args.cons {ctxs, tyBind}
         {ctxs, tyBinds}
-recListTypeBind args {ctxs, tyBinds: Nil} = args.nil
+recListTypeBind args {ctxs, tyBinds: Nil} = args.nil unit

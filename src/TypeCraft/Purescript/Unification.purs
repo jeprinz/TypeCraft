@@ -206,7 +206,7 @@ subTypePath sub (tooth : teeth) =
         Buffer2 md def {-defTy-} body bodyTy -> Buffer2 md (sterm def) {--} (sterm body) (stype bodyTy) : subTermPath sub teeth
         TLet3 md tyBind tyBinds {-def-} body bodyTy -> TLet3 md tyBind tyBinds {--} (sterm body) (stype bodyTy) : subTermPath sub teeth
         Arrow1 md {--} ty2 -> Arrow1 md {--} (stype ty2) : subTypePath sub teeth
-        Arrow2 md ty1 {--} -> Arrow1 md (stype ty1) {--} : subTypePath sub teeth
+        Arrow2 md ty1 {--} -> Arrow2 md (stype ty1) {--} : subTypePath sub teeth
         TypeArg1 md {--} -> TypeArg1 md {--} : subTypeArgPath sub teeth
         _ -> unsafeThrow "Either wasn't a type path, or I forgot a case in subTypePath"
 
