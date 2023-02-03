@@ -226,6 +226,36 @@
 
 /* lists */
 
-.list-top {
-  
+/* .node.list.cursor {
+  box-shadow: -2px 0 0 0 blue;
+} */
+
+.node.list.select-top {
+  border-radius: 0.2rem;
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+  background-color: rgb(208, 236, 255)
+}
+
+.node.list.select-bot {
+  border-radius: 0.2rem;
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+  background-color: white;
+}
+
+.node.list.query-replace-new {
+  border-radius: 0.2rem;
+  padding: 0 0.2rem;
+  background-color: rgb(196, 196, 255);
+  box-shadow: 0 0 0 1px black;
+}
+
+.node.list.query-replace-old {
+  border-radius: 0.2rem;
+  padding: 0 0.2rem;
+  background-color: rgb(205, 205, 205);
+  box-shadow: 0 0 0 1px black;
 }
