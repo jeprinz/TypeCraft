@@ -65,4 +65,4 @@ export type NodeStyle =
     'query-replace-old' |
     'query-invalid' |
     'query-metahole' |
-    'list-first'
+    'list-head'

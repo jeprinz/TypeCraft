@@ -111,7 +111,7 @@ stepKidsTerm isActive term kids = case term of
   Let md bnd bnds imp sig bod ty
     | [ k_bnd, k_bnds, k_sig, k_imp, k_bod ] <- kids ->
       [ k_bnd (Let1 md bnds imp sig bod ty)
-      , k_bnds (Let2 md bnd imp sig bod ty)
+      , addNodeStyle (NodeStyle "list-head") $ k_bnds (Let2 md bnd imp sig bod ty)
       , setNodeIndentation (indentIf isActive md.typeIndented) $ k_sig (Let4 md bnd bnds imp bod ty) -- NOTE: Yes, these are out of order. Yes, they need to stay like that.
       , setNodeIndentation (indentIf isActive md.defIndented) $ k_imp (Let3 md bnd bnds sig bod ty)
       , setNodeIndentation (newlineIf isActive md.bodyIndented) $ k_bod (Let5 md bnd bnds imp sig ty)

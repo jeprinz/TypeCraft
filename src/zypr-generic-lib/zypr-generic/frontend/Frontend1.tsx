@@ -20,6 +20,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       if (node.isParenthesized)
         kids = ([] as JSX.Element[]).concat([Punc.parenL], kids, [Punc.parenR])
 
+      if (node.tag.case.includes("nil")) {
+        kids = ([] as JSX.Element[]).concat(kids, [Punc.angleR])
+      }
+
       // TODO: Indentation 
 
       // Cursor
@@ -90,6 +94,18 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         ]
       }
 
+      if (node.styles.includes('list-head')) {
+        kids = ([] as JSX.Element[]).concat([Punc.angleL], kids)
+      }
+
+      if (node.styles.includes('list-head') && node.tag.case.includes("list nil") && !node.styles.includes("cursor")) {
+        kids = [
+          <div className="list-head-nil-wrapper">
+            {kids}
+          </div>
+        ]
+      }
+
       // Indentation
       switch (node.indentation.case) {
         // no newline nor indent
@@ -147,19 +163,28 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         }
       }
 
+      function renderConsTail(kidNode: Node, kidElems: JSX.Element[], sepElems: JSX.Element[]): JSX.Element[] {
+        // only add separator if the tail is not nil
+        if (kidNode.tag.case.includes('nil')) {
+          return kidElems;
+        } else {
+          return ([] as JSX.Element[]).concat(sepElems, kidElems)
+        }
+      }
+
       switch (node.tag.case) {
         case 'ty arr': return go(node, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat(), indentationLevel)
         case 'ty hol': return go(node, ["ty_hol"], [<div className="ty_hol-inner">*</div>].flat(), indentationLevel)
-        case 'ty neu': return go(node, ["ty_neu"], [renderLabel(node.label), [Punc.angleL], kid(), [Punc.angleR]].flat(), indentationLevel)
+        case 'ty neu': return go(node, ["ty_neu"], [renderLabel(node.label), kid()].flat(), indentationLevel)
         case 'poly-ty forall': return go(node, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
         case 'poly-ty ty': return go(node, ["poly-ty_ty"], kid(), indentationLevel)
         case 'ty-arg': return go(node, ["ty-arg"], kid(), indentationLevel)
         case 'tm app': return go(node, ["tm_app"], [kid(), kid(), [Punc.application]].flat(), indentationLevel)
         case 'tm lam': return go(node, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
         case 'tm var': return go(node, ["tm_var"], [renderLabel(node.label), kid()].flat(), indentationLevel)
-        case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR], [Punc.colon], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
-        case 'tm dat': return go(node, ["tm_dat"], [[Punc.data], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
-        case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), [Punc.angleL], kid(), [Punc.angleR, Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
+        case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
+        case 'tm dat': return go(node, ["tm_dat"], [[Punc.data], kid(), kid(), [Punc.assign_shortFront], kid(), [Punc.in_], kid()].flat(), indentationLevel)
+        case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat(), indentationLevel) // TODO: render typechange
         case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
         case 'tm hol': return go(node, ["tm_hol"], [<div className="tm_hol-inner">{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
@@ -169,17 +194,17 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'ctr-prm': return go(node, ["ctr-prm"], [[/* TODO: name */], [Punc.colon], kid()].flat(), indentationLevel) // TODO: label
         case 'ctr': return go(node, ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat(), indentationLevel)
         // ty-arg-list
-        case 'ty-arg-list cons': return go(node, ["ty-arg-list_cons"], [kid(), [Punc.comma], kid()].flat(), indentationLevel)
-        case 'ty-arg-list nil': return go(node, ["ty-arg-list_nil"], [Punc.listNil], indentationLevel)
+        case 'ty-arg-list cons': return go(node, ["ty-arg-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.comma])].flat(), indentationLevel)
+        case 'ty-arg-list nil': return go(node, ["ty-arg-list_nil list nil"], [Punc.listNil], indentationLevel)
         // ty-bnd-list
-        case 'ty-bnd-list cons': return go(node, ["ty-bnd-list_cons"], [kid(), [Punc.comma], kid()].flat(), indentationLevel)
-        case 'ty-bnd-list nil': return go(node, ["ty-bnd-list_nil"], [Punc.listNil], indentationLevel)
+        case 'ty-bnd-list cons': return go(node, ["ty-bnd-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.comma])].flat(), indentationLevel)
+        case 'ty-bnd-list nil': return go(node, ["ty-bnd-list_nil list nil"], [Punc.listNil], indentationLevel)
         // ctr-list
-        case 'ctr-list cons': return go(node, ["ctr-list_cons"], [kid(), [Punc.vertical], kid()].flat(), indentationLevel)
-        case 'ctr-list nil': return go(node, ["ctr-list_nil"], [Punc.listNil], indentationLevel)
+        case 'ctr-list cons': return go(node, ["ctr-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.vertical])].flat(), indentationLevel)
+        case 'ctr-list nil': return go(node, ["ctr-list_nil list nil"], [Punc.listNil], indentationLevel)
         // ctr-prm-list
-        case 'ctr-prm-list cons': return go(node, ["ctr-prm-list_cons"], [kid(), [Punc.comma], kid()].flat(), indentationLevel)
-        case 'ctr-prm-list nil': return go(node, ["ctr-prm-list_nil"], [Punc.listNil], indentationLevel)
+        case 'ctr-prm-list cons': return go(node, ["ctr-prm-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.comma])].flat(), indentationLevel)
+        case 'ctr-prm-list nil': return go(node, ["ctr-prm-list_nil list nil"], [Punc.listNil], indentationLevel)
         // change
         case 'replace': return go(node, ["replace"], [kid(), [Punc.rewrite], kid()].flat(), indentationLevel)
         case 'plus': return go(node, ["plus"], [kid(), [Punc.plus], [Punc.bracketL], kid(), [Punc.bracketR]].flat(), indentationLevel)

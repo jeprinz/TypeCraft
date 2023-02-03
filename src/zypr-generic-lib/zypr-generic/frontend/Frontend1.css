@@ -119,6 +119,9 @@
 .punctuation.colon {
   margin: 0 0.5rem;
 }
+.punctuation.colon_shortFront {
+  margin-right: 0.5rem;
+}
 
 .punctuation.mapsto {
   margin: 0 0.5rem;
@@ -138,6 +141,9 @@
 
 .punctuation.assign {
   margin: 0 0.5rem;
+}
+.punctuation.assign_shortFront {
+  margin-right: 0.5rem;
 }
 
 .punctuation.data {
@@ -226,36 +232,75 @@
 
 /* lists */
 
-/* .node.list.cursor {
+.node.list.cons {
+  padding-left: 0.1rem;
+}
+
+.node.list.nil {
+  padding-left: 0.2rem;
+}
+
+.listNil {
+  display: inline-block;
+  width: 0.2rem;
+}
+
+.node.list.cursor {
+  border-radius: 0;
   box-shadow: -2px 0 0 0 blue;
-} */
+}
+
+.node.list.nil.cursor {
+  box-shadow: none;
+}
+.node.list.nil.cursor > .listNil {
+  box-shadow: -2px 0 0 0 blue;
+}
 
 .node.list.select-top {
-  border-radius: 0.2rem;
-  box-shadow:
-    -2px 0 0 0 blue,
-    2px 0 0 0 blue;
+  border-radius: 0;
+  box-shadow: -2px 0 0 0 blue;
   background-color: rgb(208, 236, 255)
 }
 
 .node.list.select-bot {
-  border-radius: 0.2rem;
-  box-shadow:
-    -2px 0 0 0 blue,
-    2px 0 0 0 blue;
+  border-radius: 0;
+  box-shadow: -2px 0 0 0 blue;
+  background-color: white;
+}
+
+.node.list.nil.select-bot {
+  box-shadow: none;
+}
+.node.list.nil.select-bot > .listNil {
+  box-shadow: -2px 0 0 0 blue;
   background-color: white;
 }
 
 .node.list.query-replace-new {
-  border-radius: 0.2rem;
   padding: 0 0.2rem;
   background-color: rgb(196, 196, 255);
   box-shadow: 0 0 0 1px black;
 }
 
 .node.list.query-replace-old {
-  border-radius: 0.2rem;
   padding: 0 0.2rem;
   background-color: rgb(205, 205, 205);
   box-shadow: 0 0 0 1px black;
+}
+
+.list-head-nil-wrapper {
+  display: inline-block;
+}
+
+.list-head-nil-wrapper > * {
+  visibility: hidden;
+}
+
+.list-head-nil-wrapper:hover > * {
+  visibility: visible;
+}
+
+.list-head-nil-wrapper > .cursor {
+  visibility: visible;
 }
