@@ -44,10 +44,10 @@ subType equiv = applySubType { subTypeVars : (map (\x -> TNeu defaultTNeuMD x Li
 subChange :: TyVarEquiv -> Change -> Change
 subChange equiv = applySubChange { subTypeVars : (map (\x -> TNeu defaultTNeuMD x List.Nil) equiv) , subTHoles : Map.empty}
 
-subChangeParam :: TyVarEquiv -> ChangeParam -> ChangeParam
-subChangeParam equiv (ChangeParam c) = ChangeParam (subChange equiv c)
-subChangeParam equiv (PlusParam t) = PlusParam (subType equiv t)
-subChangeParam equiv (MinusParam t) = MinusParam (subType equiv t)
+--subChangeParam :: TyVarEquiv -> ChangeParam -> ChangeParam
+--subChangeParam equiv (ChangeParam c) = ChangeParam (subChange equiv c)
+--subChangeParam equiv (PlusParam t) = PlusParam (subType equiv t)
+--subChangeParam equiv (MinusParam t) = MinusParam (subType equiv t)
 
 subTypeArg :: TyVarEquiv -> TypeArg -> TypeArg
 subTypeArg equiv (TypeArg md ty) = TypeArg md (subType equiv ty)

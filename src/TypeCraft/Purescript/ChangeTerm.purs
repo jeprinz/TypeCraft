@@ -20,7 +20,7 @@ import TypeCraft.Purescript.Util (lookup')
 import Debug (trace)
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Freshen
-import TypeCraft.Purescript.Unification (applySubChange)
+import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Kinds (bindsToKind)
 
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
@@ -54,7 +54,7 @@ chTerm kctx ctx c t =
                        (Buffer defaultBufferMD t2 argTy t1' (snd (getEndpoints otherChange)))
 --                _ -> composeChange (Minus argTy (tyInject (snd (getEndpoints cin)))) c1 /\ -- is this right?
 --                     Buffer defaultBufferMD t1' (snd (getEndpoints c1)) t1'
-            cin /\ (Var md x params) -> -- TODO: actually do var case for real
+            cin /\ (Var md x tArgs) -> -- TODO: actually do var case for real
                 -- try the polymorphism case
 --                case getSubstitution cin (lookup x ctx)
                 let xVarCh = lookup' x ctx in
@@ -66,16 +66,18 @@ chTerm kctx ctx c t =
 ----                                   let ty = (snd (getEndpoints xChange))
 ----                                   sub <- getSubstitution cin ty
 ----                                   let c' = composeChange (invert c) (subChange sub (tyInject ty))
-----                                   pure $ c' /\ (Var md x (unsafeThrow "need to deal with params!"))
+----                                   pure $ c' /\ (Var md x (unsafeThrow "need to deal with tArgs!"))
 --                                Nothing
 --                        in case tryPolymorhpismCase  of
 --                           Just res -> res
---                           Nothing -> hole -- xChange /\ Var md x (unsafeThrow "need to deal with params!") -- if the polymorhpism case didn't apply, simply return the change and leave the variable as is
+--                           Nothing -> hole -- xChange /\ Var md x (unsafeThrow "need to deal with tArgs!") -- if the polymorhpism case didn't apply, simply return the change and leave the variable as is
                     VarTypeChange (PChange cVar) ->
                         if not (chIsId cin) then tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD
-                        else cVar /\ Var md x params
+                        else cVar /\ Var md x tArgs
                     VarInsert _ -> unsafeThrow "shouldn't get here"
-                    VarTypeChange _ -> unsafeThrow "not implemented yet"
+                    VarTypeChange pch ->
+                        let ch /\ tyArgs' = chTypeArgs2 kctx tArgs pch in
+                        ch /\ Var md x tyArgs'
             (CArrow c1 c2) /\ (Lambda md tBind@(TermBind _ x) ty t bodyTy) ->
                 if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen 1" else
                 if not (bodyTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen 2" else
@@ -146,8 +148,19 @@ This is a tricky function to write. It needs to account for:
 - The list of type arguments needs to be altered according to the PolyChange. For example, arguments added or removed
 -}
 -- here, the output Change is the Change inside the input PolyChange.
---chTypeArgs :: KindChangeCtx -> List TypeArg -> PolyChange -> Change /\ (List TypeArg)
---chTypeArgs = hole' "cTypeArgs"
+chTypeArgs2 :: KindChangeCtx -> List TypeArg -> PolyChange -> Change /\ (List TypeArg)
+chTypeArgs2 kctx Nil (PChange ch) = ch /\ Nil
+chTypeArgs2 kctx (tyArg@(TypeArg _ ty) : tyArgs) (CForall x pc) =
+    let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
+    let ch' = applySubChange { subTypeVars : (insert x ty empty) , subTHoles : empty} ch in
+    ch' /\ tyArg : tyArgsOut
+chTypeArgs2 kctx tyArgs (PPlus x pc) =
+    let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
+    ch /\ (TypeArg defaultTypeArgMD (freshTHole unit)) : tyArgsOut
+chTypeArgs2 kctx (tyArg : tyArgs) (PMinus x pc) =
+    let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
+    ch /\ tyArgs
+chTypeArgs2 _ _ _ = unsafeThrow "invalid input to chTypeArgs2, or I forgot a case"
 
 -- could avoid returning Type (because you can get it from the change with getEndpoints), if I put metadata into Change
 chType :: KindChangeCtx -> Type -> Type /\ Change
