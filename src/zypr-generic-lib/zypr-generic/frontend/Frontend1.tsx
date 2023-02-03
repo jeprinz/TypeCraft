@@ -165,7 +165,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm ty-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat(), indentationLevel) // TODO: render typechange
         case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
         case 'tm hol': return go(node, ["tm_hol"], [<div className="tm_hol-inner">{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
-        // case 'tm hol': return go(node, ["tm_hol"], [Punc.interrogative].flat(), indentationLevel)
         case 'tm buf': return go(node, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'ty-bnd': return go(node, ["ty-bnd"], renderLabel(node.label), indentationLevel)
         case 'tm-bnd': return go(node, ["tm-bnd"], renderLabel(node.label), indentationLevel)
