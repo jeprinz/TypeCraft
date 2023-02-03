@@ -4,84 +4,27 @@
   display: inline;
 }
 
-.node.cursorable {}
-
-.node.selectable {}
-
-.node.cursor {
-  border-radius: 0.2rem;
-  box-shadow:
-    -2px 0 0 0 blue,
-    2px 0 0 0 blue;
-}
-
-.node.select-top {
-  border-radius: 0.2rem;
-  box-shadow:
-    -2px 0 0 0 blue,
-    2px 0 0 0 blue;
-  background-color: rgb(208, 236, 255)
-}
-
-.node.select-bot {
-  border-radius: 0.2rem;
-  box-shadow:
-    -2px 0 0 0 blue,
-    2px 0 0 0 blue;
-  background-color: white;
-}
-
-.node.query-replace-new {
-  border-radius: 0.2rem;
-  background-color: rgb(196, 196, 255);
-  box-shadow: 0 0 0 1px black;
-}
-
-.node.query-replace-old {
-  border-radius: 0.2rem;
-  background-color: rgb(205, 205, 205);
-  box-shadow: 0 0 0 1px black;
-}
-
-.node.tm_hol {
-  border-radius: 0.2rem;
-  padding: 0 0.2rem;
-
-  background-color: rgb(255, 149, 114);
-  box-shadow:  0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
-}
-
-.node.tm_hol.cursor {
-  box-shadow: -2px 0 0 0 blue, 2px 0 0 0 blue, 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
-}
-
 .tm_hol-inner {
   display: inline-block;
-  /* border-radius: 0.2rem; */
-  /* padding: 0 0.2rem; */
-  /* background-color: rgb(255, 149, 114);
-  box-shadow: 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset; */
-}
-
-.node.ty_hol {
   border-radius: 0.2rem;
   padding: 0 0.2rem;
-
+  display: inline-block;
   background-color: rgb(255, 149, 114);
   box-shadow:  0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }
 
-.node.ty_hol.cursor {
-  box-shadow: -2px 0 0 0 blue, 2px 0 0 0 blue, 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
+.ty_hol-inner {
+  display: inline-block;
+  border-radius: 0.2rem;
+  padding: 0 0.2rem;
+  display: inline-block;
+  background-color: rgb(255, 149, 114);
+  box-shadow:  0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }
 
 .ty_hol-inner {
   display: inline;
   white-space: pre;
-}
-
-.node.tm_hol.cursor {
-  box-shadow: -2px 0 0 0 blue, 2px 0 0 0 blue, 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }
 
 .node.tm_ty-boundary-change {
@@ -235,4 +178,48 @@
   box-shadow: 0 0 0 1px orange inset, 1px 1px 2px 0 black inset; */
   background-color: rgb(255, 149, 114);
   box-shadow: 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
+}
+
+/* cursor, select, etc. */
+
+
+.node.cursorable {}
+
+.node.selectable {}
+
+.node.cursor {
+  border-radius: 0.2rem;
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+}
+
+.node.select-top {
+  border-radius: 0.2rem;
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+  background-color: rgb(208, 236, 255)
+}
+
+.node.select-bot {
+  border-radius: 0.2rem;
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+  background-color: white;
+}
+
+.node.query-replace-new {
+  border-radius: 0.2rem;
+  padding: 0 0.2rem;
+  background-color: rgb(196, 196, 255);
+  box-shadow: 0 0 0 1px black;
+}
+
+.node.query-replace-old {
+  border-radius: 0.2rem;
+  padding: 0 0.2rem;
+  background-color: rgb(205, 205, 205);
+  box-shadow: 0 0 0 1px black;
 }
