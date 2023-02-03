@@ -71,11 +71,12 @@ chTerm kctx ctx c t =
 --                        in case tryPolymorhpismCase  of
 --                           Just res -> res
 --                           Nothing -> hole -- xChange /\ Var md x (unsafeThrow "need to deal with tArgs!") -- if the polymorhpism case didn't apply, simply return the change and leave the variable as is
-                    VarTypeChange (PChange cVar) ->
-                        if not (chIsId cin) then tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD
-                        else cVar /\ Var md x tArgs
+--                    VarTypeChange (PChange cVar) ->
+--                        if not (chIsId cin) then tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD
+--                        else cVar /\ Var md x tArgs
                     VarInsert _ -> unsafeThrow "shouldn't get here"
                     VarTypeChange pch ->
+                        if not (chIsId cin) then tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD else
                         let ch /\ tyArgs' = chTypeArgs2 kctx tArgs pch in
                         ch /\ Var md x tyArgs'
             (CArrow c1 c2) /\ (Lambda md tBind@(TermBind _ x) ty t bodyTy) ->
@@ -100,8 +101,9 @@ chTerm kctx ctx c t =
                 -- TODO: need to include the binds into the kctx for some things I think?
                 if not (fst (getEndpoints c) == tyBody) then unsafeThrow "shouldn't happen 5" else
                 let ctx' = addLetToCCtx ctx tBind binds ty in
-                let c1 /\ t1'= chTerm kctx ctx' (tyInject ty) t1 in
-                let c2 /\ t2' = chTerm kctx ctx' c t2 in
+                let kctx' = addLetToKCCtx kctx binds in
+                let c1 /\ t1'= chTerm kctx' ctx' (tyInject ty) t1 in
+                let c2 /\ t2' = chTerm kctx' ctx' c t2 in
                 let t1'' = if chIsId c1 then t1' else TypeBoundary defaultTypeBoundaryMD c1 t1' in
                 c2 /\ Let md tBind binds t1'' ty t2' (snd (getEndpoints c2))
             c /\ Buffer md t1 ty1 t2 bodyTy ->
