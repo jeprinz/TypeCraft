@@ -90,7 +90,7 @@ export const makeQueryReplaceOldNodeStyle = { case: 'query-replace-old' }
 export const makeQueryInvalidNodeStyle = (str) => ({ case: 'query-invalid', string: str })
 export const makeQueryMetaholeNodeStyle = { case: 'query-metahole' }
 
-export const setNodeStyle = style => node => ({ ...node, style })
+export const addNodeStyle = style => node => ({ ...node, styles: [...node.styles, style] })
 
 // TODO: even if i explicitly use the other kinds of indent, always sets
 // indentation to be "inline" wehen it gets here... wtf

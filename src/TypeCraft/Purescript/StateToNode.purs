@@ -2,6 +2,7 @@ module TypeCraft.Purescript.StateToNode where
 
 import Prelude
 import Prim hiding (Type)
+
 import Data.Array (foldr)
 import Data.Array as Array
 import Data.Int (toNumber)
@@ -13,15 +14,13 @@ import Data.Tuple.Nested ((/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Dentist (downPathToCtxChange)
 import TypeCraft.Purescript.Grammar (freshHole)
-import TypeCraft.Purescript.Node (Node, makeCursorNodeStyle, makeQueryInsertBotNodeStyle, makeQueryInsertTopStyle, makeQueryMetaholeNodeStyle, makeQueryReplaceNewNodeStyle, makeSelectBotNodeStyle, makeSelectTopNodeStyle, setNodeCompletions, setNodeQueryString, setNodeStyle)
-import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeArgListPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode)
+import TypeCraft.Purescript.Node (Node, NodeStyle(..), addNodeStyle, setNodeCompletions, setNodeQueryString)
+import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), State, getCompletion)
-import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeArgListToNode, typeBindListToNode, typeBindToNode, typeToNode)
+import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode)
 import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 import TypeCraft.Purescript.Unification (applySubType)
 import TypeCraft.Purescript.Util (fromJust', hole')
-import TypeCraft.Purescript.Util (hole)
-
 {-
 TODO: Note from Jacob: Counterintuitvely, all cursor modes should use BISelect
 and AISelect, because it is from a cursor mode that a selection is possible.
@@ -37,42 +36,42 @@ stateToNode st = case st.mode of
     { select: TermSelect topPath ctx1 ty1 term1 middlePath ctx2 ty2 term2 root } ->  -- TODO: render something differently depending on root?
       termPathToNode true Nil BITerm
         { ctxs: ctx1, ty: ty1, term: term1, termPath: topPath }
-        $ setNodeStyle makeSelectTopNodeStyle
+        $ addNodeStyle (NodeStyle "select-top")
         $ termPathToNode true topPath BITerm
             { ctxs: ctx2, ty: ty2, term: term2, termPath: middlePath }
-        $ setNodeStyle makeSelectBotNodeStyle
+        $ addNodeStyle (NodeStyle "select-bot")
         $ termToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2, term: term2 }
     { select: TypeSelect topPath ctx1 ty1 middlePath ctx2 ty2 root } ->
       typePathToNode true Nil BITerm
         { ctxs: ctx1, ty: ty1, typePath: topPath }
-        $ setNodeStyle makeSelectTopNodeStyle
+        $ addNodeStyle (NodeStyle "select-top")
         $ typePathToNode true topPath BITerm
             { ctxs: ctx2, ty: ty2, typePath: middlePath }
-        $ setNodeStyle makeSelectBotNodeStyle
+        $ addNodeStyle (NodeStyle "select-bot")
         $ typeToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2 }
     { select: CtrListSelect topPath ctx1 ctrs1 middlePath ctx2 ctrs2 root } ->
       ctrListPathToNode true Nil BITerm
         { ctxs: ctx1, ctrs: ctrs1, listCtrPath: topPath }
-        $ setNodeStyle makeSelectTopNodeStyle
+        $ addNodeStyle (NodeStyle "select-top")
         $ ctrListPathToNode true topPath BITerm
             { ctxs: ctx2, ctrs: ctrs2, listCtrPath: middlePath }
-        $ setNodeStyle makeSelectBotNodeStyle
+        $ addNodeStyle (NodeStyle "select-bot")
         $ ctrListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ctrs: ctrs2 }
     { select: CtrParamListSelect topPath ctx1 ctrParams1 middlePath ctx2 ctrParams2 root } ->
       ctrParamListPathToNode true Nil BITerm
         { ctxs: ctx1, ctrParams: ctrParams1, listCtrParamPath: topPath }
-        $ setNodeStyle makeSelectTopNodeStyle
+        $ addNodeStyle (NodeStyle "select-top")
         $ ctrParamListPathToNode true topPath BITerm
             { ctxs: ctx2, ctrParams: ctrParams2, listCtrParamPath: middlePath }
-        $ setNodeStyle makeSelectBotNodeStyle
+        $ addNodeStyle (NodeStyle "select-bot")
         $ ctrParamListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ctrParams: ctrParams2 }
     { select: TypeBindListSelect topPath ctx1 tyBinds1 middlePath ctx2 tyBinds2 root } ->
       typeBindListPathToNode true Nil BITerm
         { ctxs: ctx1, tyBinds: tyBinds1, listTypeBindPath: topPath }
-        $ setNodeStyle makeSelectTopNodeStyle
+        $ addNodeStyle (NodeStyle "select-top")
         $ typeBindListPathToNode true topPath BITerm
             { ctxs: ctx2, tyBinds: tyBinds2, listTypeBindPath: middlePath }
-        $ setNodeStyle makeSelectBotNodeStyle
+        $ addNodeStyle (NodeStyle "select-bot")
         $ typeBindListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, tyBinds: tyBinds2 }
 
 cursorModeToNode :: CursorMode -> Node
@@ -125,7 +124,7 @@ cursorModeToNode cursorMode =
 
   cursorModeTermToNode :: Unit -> Node
   cursorModeTermToNode _ =
-    setNodeStyle makeCursorNodeStyle case cursorMode.cursorLocation of
+    addNodeStyle (NodeStyle "cursor") case cursorMode.cursorLocation of
       TermCursor ctxs ty termPath term -> termToNode true (AISelect termPath ctxs (term /\ ty) Nil) { ctxs, term, ty }
       TypeCursor ctxs typePath ty -> typeToNode true (AISelect typePath ctxs ty Nil) { ctxs, ty }
       TypeBindCursor ctxs upPath tyBind -> typeBindToNode true (AICursor upPath) { ctxs, tyBind }
@@ -142,7 +141,7 @@ cursorModeToNode cursorMode =
         let
           ty = applySubType sub ty'
         in
-          setNodeStyle makeQueryReplaceNewNodeStyle
+          addNodeStyle (NodeStyle "query-replace-new")
             $ termToNode false
                 (AISelect termPath ctxs (term /\ ty) Nil)
                 { ctxs, term, ty }
@@ -155,10 +154,10 @@ cursorModeToNode cursorMode =
           let
             newCtxs = snd (getAllEndpoints chCtxs)
           in
-            setNodeStyle makeQueryInsertTopStyle
+            addNodeStyle (NodeStyle "query-insert-top")
               $ termPathToNode false Nil BITerm -- ideally we shouldn't have to specify Nil and BITerm here, as they are irrelevant. See refactors.
                   { ctxs: newCtxs {-TODO: Jacob note: this is where it needs newCtxs-}, term, termPath, ty }
-                  ( setNodeStyle makeQueryInsertBotNodeStyle
+                  ( addNodeStyle (NodeStyle "query-insert-bot")
                       if opts.isInline then
                         -- if inline, render with cursor term at head
                         termToNode true -- TODO: shouldn't this be false? Why should you be able to click on the query?
@@ -171,17 +170,17 @@ cursorModeToNode cursorMode =
       _ -> hole' "completionToNode CompletionPath non-TermCursor"
     CompletionType ty _sub -> case cursorMode.cursorLocation of
       TypeCursor ctxs path _ty ->
-        setNodeStyle makeQueryReplaceNewNodeStyle
+        addNodeStyle (NodeStyle "query-replace-new")
           $ typeToNode false
               (AISelect path ctxs ty Nil)
               { ctxs, ty }
       _ -> hole' "completionToNode CompletionType non-TypeCursor"
     CompletionTypePath path' ch -> case cursorMode.cursorLocation of
       TypeCursor ctxs path ty ->
-        setNodeStyle makeQueryInsertTopStyle
+        addNodeStyle (NodeStyle "query-insert-top")
           $ typePathToNode false Nil BITerm -- ideally we shouldn't have to specify Nil and BITerm here, as they are irrelevant. See refactors.
               { ctxs, ty, typePath: path' }
-              ( setNodeStyle makeQueryInsertBotNodeStyle
+              ( addNodeStyle (NodeStyle "query-insert-bot")
                   if opts.isInline then
                     -- if inline, render with cursor type at head
                     typeToNode true
@@ -193,17 +192,17 @@ cursorModeToNode cursorMode =
       _ -> unsafeThrow "completionToNode CompletionTypePath non-TypeCursor"
     CompletionCtrParamListPath path' ch -> case cursorMode.cursorLocation of
       CtrParamListCursor ctxs path ctrParams ->
-        setNodeStyle makeQueryInsertTopStyle
+        addNodeStyle (NodeStyle "query-insert-top")
           $ ctrParamListPathToNode false Nil BITerm
               { ctxs, ctrParams, listCtrParamPath: path' }
-              ( setNodeStyle makeQueryInsertBotNodeStyle
+              ( addNodeStyle (NodeStyle "query-insert-bot")
                   if opts.isInline then
                     -- if inline, render with cursor type at head
                     ctrParamListToNode true
                       (AISelect (path' <> path) ctxs ctrParams (path' <> path))
                       { ctxs, ctrParams }
                   else
-                    setNodeStyle makeQueryMetaholeNodeStyle
+                    addNodeStyle (NodeStyle "query-metahole")
                       $ ctrParamListToNode false
                           (AISelect path ctxs ctrParams Nil)
                           { ctxs, ctrParams }
@@ -211,26 +210,26 @@ cursorModeToNode cursorMode =
       _ -> unsafeThrow "Shouldn't get here: non-CtrParamListCursor, but tried a CtrParamListPath completion!"
     CompletionCtrListPath path' listCtrCh -> case cursorMode.cursorLocation of
       CtrListCursor ctxs path ctrs ->
-        setNodeStyle makeQueryInsertTopStyle
+        addNodeStyle (NodeStyle "query-insert-top")
           $ ctrListPathToNode false Nil BITerm
               { ctxs, ctrs, listCtrPath: path' }
-              ( setNodeStyle makeQueryInsertBotNodeStyle
+              ( addNodeStyle (NodeStyle "query-insert-bot")
                   $ if opts.isInline then
                       ctrListToNode true (AISelect (path' <> path) ctxs ctrs (path' <> path)) { ctxs, ctrs }
                     else
-                      setNodeStyle makeQueryMetaholeNodeStyle
+                      addNodeStyle (NodeStyle "query-metahole")
                         $ ctrListToNode false (AISelect path ctxs ctrs Nil) { ctxs, ctrs }
               )
       _ -> unsafeThrow "Shouldn't get here: non-CtrListCursor, but tried a CtrPath completion!"
     CompletionTypeBindListPath path' listTyBindCh -> case cursorMode.cursorLocation of
       TypeBindListCursor ctxs path tyBinds ->
-        setNodeStyle makeQueryInsertTopStyle
+        addNodeStyle (NodeStyle "query-insert-top")
           $ typeBindListPathToNode false Nil BITerm { ctxs, tyBinds, listTypeBindPath: path' }
-              ( setNodeStyle makeQueryInsertBotNodeStyle
+              ( addNodeStyle (NodeStyle "query-insert-bot")
                   if opts.isInline then
                     typeBindListToNode true (AISelect (path' <> path) ctxs tyBinds (path' <> path)) { ctxs, tyBinds }
                   else
-                    setNodeStyle makeQueryMetaholeNodeStyle
+                    addNodeStyle (NodeStyle "query-metahole")
                       $ typeBindListToNode true (AISelect (path' <> path) ctxs tyBinds Nil) { ctxs, tyBinds }
               )
       _ -> unsafeThrow "Shouldn't get here: non-TypeBindListCursor, but tried a TypeBindList completion!"
@@ -241,12 +240,12 @@ cursorModeToNode cursorMode =
       let
         term = freshHole unit
       in
-        setNodeStyle makeQueryMetaholeNodeStyle
+        addNodeStyle (NodeStyle "query-metahole")
           $ termToNode false
               (AISelect termPath ctxs (term /\ ty) Nil)
               { ctxs, term, ty }
     TypeCursor ctxs path ty ->
-      setNodeStyle makeQueryMetaholeNodeStyle
+      addNodeStyle (NodeStyle "query-metahole")
         $ typeToNode false
             (AISelect path ctxs ty Nil)
             { ctxs, ty }

@@ -7,7 +7,7 @@ export type Node = {
     kids: Node[],
     getCursor?: ((st: State) => State),
     getSelect?: ((st: State) => State),
-    style: NodeStyle,
+    styles: NodeStyle[],
     indentation: NodeIndentation,
     isParenthesized: boolean,
     label?: string,
@@ -55,15 +55,13 @@ export type NodeTag
     | { case: 'plus' }
     | { case: 'minus' }
 
-
-export type NodeStyle
-    = { case: 'normal' }
-    | { case: 'cursor' }
-    | { case: 'select-top' }
-    | { case: 'select-bot' }
-    | { case: 'query-insert-top' }
-    | { case: 'query-insert-bot' }
-    | { case: 'query-replace-new' }
-    | { case: 'query-replace-old' }
-    | { case: 'query-invalid' }
-    | { case: 'query-metahole' }
+export type NodeStyle =
+    'cursor' |
+    'select-top' |
+    'select-bot' |
+    'query-insert-top' |
+    'query-insert-bot' |
+    'query-replace-new' |
+    'query-replace-old' |
+    'query-invalid' |
+    'query-metahole'

@@ -1,23 +1,18 @@
 module TypeCraft.Purescript.Node where
 
-import Control.Alternative
-import Control.Applicative
 import Prelude
 import Prim hiding (Type)
 import Data.Array (find)
 import Data.Bounded.Generic (genericBottom, genericTop)
-import Data.Enum (class BoundedEnum, class Enum, cardinality, enumFromTo)
+import Data.Enum (class BoundedEnum, class Enum, enumFromTo)
 import Data.Enum.Generic (genericCardinality, genericFromEnum, genericPred, genericSucc, genericToEnum)
-import Data.Foldable (foldr)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
-import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar
+import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), Type(..), TypeArg, TypeBind)
 import TypeCraft.Purescript.Nullable (Nullable)
 import TypeCraft.Purescript.Nullable as Nullable
 import TypeCraft.Purescript.State (State)
-import TypeCraft.Purescript.Util (hole, hole')
 import Data.List (List(..), (:))
 
 -- Node
@@ -27,7 +22,7 @@ foreign import makeNode_ ::
   { kids :: Array Node
   , getCursor :: Nullable (State -> State)
   , getSelect :: Nullable (State -> State)
-  , style :: NodeStyle
+  , styles :: Array String
   , indentation :: NodeIndentation
   , isParenthesized :: Boolean
   , tag :: NodeTag_
@@ -50,7 +45,7 @@ makeNode x =
     { kids: x.kids
     , getCursor: Nullable.fromMaybe x.getCursor
     , getSelect: Nullable.fromMaybe x.getSelect
-    , style: makeNormalNodeStyle
+    , styles: []
     , indentation: makeInlineNodeIndentation
     , isParenthesized: false
     , label: Nullable.emptyNullable
@@ -60,7 +55,7 @@ makeNode x =
     , tag: toNodeTag_ x.tag
     }
 
-foreign import setNodeStyle :: NodeStyle -> Node -> Node
+foreign import addNodeStyle :: NodeStyle -> Node -> Node
 
 foreign import setNodeIndentation :: NodeIndentation -> Node -> Node
 
@@ -235,27 +230,7 @@ typeToNodeTag = case _ of
     TNeu _ _ _ -> TNeuNodeTag
 
 -- NodeStyle
-foreign import data NodeStyle :: Prim.Type
-
-foreign import makeNormalNodeStyle :: NodeStyle
-
-foreign import makeCursorNodeStyle :: NodeStyle
-
-foreign import makeSelectTopNodeStyle :: NodeStyle
-
-foreign import makeSelectBotNodeStyle :: NodeStyle
-
-foreign import makeQueryInsertTopStyle :: NodeStyle
-
-foreign import makeQueryInsertBotNodeStyle :: NodeStyle
-
-foreign import makeQueryReplaceNewNodeStyle :: NodeStyle
-
-foreign import makeQueryReplaceOldNodeStyle :: NodeStyle
-
-foreign import makeQueryInvalidNodeStyle :: NodeStyle
-
-foreign import makeQueryMetaholeNodeStyle :: NodeStyle
+newtype NodeStyle = NodeStyle String
 
 -- utilities
 setIndentNodeIndentationIf :: Boolean -> Node -> Node

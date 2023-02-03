@@ -107,7 +107,7 @@ stepKidsTerm isActive term kids = case term of
       , setNodeIndentation (indentIf isActive md.bodyIndented) $ k_body (Lambda3 md bnd sig ty)
       ]
   Var md x args
-    | [k_tyargs] <- kids -> [k_tyargs (Var1 md x {-args-})]
+    | [ k_tyargs ] <- kids -> [ k_tyargs (Var1 md x {-args-}) ]
   Let md bnd bnds imp sig bod ty
     | [ k_bnd, k_bnds, k_sig, k_imp, k_bod ] <- kids ->
       [ k_bnd (Let1 md bnds imp sig bod ty)
@@ -131,7 +131,7 @@ stepKidsTerm isActive term kids = case term of
       , k_bod (TLet4 md bnd bnds sig ty)
       ]
   TypeBoundary md ch bod
-    | [ k_bod , k_ch ] <- kids -> [ k_bod (TypeBoundary1 md ch) , k_ch (TypeBoundary1 md ch) {-TODO: This is a dummy tooth because the change isn't a real node-} ]
+    | [ k_bod, k_ch ] <- kids -> [ k_bod (TypeBoundary1 md ch), k_ch (TypeBoundary1 md ch) {-TODO: This is a dummy tooth because the change isn't a real node-} ]
   ContextBoundary md x ch bod
     | [ k_bod ] <- kids -> [ k_bod (ContextBoundary1 md x ch) ]
   Hole md
@@ -191,14 +191,17 @@ termToNode isActive aboveInfo term =
             [ arrangeKidAI aboveInfo (termToNode isActive) t1
             , arrangeKidAI aboveInfo (termToNode isActive) t2
             ]
-    , var: \md x targs -> setNodeLabel (x `lookup'` term.ctxs.mdctx) $ arrangeTerm args [
-            arrangeKidAI cursorOnlyInfo (typeArgListToNode isActive) targs
-        ] -- TODO: needs to have type arguments
+    , var:
+        \md x targs ->
+          setNodeLabel (x `lookup'` term.ctxs.mdctx)
+            $ arrangeTerm args
+                [ arrangeKidAI cursorOnlyInfo (typeArgListToNode isActive) targs
+                ] -- TODO: needs to have type arguments
     , lett:
         \md tBind tyBinds def defTy body _bodyTy ->
           arrangeTerm args
             [ arrangeKidAI cursorOnlyInfo (termBindToNode isActive) tBind
-            , arrangeKidAI cursorOnlyInfo (typeBindListToNode isActive) tyBinds
+            , (\k t -> addNodeStyle (NodeStyle "list-top") (k t)) $ arrangeKidAI cursorOnlyInfo (typeBindListToNode isActive) tyBinds
             , arrangeKidAI cursorOnlyInfo (typeToNode isActive) defTy
             , arrangeKidAI aboveInfo (termToNode isActive) def
             , arrangeKidAI aboveInfo (termToNode isActive) body
@@ -322,9 +325,10 @@ typeToNode isActive aboveInfo ty =
             ]
     , tNeu:
         \md x tyArgs ->
-          setNodeLabel (x `lookup'` ty.ctxs.mdkctx) $ arrangeType args
-            [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
-            ]
+          setNodeLabel (x `lookup'` ty.ctxs.mdkctx)
+            $ arrangeType args
+                [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
+                ]
     , tHole: \md x -> arrangeType args []
     }
     ty
@@ -481,49 +485,55 @@ typeBindToNode isActive aboveInfo { ctxs, tyBind: tyBind@(TypeBind md x) } =
 
 stepKidsTypeBindList :: Boolean -> List TypeBind -> Array PreNode -> Array Node
 stepKidsTypeBindList isActive tyBinds kids = case tyBinds of
-    Nil | [] <- kids -> []
-    tyBind@(TypeBind md _) : tyBinds' | [k_tyBind, k_tyBinds] <- kids -> [
-        k_tyBind (TypeBindListCons1 {--} tyBinds')
-        , k_tyBinds (TypeBindListCons2 tyBind {--})
-    ]
-    _ -> unsafeThrow "stepKidsTypeBindList: wrong number of kids"
+  Nil
+    | [] <- kids -> []
+  tyBind@(TypeBind md _) : tyBinds'
+    | [ k_tyBind, k_tyBinds ] <- kids ->
+      [ k_tyBind (TypeBindListCons1 {--} tyBinds')
+      , k_tyBinds (TypeBindListCons2 tyBind {--})
+      ]
+  _ -> unsafeThrow "stepKidsTypeBindList: wrong number of kids"
 
-type TypeBindListNodeCursorInfo = {
-    isActive :: Boolean
+type TypeBindListNodeCursorInfo
+  = { isActive :: Boolean
     , makeCursor :: Unit -> Maybe CursorLocation
     , makeSelect :: Unit -> Maybe Select
     , tyBinds :: ListTypeBindRecValue
-}
+    }
 
 arrangeTypeBindList :: TypeBindListNodeCursorInfo -> Array PreNode -> Node
 arrangeTypeBindList args =
-    arrangeNodeKids {
-        isActive: args.isActive
-        , tag: tyBindListToNodeTag args.tyBinds.tyBinds
-        , stepKids: stepKidsTypeBindList args.isActive args.tyBinds.tyBinds
-        , makeCursor: args.makeCursor
-        , makeSelect: args.makeSelect
+  arrangeNodeKids
+    { isActive: args.isActive
+    , tag: tyBindListToNodeTag args.tyBinds.tyBinds
+    , stepKids: stepKidsTypeBindList args.isActive args.tyBinds.tyBinds
+    , makeCursor: args.makeCursor
+    , makeSelect: args.makeSelect
     }
 
 -- TypeBind
 typeBindListToNode :: Boolean -> AboveInfo (List TypeBind) -> ListTypeBindRecValue -> Node
 typeBindListToNode isActive aboveInfo tyBinds =
-    recListTypeBind {
-        cons: \tyBind tyBinds -> arrangeTypeBindList args [
-            arrangeKidAI (aIOnlyCursor aboveInfo) (typeBindToNode isActive) tyBind
+  recListTypeBind
+    { cons:
+        \tyBind tyBinds ->
+          arrangeTypeBindList args
+            [ arrangeKidAI (aIOnlyCursor aboveInfo) (typeBindToNode isActive) tyBind
             , arrangeKidAI aboveInfo (typeBindListToNode isActive) tyBinds
-        ]
-        , nil: \_ -> arrangeTypeBindList args []
-    } tyBinds
-    where
-    args = {
-        isActive
-        , makeCursor: \_ -> Just $ TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
-        , makeSelect: \_ -> case aboveInfo of
-            AICursor _path -> Nothing
-            AISelect topPath topCtx topTyBinds midPath -> Just $ TypeBindListSelect topPath topCtx topTyBinds midPath tyBinds.ctxs tyBinds.tyBinds topSelectOrientation
-            AINothing -> Nothing
-        , tyBinds
+            ]
+    , nil: \_ -> arrangeTypeBindList args []
+    }
+    tyBinds
+  where
+  args =
+    { isActive
+    , makeCursor: \_ -> Just $ TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
+    , makeSelect:
+        \_ -> case aboveInfo of
+          AICursor _path -> Nothing
+          AISelect topPath topCtx topTyBinds midPath -> Just $ TypeBindListSelect topPath topCtx topTyBinds midPath tyBinds.ctxs tyBinds.tyBinds topSelectOrientation
+          AINothing -> Nothing
+    , tyBinds
     }
 
 -- TermBind
@@ -538,12 +548,12 @@ termBindToNode isActive aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
         , tag: TermBindNodeTag
         }
 
-type CtrParamListNodeCursorInfo = {
-    isActive :: Boolean
+type CtrParamListNodeCursorInfo
+  = { isActive :: Boolean
     , makeCursor :: Unit -> Maybe CursorLocation
     , makeSelect :: Unit -> Maybe Select
     , ctrParams :: ListCtrParamRecValue
-}
+    }
 
 arrangeCtrParamList :: CtrParamListNodeCursorInfo -> Array PreNode -> Node
 arrangeCtrParamList args =
@@ -557,51 +567,57 @@ arrangeCtrParamList args =
 
 stepKidsCtrParamList :: Boolean -> List CtrParam -> Array PreNode -> Array Node
 stepKidsCtrParamList isActive ctrParams kids = case ctrParams of
-    Nil | [] <- kids -> []
-    ctrParam@(CtrParam md _) : ctrParams' | [k_ctrParam, k_ctrParams] <- kids -> [
-        k_ctrParam (CtrParamListCons1 {--} ctrParams')
-        , setNodeIndentation (indentIf isActive md.indented) $ k_ctrParams (CtrParamListCons2 ctrParam {--})
-    ]
-    _ -> unsafeThrow "stepKidsCtrParamList: wrong number of kids"
+  Nil
+    | [] <- kids -> []
+  ctrParam@(CtrParam md _) : ctrParams'
+    | [ k_ctrParam, k_ctrParams ] <- kids ->
+      [ k_ctrParam (CtrParamListCons1 {--} ctrParams')
+      , setNodeIndentation (indentIf isActive md.indented) $ k_ctrParams (CtrParamListCons2 ctrParam {--})
+      ]
+  _ -> unsafeThrow "stepKidsCtrParamList: wrong number of kids"
 
 -- CtrParamList
 ctrParamListToNode :: Boolean -> AboveInfo (List CtrParam) -> ListCtrParamRecValue -> Node
 ctrParamListToNode isActive aboveInfo ctrParams =
-    recListCtrParam {
-        cons: \ctrParam ctrParams ->
-            arrangeCtrParamList args
-                [ arrangeKidAI (aIOnlyCursor aboveInfo) (ctrParamToNode isActive) ctrParam
-                , arrangeKidAI aboveInfo (ctrParamListToNode isActive) ctrParams
-                ]
-        , nil: \_ -> arrangeCtrParamList args []
-    } ctrParams
-    where
-    args = {
-        isActive
-        , makeCursor: \_ -> Just $ CtrParamListCursor ctrParams.ctxs (aIGetPath aboveInfo) ctrParams.ctrParams
-        , makeSelect:
-            \_ -> case aboveInfo of
-                AICursor _path -> Nothing
-                AISelect topPath topCtx topCtrParams midPath -> Just $ CtrParamListSelect topPath topCtx topCtrParams midPath ctrParams.ctxs ctrParams.ctrParams topSelectOrientation
-                AINothing -> Nothing
-        , ctrParams
+  recListCtrParam
+    { cons:
+        \ctrParam ctrParams ->
+          arrangeCtrParamList args
+            [ arrangeKidAI (aIOnlyCursor aboveInfo) (ctrParamToNode isActive) ctrParam
+            , arrangeKidAI aboveInfo (ctrParamListToNode isActive) ctrParams
+            ]
+    , nil: \_ -> arrangeCtrParamList args []
+    }
+    ctrParams
+  where
+  args =
+    { isActive
+    , makeCursor: \_ -> Just $ CtrParamListCursor ctrParams.ctxs (aIGetPath aboveInfo) ctrParams.ctrParams
+    , makeSelect:
+        \_ -> case aboveInfo of
+          AICursor _path -> Nothing
+          AISelect topPath topCtx topCtrParams midPath -> Just $ CtrParamListSelect topPath topCtx topCtrParams midPath ctrParams.ctxs ctrParams.ctrParams topSelectOrientation
+          AINothing -> Nothing
+    , ctrParams
     }
 
 stepKidsTypeArgList :: Boolean -> List TypeArg -> Array PreNode -> Array Node
 stepKidsTypeArgList isActive tyArgs kids = case tyArgs of
-    Nil | [] <- kids -> []
-    tyArg@(TypeArg md _) : tyArgs' | [k_tyArg, k_tyArgs] <- kids -> [
-        k_tyArg (TypeArgListCons1 {--} tyArgs')
-        , setNodeIndentation (indentIf isActive md.indented) $ k_tyArgs (TypeArgListCons2 tyArg {--})
-    ]
-    _ -> unsafeThrow "stepKidsTypeArgList: wrong number of kids"
+  Nil
+    | [] <- kids -> []
+  tyArg@(TypeArg md _) : tyArgs'
+    | [ k_tyArg, k_tyArgs ] <- kids ->
+      [ k_tyArg (TypeArgListCons1 {--} tyArgs')
+      , setNodeIndentation (indentIf isActive md.indented) $ k_tyArgs (TypeArgListCons2 tyArg {--})
+      ]
+  _ -> unsafeThrow "stepKidsTypeArgList: wrong number of kids"
 
-type TypeArgListNodeCursorInfo = {
-    isActive :: Boolean
+type TypeArgListNodeCursorInfo
+  = { isActive :: Boolean
     , makeCursor :: Unit -> Maybe CursorLocation
     , makeSelect :: Unit -> Maybe Select
     , tyArgs :: ListTypeArgRecValue
-}
+    }
 
 arrangeTypeArgList :: TypeArgListNodeCursorInfo -> Array PreNode -> Node
 arrangeTypeArgList args =
@@ -616,24 +632,26 @@ arrangeTypeArgList args =
 -- ArgParamList
 typeArgListToNode :: Boolean -> AboveInfo (List TypeArg) -> ListTypeArgRecValue -> Node
 typeArgListToNode isActive aboveInfo tyArgs =
-    recListTypeArg {
-        cons: \tyArg tyArgs ->
-            arrangeTypeArgList args
-                [ arrangeKidAI (aIOnlyCursor aboveInfo) (typeArgToNode isActive) tyArg
-                , arrangeKidAI aboveInfo (typeArgListToNode isActive) tyArgs
-                ]
-        , nil: \_ -> arrangeTypeArgList args []
-    } tyArgs
-    where
-    args = {
-        isActive
-        , makeCursor: \_ -> Nothing -- \_ -> Just $ TypeArgListCursor tyArgs.ctxs (aIGetPath aboveInfo) tyArgs.tyArgs
-        , makeSelect: \_ -> Nothing
---            \_ -> case aboveInfo of
---                AICursor _path -> Nothing
---                AISelect topPath topCtx topTypeArgs midPath -> Just $ TypeArgListSelect topPath topCtx topTypeArgs midPath tyArgs.ctxs tyArgs.tyArgs topSelectOrientation
---                AINothing -> Nothing
-        , tyArgs
+  recListTypeArg
+    { cons:
+        \tyArg tyArgs ->
+          arrangeTypeArgList args
+            [ arrangeKidAI (aIOnlyCursor aboveInfo) (typeArgToNode isActive) tyArg
+            , arrangeKidAI aboveInfo (typeArgListToNode isActive) tyArgs
+            ]
+    , nil: \_ -> arrangeTypeArgList args []
+    }
+    tyArgs
+  where
+  args =
+    { isActive
+    , makeCursor: \_ -> Nothing -- \_ -> Just $ TypeArgListCursor tyArgs.ctxs (aIGetPath aboveInfo) tyArgs.tyArgs
+    , makeSelect: \_ -> Nothing
+    --            \_ -> case aboveInfo of
+    --                AICursor _path -> Nothing
+    --                AISelect topPath topCtx topTypeArgs midPath -> Just $ TypeArgListSelect topPath topCtx topTypeArgs midPath tyArgs.ctxs tyArgs.tyArgs topSelectOrientation
+    --                AINothing -> Nothing
+    , tyArgs
     }
 
 stepKidsCtrList :: Boolean -> List Constructor -> Array PreNode -> Array Node

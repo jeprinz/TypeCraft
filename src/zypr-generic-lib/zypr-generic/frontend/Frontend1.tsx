@@ -29,7 +29,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       if (node.getSelect !== undefined) classNames.push("selectable")
 
       // NodeStyle
-      classNames.push(node.style.case)
+      node.styles.forEach(style => classNames.push(style))
 
       function onMouseDown(event: React.MouseEvent) {
         let getCursor = node.getCursor
@@ -106,8 +106,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           }
           break
       }
-
-
 
       return kids
     }
