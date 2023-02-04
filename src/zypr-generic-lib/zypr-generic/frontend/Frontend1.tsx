@@ -64,6 +64,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         )
       }
 
+      if (node.styles.includes('list-head') && node.tag.case.includes("list nil")) {
+        kids = ([] as JSX.Element[]).concat([Punc.angleL], kids)
+      }
+
       kids = [
         <div
           className={([] as string[]).concat(["node"], classNames).join(" ")}
@@ -94,7 +98,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         ]
       }
 
-      if (node.styles.includes('list-head')) {
+      if (node.styles.includes('list-head') && !node.tag.case.includes("list nil")) {
         kids = ([] as JSX.Element[]).concat([Punc.angleL], kids)
       }
 
