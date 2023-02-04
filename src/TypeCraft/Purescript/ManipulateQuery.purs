@@ -7,7 +7,6 @@ import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.Unification
-
 import Control.Monad.Writer as Writer
 import Data.Array (any)
 import Data.Either (Either(..))
@@ -16,6 +15,7 @@ import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.String as String
+import Data.String.Regex as Regex
 import Data.Tuple (fst)
 import Data.Tuple.Nested (type (/\), (/\))
 import Data.UUID (UUID)
@@ -26,7 +26,6 @@ import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State)
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (lookup')
-
 
 isNonemptyQueryString :: Query -> Boolean
 isNonemptyQueryString query = not $ String.null query.string
@@ -52,7 +51,7 @@ kindaStartsWith str pat =
   and
     [ len_str > 0 -- string can't be empty
     , len_pat > 0 -- patfix can't be empty
-    , len_pat >= len_str 
+    , len_pat >= len_str
     , isJust $ String.stripPrefix (String.Pattern str) pat
     ]
   where
@@ -62,6 +61,14 @@ kindaStartsWith str pat =
 
 kindaStartsWithAny :: String -> Array String -> Boolean
 kindaStartsWithAny str pats = String.length str > 0 && any (str `kindaStartsWith` _) pats
+
+isValidTypeBindLabel_Regex :: Regex.Regex
+isValidTypeBindLabel_Regex = case Regex.regex "^[a-zA-Z0-9]$" mempty of
+  Left msg -> unsafeThrow $ "isValidTypeBindLabel_Regex: " <> msg
+  Right reg -> reg
+
+isValidTypeBindLabel :: String -> Boolean
+isValidTypeBindLabel = Regex.test isValidTypeBindLabel_Regex
 
 calculateCompletionsGroups :: String -> State -> CursorMode -> Array (Array Completion)
 calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
@@ -120,8 +127,8 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
       when (str `kindaStartsWith` "data")
         $ Writer.tell
             [ [ CompletionTermPath
-                (List.singleton $ Data4 defaultGADTMD (freshTypeBind Nothing) List.Nil List.Nil ty)
-                (tyInject ty)
+                  (List.singleton $ Data4 defaultGADTMD (freshTypeBind Nothing) List.Nil List.Nil ty)
+                  (tyInject ty)
               ]
             ]
       -- TypeBoundary
@@ -151,72 +158,96 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             ]
   TypeCursor ctxs path ty ->
     trace ("Debug while looking for type completions: " <> show (Map.values ctxs.mdkctx)) \_ ->
-    Writer.execWriter do
-      -- TNeu
-      traverse_
-        ( \(id /\ tyName) -> case Map.lookup id ctxs.kctx of
-            Nothing -> unsafeThrow $ "the entry '" <> show (id /\ tyName) <> "' was found in the ctxs.mdkctx, but not in the ctxs.kctx: '" <> show ctxs.ctx <> "'"
-            Just kind ->
-              case ty of
+      Writer.execWriter do
+        -- TNeu
+        traverse_
+          ( \(id /\ tyName) -> case Map.lookup id ctxs.kctx of
+              Nothing -> unsafeThrow $ "the entry '" <> show (id /\ tyName) <> "' was found in the ctxs.mdkctx, but not in the ctxs.kctx: '" <> show ctxs.ctx <> "'"
+              Just kind -> case ty of
                 THole md x ->
                   when (str `kindaStartsWith` tyName) do
-                    let cTy = (makeEmptyTNeu id kind)
-                    Writer.tell [ [CompletionType cTy {subTypeVars: Map.empty, subTHoles: Map.insert x cTy Map.empty} ] ]
+                    let
+                      cTy = (makeEmptyTNeu id kind)
+                    Writer.tell [ [ CompletionType cTy { subTypeVars: Map.empty, subTHoles: Map.insert x cTy Map.empty } ] ]
                 _ -> pure unit
-        )
-        (Map.toUnfoldable ctxs.mdkctx :: Array (UUID /\ String))
-      -- Arrow
-      when (str `kindaStartsWithAny` [ "arrow", "->" ])
-        $ Writer.tell
-            [ [ let
-                  thole = freshTHole unit
-                in
-                  CompletionTypePath
-                    (List.singleton $ Arrow2 defaultArrowMD thole)
-                    (Plus thole (tyInject ty))
+          )
+          (Map.toUnfoldable ctxs.mdkctx :: Array (UUID /\ String))
+        -- Arrow
+        when (str `kindaStartsWithAny` [ "arrow", "->" ])
+          $ Writer.tell
+              [ [ let
+                    thole = freshTHole unit
+                  in
+                    CompletionTypePath
+                      (List.singleton $ Arrow2 defaultArrowMD thole)
+                      (Plus thole (tyInject ty))
+                ]
               ]
-            ]
-      -- THole -- Jacob note: I don't think it makes sense to query holes. Instead, the delete/backspace button does that.
---      when (str `kindaStartsWithAny` [ "hole", "?" ])
---        $ Writer.tell
---            [ [ CompletionType (freshTHole unit) emptySub
---              ]
---            ]
-  TypeBindListCursor ctxs path tyBinds -> 
+  -- THole -- Jacob note: I don't think it makes sense to query holes. Instead, the delete/backspace button does that.
+  --      when (str `kindaStartsWithAny` [ "hole", "?" ])
+  --        $ Writer.tell
+  --            [ [ CompletionType (freshTHole unit) emptySub
+  --              ]
+  --            ]
+  TypeBindListCursor ctxs path tyBinds ->
     Writer.execWriter do
       -- add a type bind
-      when (str `kindaStartsWithAny` [" ", ","])  
-        $ Writer.tell [
-          let newTyBind = (freshTypeBind Nothing) in
-          [CompletionTypeBindListPath (List.singleton $ TypeBindListCons2 newTyBind) (ListTypeBindChangePlus newTyBind (chTypeBindList tyBinds))]
-        ]
+      when (str `kindaStartsWithAny` [ " ", "," ])
+        $ Writer.tell
+            [ let
+                newTyBind = (freshTypeBind Nothing)
+              in
+                [ CompletionTypeBindListPath (List.singleton $ TypeBindListCons2 newTyBind) (ListTypeBindChangePlus newTyBind (chTypeBindList tyBinds)) ]
+            ]
+      when (isValidTypeBindLabel str)
+        $ Writer.tell
+            [ let
+                newTyBind = freshTypeBind (Just str)
+              in
+                [ CompletionTypeBindListPath (List.singleton $ TypeBindListCons2 newTyBind) (ListTypeBindChangePlus newTyBind (chTypeBindList tyBinds)) ]
+            ]
   CtrListCursor ctxs path ctrs ->
     Writer.execWriter do
-        -- add a constructor
-        when (str `kindaStartsWithAny` ["|", "constructor", ","])
-            $ Writer.tell [[
-                let kctx = kCtxInject ctxs.kctx ctxs.actx in
-                let ctrCh = fst (chCtrList kctx ctrs) in
-                let newCtr = (Constructor defaultCtrMD (freshTermBind Nothing) List.Nil) in
-                CompletionCtrListPath (List.singleton $ CtrListCons2 newCtr)
-                    (ListCtrChangePlus newCtr ctrCh)
-            ]]
+      -- add a constructor
+      when (str `kindaStartsWithAny` [ "|", "constructor", "," ])
+        $ Writer.tell
+            [ [ let
+                  kctx = kCtxInject ctxs.kctx ctxs.actx
+                in
+                  let
+                    ctrCh = fst (chCtrList kctx ctrs)
+                  in
+                    let
+                      newCtr = (Constructor defaultCtrMD (freshTermBind Nothing) List.Nil)
+                    in
+                      CompletionCtrListPath (List.singleton $ CtrListCons2 newCtr)
+                        (ListCtrChangePlus newCtr ctrCh)
+              ]
+            ]
   CtrParamListCursor ctxs path ctrParams ->
     Writer.execWriter do
-        -- add a constructor param
-        when (str `kindaStartsWithAny` [" ", ","])
-            $ Writer.tell [[
-                let kctx = kCtxInject ctxs.kctx ctxs.actx in
-                let ctrParamCh = fst (chParamList kctx ctrParams) in
-                let newCtrParam = (CtrParam defaultCtrParamMD (freshTHole unit)) in
-                CompletionCtrParamListPath (List.singleton $ CtrParamListCons2 newCtrParam)
-                    (ListCtrParamChangePlus newCtrParam ctrParamCh)
-            ]]
+      -- add a constructor param
+      when (str `kindaStartsWithAny` [ " ", "," ])
+        $ Writer.tell
+            [ [ let
+                  kctx = kCtxInject ctxs.kctx ctxs.actx
+                in
+                  let
+                    ctrParamCh = fst (chParamList kctx ctrParams)
+                  in
+                    let
+                      newCtrParam = (CtrParam defaultCtrParamMD (freshTHole unit))
+                    in
+                      CompletionCtrParamListPath (List.singleton $ CtrParamListCons2 newCtrParam)
+                        (ListCtrParamChangePlus newCtrParam ctrParamCh)
+              ]
+            ]
   _ -> [] -- TODO: impl
 
 makeEmptyTNeu :: TypeVarID -> Kind -> Type
 makeEmptyTNeu x k = TNeu defaultTNeuMD x (helper k)
-    where
-        helper :: Kind -> List.List TypeArg
-        helper Type = List.Nil
-        helper (KArrow k) = TypeArg defaultTypeArgMD (freshTHole unit) List.: (helper k)
+  where
+  helper :: Kind -> List.List TypeArg
+  helper Type = List.Nil
+
+  helper (KArrow k) = TypeArg defaultTypeArgMD (freshTHole unit) List.: (helper k)
