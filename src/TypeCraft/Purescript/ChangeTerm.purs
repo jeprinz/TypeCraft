@@ -49,7 +49,7 @@ chTerm kctx ctx c t =
                         then t2'
                         else TypeBoundary defaultTypeBoundaryMD (invert c2) t2'
                     in c1b /\ App md t1' t2'' (snd (getEndpoints c1a)) (snd (getEndpoints c1b))
-                otherChange -> trace "gets here now" \_ -> tyInject (outTy)
+                otherChange -> tyInject (outTy)
                     /\ TypeBoundary defaultTypeBoundaryMD (Replace (snd (getEndpoints otherChange)) (snd (getEndpoints cin)))
                        (Buffer defaultBufferMD t2 argTy t1' (snd (getEndpoints otherChange)))
 --                _ -> composeChange (Minus argTy (tyInject (snd (getEndpoints cin)))) c1 /\ -- is this right?
@@ -144,11 +144,6 @@ doInsertArgs :: Change -> Term -> Change /\ Term
 doInsertArgs (Plus ty c) t = doInsertArgs c (App defaultAppMD t (Hole defaultHoleMD) ty (snd (getEndpoints c)))
 doInsertArgs c t = c /\ t
 
-{-
-This is a tricky function to write. It needs to account for:
-- If a type alias definition changed earlier, or a datatype was deleted, this needs to be reflected in the output Change
-- The list of type arguments needs to be altered according to the PolyChange. For example, arguments added or removed
--}
 -- here, the output Change is the Change inside the input PolyChange.
 chTypeArgs2 :: KindChangeCtx -> List TypeArg -> PolyChange -> Change /\ (List TypeArg)
 chTypeArgs2 kctx Nil (PChange ch) = ch /\ Nil
