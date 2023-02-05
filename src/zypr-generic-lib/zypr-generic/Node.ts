@@ -14,7 +14,8 @@ export type Node = {
     queryString?: string,
     completions?: Node[],
     activeCompletionGroup?: number,
-    tag: NodeTag
+    tag: NodeTag,
+    metadata?: NodeMetadata
 }
 
 export type NodeIndentation
@@ -67,3 +68,6 @@ export type NodeStyle =
     'query-metahole' |
     'list-head' |
     'list-head-var'
+
+export type NodeMetadata
+    = { case: "ty hol", typeHoleId: string }

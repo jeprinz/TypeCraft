@@ -2,21 +2,25 @@ module TypeCraft.Purescript.Node where
 
 import Prelude
 import Prim hiding (Type)
+
 import Data.Array (find)
 import Data.Bounded.Generic (genericBottom, genericTop)
 import Data.Enum (class BoundedEnum, class Enum, enumFromTo)
 import Data.Enum.Generic (genericCardinality, genericFromEnum, genericPred, genericSucc, genericToEnum)
 import Data.Generic.Rep (class Generic)
+import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
+import Data.UUID as UUID
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), Type(..), TypeArg, TypeBind)
+import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), Type(..), TypeArg, TypeBind, TypeHoleID)
 import TypeCraft.Purescript.Nullable (Nullable)
 import TypeCraft.Purescript.Nullable as Nullable
 import TypeCraft.Purescript.State (State)
-import Data.List (List(..), (:))
 
 -- Node
 foreign import data Node :: Prim.Type
+
+foreign import data NodeMetadata :: Prim.Type
 
 foreign import makeNode_ ::
   { kids :: Array Node
@@ -30,6 +34,7 @@ foreign import makeNode_ ::
   , queryString :: Nullable String -- requires: active query
   , completions :: Nullable (Array Node) -- requires: active query
   , activeCompletion :: Nullable Int -- requires: active query
+  , metadata :: Nullable NodeMetadata
   } ->
   Node
 
@@ -53,6 +58,7 @@ makeNode x =
     , completions: Nullable.emptyNullable
     , activeCompletion: Nullable.emptyNullable
     , tag: toNodeTag_ x.tag
+    , metadata: Nullable.emptyNullable
     }
 
 foreign import addNodeStyle :: NodeStyle -> Node -> Node
@@ -231,6 +237,14 @@ typeToNodeTag = case _ of
 
 -- NodeStyle
 newtype NodeStyle = NodeStyle String
+
+-- NodeMetadata
+foreign import setNodeMetadata :: NodeMetadata -> Node -> Node
+
+-- takes string of type hole id
+foreign import makeTHoleNodeMetadata_ :: String -> NodeMetadata
+makeTHoleNodeMetadata :: TypeHoleID -> NodeMetadata
+makeTHoleNodeMetadata = makeTHoleNodeMetadata_ <<< UUID.toString
 
 -- utilities
 setIndentNodeIndentationIf :: Boolean -> Node -> Node

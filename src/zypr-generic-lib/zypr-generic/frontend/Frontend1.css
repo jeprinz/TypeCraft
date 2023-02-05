@@ -9,17 +9,17 @@
   border-radius: 0.2rem;
   padding: 0 0.2rem;
   display: inline-block;
-  background-color: rgb(255, 149, 114);
+  background-color: rgb(255, 173, 145);
   box-shadow:  0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }
 
 .ty_hol-inner {
   display: inline-block;
-  border-radius: 0.2rem;
+  border-radius: 0.4rem;
   padding: 0 0.2rem;
   display: inline-block;
-  background-color: rgb(255, 149, 114);
-  box-shadow:  0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
+  background-color: rgb(255, 114, 147);
+  box-shadow:  0 0 0 1px rgb(255, 86, 126) inset, 0 0 2px 1px black inset;
 }
 
 .ty_hol-inner {
@@ -191,8 +191,8 @@
   /* box-shadow: 0 0 0 1px black; */
   /* background-color: rgb(255, 224, 165);
   box-shadow: 0 0 0 1px orange inset, 1px 1px 2px 0 black inset; */
-  background-color: rgb(255, 149, 114);
-  box-shadow: 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
+  background-color: rgb(255, 214, 157);
+  box-shadow: 0 0 0 1px rgb(255, 182, 80) inset, 0 0 2px 1px black inset;
 }
 
 /* cursor, select, etc. */

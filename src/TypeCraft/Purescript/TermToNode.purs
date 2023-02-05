@@ -2,20 +2,21 @@ module TypeCraft.Purescript.TermToNode where
 
 import Prelude
 import Prim hiding (Type)
+import TypeCraft.Purescript.Node
+import TypeCraft.Purescript.State
+import TypeCraft.Purescript.TermRec
 import Data.Array as Array
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
+import Data.UUID as UUID
+import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.CursorMovement (getMiddlePath)
 import TypeCraft.Purescript.Grammar (Change(..), Constructor(..), CtrParam(..), Term(..), TermBind(..), Tooth(..), Type(..), TypeArg(..), TypeBind(..), UpPath)
-import TypeCraft.Purescript.Node
-import TypeCraft.Purescript.State
-import TypeCraft.Purescript.TermRec
 import TypeCraft.Purescript.Util (justWhen, lookup')
-import Debug (trace)
 
 data AboveInfo syn
   = AICursor UpPath
@@ -332,7 +333,10 @@ typeToNode isActive aboveInfo ty =
             $ arrangeType args
                 [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
                 ]
-    , tHole: \md x -> arrangeType args []
+    , tHole:
+        \md x ->
+          setNodeMetadata (makeTHoleNodeMetadata x)
+            $ arrangeType args []
     }
     ty
   where

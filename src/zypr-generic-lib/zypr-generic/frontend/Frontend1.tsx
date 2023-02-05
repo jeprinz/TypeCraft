@@ -6,6 +6,7 @@ import * as Punc from './Punctuation';
 import { showList } from '../../../TypeCraft/Purescript/output/Data.List.Types';
 import { showTooth } from '../../../TypeCraft/Purescript/output/TypeCraft.Purescript.Grammar';
 import { showCursorLocation } from '../../../TypeCraft/Purescript/output/TypeCraft.Purescript.State';
+import assert from 'assert';
 
 export default function makeFrontend(backend: Backend): JSX.Element {
   function render(editor: Editor): JSX.Element[] {
@@ -185,7 +186,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
       switch (node.tag.case) {
         case 'ty arr': return go(node, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat(), indentationLevel)
-        case 'ty hol': return go(node, ["ty_hol"], [<div className="ty_hol-inner">*</div>].flat(), indentationLevel)
+        case 'ty hol': 
+          assert(node.metadata !== undefined)
+          assert(node.metadata.case === 'ty hol')
+          return go(node, ["ty_hol"], [<div className="ty_hol-inner">✶{node.metadata.typeHoleId.substring(0, 2)}</div>].flat(), indentationLevel)
         case 'ty neu': return go(node, ["ty_neu"], [renderLabel(node.label), kid()].flat(), indentationLevel)
         case 'poly-ty forall': return go(node, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
         case 'poly-ty ty': return go(node, ["poly-ty_ty"], kid(), indentationLevel)
@@ -198,7 +202,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat(), indentationLevel) // TODO: render typechange
         case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
-        case 'tm hol': return go(node, ["tm_hol"], [<div className="tm_hol-inner">{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
+        case 'tm hol': return go(node, ["tm_hol"], [<div className="tm_hol-inner">?:{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
         case 'tm buf': return go(node, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'ty-bnd': return go(node, ["ty-bnd"], renderLabel(node.label), indentationLevel)
         case 'tm-bnd': return go(node, ["tm-bnd"], renderLabel(node.label), indentationLevel)

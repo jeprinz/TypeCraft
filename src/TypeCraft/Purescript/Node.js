@@ -98,3 +98,8 @@ export const setNodeCompletions = completions => activeCompletionGroup => node =
 export const makeInlineNodeIndentation = { case: 'inline' }
 export const makeIndentNodeIndentation = { case: 'indent' }
 export const makeNewlineNodeIndentation = { case: 'newline' }
+
+// NodeMetadata
+export const setNodeMetadata = metadata => node => ({ ...node, metadata })
+
+export const makeTHoleNodeMetadata_ = typeHoleId => ({ case: 'ty hol', typeHoleId })
