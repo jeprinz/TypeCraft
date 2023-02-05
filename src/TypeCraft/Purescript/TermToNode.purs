@@ -197,7 +197,7 @@ termToNode isActive aboveInfo term =
             ]
     , var:
         \md x targs ->
-          setNodeLabel (x `lookup'` term.ctxs.mdctx)
+          setNodeMetadata (makeVarNodeMetadata (x `lookup'` term.ctxs.mdctx))
             $ arrangeTerm args
                 [ arrangeKidAI cursorOnlyInfo (typeArgListToNode isActive) targs
                 ] -- TODO: needs to have type arguments
@@ -329,7 +329,7 @@ typeToNode isActive aboveInfo ty =
             ]
     , tNeu:
         \md x tyArgs ->
-          setNodeLabel (x `lookup'` ty.ctxs.mdkctx)
+          setNodeMetadata (makeTNeuNodeMetadata (x `lookup'` ty.ctxs.mdkctx))
             $ arrangeType args
                 [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
                 ]
@@ -481,7 +481,7 @@ typeArgToNode isActive aboveInfo tyArg =
 -- TypeBind
 typeBindToNode :: Boolean -> AboveInfo Unit -> TypeBindRecValue -> Node
 typeBindToNode isActive aboveInfo { ctxs, tyBind: tyBind@(TypeBind md x) } =
-  setNodeLabel md.varName
+  setNodeMetadata (makeTypeBindNodeMetadata md.varName)
     $ makeNode
         { kids: []
         , getCursor:
@@ -546,7 +546,7 @@ typeBindListToNode isActive aboveInfo tyBinds =
 -- TermBind
 termBindToNode :: Boolean -> AboveInfo Unit -> TermBindRecValue -> Node
 termBindToNode isActive aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
-  setNodeLabel md.varName
+  setNodeMetadata (makeTermBindNodeMetadata md.varName)
     $ makeNode
         { kids: []
         , getCursor:

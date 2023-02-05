@@ -67,8 +67,6 @@ foreign import setNodeIndentation :: NodeIndentation -> Node -> Node
 
 foreign import setNodeIsParenthesized :: Boolean -> Node -> Node
 
-foreign import setNodeLabel :: String -> Node -> Node
-
 foreign import setNodeQueryString :: String -> Node -> Node
 
 foreign import setNodeCompletions :: Array Node -> Number -> Node -> Node
@@ -246,6 +244,12 @@ foreign import makeTHoleNodeMetadata_ :: String -> NodeMetadata
 makeTHoleNodeMetadata :: TypeHoleID -> NodeMetadata
 makeTHoleNodeMetadata = makeTHoleNodeMetadata_ <<< UUID.toString
 
+foreign import makeTNeuNodeMetadata :: String -> NodeMetadata
+foreign import makeVarNodeMetadata :: String -> NodeMetadata
+foreign import makeTypeBindNodeMetadata :: String -> NodeMetadata
+foreign import makeTermBindNodeMetadata :: String -> NodeMetadata
+foreign import makeCtrParamNodeMetadata :: String -> NodeMetadata
+
 -- utilities
 setIndentNodeIndentationIf :: Boolean -> Node -> Node
 setIndentNodeIndentationIf =
@@ -259,10 +263,3 @@ calculateNodeIsParenthesized parentTag childTag = false -- hole' "calculateNodeI
 
 setCalculatedNodeIsParenthesized :: NodeTag -> Node -> Node
 setCalculatedNodeIsParenthesized parentTag child = setNodeIsParenthesized (calculateNodeIsParenthesized parentTag (getNodeTag child)) child
-
--- # setNodeIsParenthesized isParenthesized
--- >>> setNodeIndentation indentation
-setNodeLabelMaybe :: Maybe String -> Node -> Node
-setNodeLabelMaybe (Just label) = setNodeLabel label
-
-setNodeLabelMaybe Nothing = identity

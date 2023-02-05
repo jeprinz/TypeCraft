@@ -10,73 +10,6 @@ export const makeNodeTag_ = (case_) => ({ case: case_ })
 
 export const fromNodeTag_ = (nodeTag) => nodeTag.case
 
-//  {
-//   switch (nodeTag){
-//     case 'ty arr': return ""
-//     case 'ty hol': return hole
-//     case 'ty neu': return hole
-//     case 'poly-ty forall': return hole
-//     case 'poly-ty ty': return hole
-//     case 'ty-arg': return hole
-//     case 'tm app': return hole
-//     case 'tm lam': return hole
-//     case 'tm var': return hole
-//     case 'tm let': return hole
-//     case 'tm dat': return hole
-//     case 'tm ty-let': return hole
-//     case 'tm ty-boundary': return hole
-//     case 'tm cx-boundary': return hole
-//     case 'tm hol': return hole
-//     case 'tm buf': return hole
-//     case 'ty-bnd': return hole
-//     case 'tm-bnd': return hole
-//     case 'ctr-prm': return hole
-//     case 'ctr': return hole
-//     default: throw new Error("unknown NodeTag: " + nodeTag)
-//   }
-// }
-
-// export const makeArrowNodeTag = { case: 'ty arr' }
-// export const makeTHoleNodeTag = { case: 'ty hol' }
-// export const makeTNeuNodeTag = { case: 'ty neu' }
-// export const makeForallNodeTag = { case: 'poly-ty forall' }
-// export const makePTypeNodeTag = { case: 'poly-ty ty' }
-// export const makeTypeArgNodeTag = { case: 'ty-arg' }
-// export const makeAppNodeTag = { case: 'tm app' }
-// export const makeLambdaNodeTag = { case: 'tm lam' }
-// export const makeVarNodeTag = { case: 'tm var' }
-// export const makeLetNodeTag = { case: 'tm let' }
-// export const makeDataNodeTag = { case: 'tm dat' }
-// export const makeTLetNodeTag = { case: 'tm ty-let' }
-// export const makeTypeBoundaryNodeTag = { case: 'tm ty-boundary' }
-// export const makeContextBoundaryNodeTag = { case: 'tm cx-boundary' }
-// export const makeHoleNodeTag = { case: 'tm hol' }
-// export const makeBufferNodeTag = { case: 'tm buf' }
-// export const makeTypeBindNodeTag = { case: 'ty-bnd' }
-// export const makeTermBindNodeTag = { case: 'tm-bnd' }
-// export const makeCtrParamNodeTag = { case: 'ctr-prm' }
-// export const makeConstructorNodeTag = { case: 'ctr' }
-
-// List TypeArg
-export const makeTypeArgListConsNodeTag = { case: 'ty-arg-list cons' }
-
-export const makeTypeArgListNilNodeTag = { case: 'ty-arg-list nil' }
-
-// List TypeBind
-export const makeTypeBindListConsNodeTag = { case: 'ty-bnd-list cons' }
-
-export const makeTypeBindListNilNodeTag = { case: 'ty-bnd-list nil' }
-
-// List Constructor
-export const makeConstructorListConsNodeTag = { case: 'ctr-list cons' }
-
-export const makeConstructorListNilNodeTag = { case: 'ctr-list nil' }
-
-// List CtrParam
-export const makeCtrParamListConsNodeTag = { case: 'ctr-prm-list cons' }
-
-export const makeCtrParamListNilNodeTag = { case: 'ctr-prm-list nil' }
-
 // NodeStyle
 
 export const addNodeStyle = style => node => ({ ...node, styles: [...node.styles, style] })
@@ -87,8 +20,6 @@ export const addNodeStyle = style => node => ({ ...node, styles: [...node.styles
 export const setNodeIndentation = indentation => node => ({ ...node, indentation })
 
 export const setNodeIsParenthesized = isParenthesized => node => ({ ...node, isParenthesized })
-
-export const setNodeLabel = label => node => ({ ...node, label })
 
 export const setNodeQueryString = queryString => node => ({ ...node, queryString })
 
@@ -103,3 +34,8 @@ export const makeNewlineNodeIndentation = { case: 'newline' }
 export const setNodeMetadata = metadata => node => ({ ...node, metadata })
 
 export const makeTHoleNodeMetadata_ = typeHoleId => ({ case: 'ty hol', typeHoleId })
+export const makeTNeuNodeMetadata = label => ({ case: 'ty neu', label })
+export const makeVarNodeMetadata = label => ({ case: 'tm var', label })
+export const makeTypeBindNodeMetadata = label => ({ case: 'ty-bnd', label })
+export const makeTermBindNodeMetadata = label => ({ case: 'tm-bnd', label })
+export const makeCtrParamNodeMetadata = label => ({ case: 'ctr-prm', label })

@@ -187,16 +187,19 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       switch (node.tag.case) {
         case 'ty arr': return go(node, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat(), indentationLevel)
         case 'ty hol': 
-          assert(node.metadata !== undefined)
-          assert(node.metadata.case === 'ty hol')
+          assert(node.metadata !== undefined && node.metadata.case === 'ty hol')
           return go(node, ["ty_hol"], [<div className="ty_hol-inner">✶{node.metadata.typeHoleId.substring(0, 2)}</div>].flat(), indentationLevel)
-        case 'ty neu': return go(node, ["ty_neu"], [renderLabel(node.label), kid()].flat(), indentationLevel)
+        case 'ty neu': 
+        assert(node.metadata !== undefined && node.metadata.case === 'ty neu')
+        return go(node, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
         case 'poly-ty forall': return go(node, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
         case 'poly-ty ty': return go(node, ["poly-ty_ty"], kid(), indentationLevel)
         case 'ty-arg': return go(node, ["ty-arg"], kid(), indentationLevel)
         case 'tm app': return go(node, ["tm_app"], [kid(), [Punc.space], kid(), [Punc.application]].flat(), indentationLevel)
         case 'tm lam': return go(node, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
-        case 'tm var': return go(node, ["tm_var"], [renderLabel(node.label), kid()].flat(), indentationLevel)
+        case 'tm var': 
+          assert(node.metadata !== undefined && node.metadata.case === 'tm var')
+          return go(node, ["tm_var"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
         case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm dat': return go(node, ["tm_dat"], [[Punc.data], kid(), kid(), [Punc.assign_shortFront], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-let': return go(node, ["tm_ty-let"], [[Punc.let_], kid(), kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
@@ -204,9 +207,16 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
         case 'tm hol': return go(node, ["tm_hol"], [<div className="tm_hol-inner">?:{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
         case 'tm buf': return go(node, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat(), indentationLevel)
-        case 'ty-bnd': return go(node, ["ty-bnd"], renderLabel(node.label), indentationLevel)
-        case 'tm-bnd': return go(node, ["tm-bnd"], renderLabel(node.label), indentationLevel)
-        case 'ctr-prm': return go(node, ["ctr-prm"], [[/* TODO: name */], [Punc.colon], kid()].flat(), indentationLevel) // TODO: label
+        case 'ty-bnd': 
+          assert(node.metadata !== undefined && node.metadata.case === 'ty-bnd')
+          return go(node, ["ty-bnd"], renderLabel(node.metadata.label), indentationLevel)
+        case 'tm-bnd': 
+          assert(node.metadata !== undefined && node.metadata.case === 'tm-bnd')
+          return go(node, ["tm-bnd"], renderLabel(node.metadata.label), indentationLevel)
+        case 'ctr-prm':
+          // TODO: label
+          assert(node.metadata !== undefined && node.metadata.case === 'ctr-prm')
+          return go(node, ["ctr-prm"], [renderLabel(node.metadata.label), [Punc.colon], kid()].flat(), indentationLevel) 
         case 'ctr': return go(node, ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat(), indentationLevel)
         // ty-arg-list
         case 'ty-arg-list cons': return go(node, ["ty-arg-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.comma])].flat(), indentationLevel)

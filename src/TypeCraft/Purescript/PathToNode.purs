@@ -12,7 +12,6 @@ import TypeCraft.Purescript.Node (Node, NodeTag, makeNode)
 import TypeCraft.Purescript.State
 import TypeCraft.Purescript.Util (hole', justWhen)
 import TypeCraft.Purescript.Util (hole)
-import TypeCraft.Purescript.Node (setNodeLabel)
 import TypeCraft.Purescript.Util (lookup')
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
@@ -501,7 +500,7 @@ typeArgListPathToNode isActive abovePath belowInfo listTypeArgPath innerNode =
     recListTypeArgPath {
         tNeu1: \typePath md x ->
             let newBI = BITerm in
-            setNodeLabel (x `lookup'` listTypeArgPath.ctxs.mdkctx) $
+            -- setNodeLabel (x `lookup'` listTypeArgPath.ctxs.mdkctx) $
             typePathToNode isActive abovePath newBI typePath
                 $ arrangeType (makeTypeArgs isActive abovePath newBI typePath) [
                     arrangeKid typePath.typePath abovePath (\_ _ -> innerNode) tyArgs
