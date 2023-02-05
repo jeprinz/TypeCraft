@@ -49,7 +49,7 @@ applySubChange sub = case _ of
   -- Question from Jacob: Why is there a special case for Nil?
   -- Note from Jacob: this former version of the line was causing an infinite loop
 --  ty@(CNeu id List.Nil) -> applySubChange sub $ maybe ty tyInject (Map.lookup id sub.subTypeVars)
-  ty@(CNeu id List.Nil) -> maybe ty tyInject (Map.lookup id sub.subTHoles)
+  ty@(CNeu id List.Nil) -> maybe ty tyInject (Map.lookup id sub.subTypeVars)
   CNeu id args -> CNeu id (applySubChangeParam sub <$> args)
   Replace ty1 ty2 -> Replace (applySubType sub ty1) (applySubType sub ty2)
   Plus ty ch -> Plus (applySubType sub ty) (applySubChange sub ch)
