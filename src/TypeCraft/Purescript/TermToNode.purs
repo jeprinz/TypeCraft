@@ -107,7 +107,7 @@ stepKidsTerm isActive term kids = case term of
       , setNodeIndentation (indentIf isActive md.bodyIndented) $ k_body (Lambda3 md bnd sig ty)
       ]
   Var md x args
-    | [ k_tyargs ] <- kids -> [ k_tyargs (Var1 md x {-args-}) ]
+    | [ k_tyargs ] <- kids -> [ addNodeStyle (NodeStyle "list-head-var") $ k_tyargs (Var1 md x {-args-}) ]
   Let md bnd bnds imp sig bod ty
     | [ k_bnd, k_bnds, k_sig, k_imp, k_bod ] <- kids ->
       [ k_bnd (Let1 md bnds imp sig bod ty)

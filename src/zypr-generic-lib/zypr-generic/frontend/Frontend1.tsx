@@ -64,7 +64,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         )
       }
 
-      if (node.styles.includes('list-head') && node.tag.case.includes("list nil")) {
+      if ((node.styles.includes('list-head') || node.styles.includes('list-head-var')) && node.tag.case.includes("list nil")) {
         kids = ([] as JSX.Element[]).concat([Punc.angleL], kids)
       }
 
@@ -98,16 +98,23 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         ]
       }
 
-      if (node.styles.includes('list-head') && !node.tag.case.includes("list nil")) {
+      if ((node.styles.includes('list-head') || node.styles.includes('list-head-var')) && !node.tag.case.includes("list nil")) {
         kids = ([] as JSX.Element[]).concat([Punc.angleL], kids)
       }
 
-      if (node.styles.includes('list-head') && node.tag.case.includes("list nil") && !node.styles.includes("cursor")) {
+      if (node.styles.includes('list-head') && node.tag.case.includes("list nil") && !node.styles.includes("cursor") && !node.styles.includes("list-head-var")) {
         kids = [
           <div className="list-head-nil-wrapper">
             {kids}
           </div>
         ]
+      } else if (node.styles.includes('list-head-var') && node.tag.case.includes("list nil")) {
+        // kids = [
+        //   <div className="list-head-var-nil-wrapper">
+        //     {kids}
+        //   </div>
+        // ]
+        kids = []
       }
 
       // Indentation

@@ -63,7 +63,7 @@ kindaStartsWithAny :: String -> Array String -> Boolean
 kindaStartsWithAny str pats = String.length str > 0 && any (str `kindaStartsWith` _) pats
 
 isValidTypeBindLabel_Regex :: Regex.Regex
-isValidTypeBindLabel_Regex = case Regex.regex "^[a-zA-Z0-9]$" mempty of
+isValidTypeBindLabel_Regex = case Regex.regex "^[a-zA-Z0-9]*$" mempty of
   Left msg -> unsafeThrow $ "isValidTypeBindLabel_Regex: " <> msg
   Right reg -> reg
 
