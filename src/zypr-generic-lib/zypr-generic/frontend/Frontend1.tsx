@@ -190,7 +190,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'poly-ty forall': return go(node, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
         case 'poly-ty ty': return go(node, ["poly-ty_ty"], kid(), indentationLevel)
         case 'ty-arg': return go(node, ["ty-arg"], kid(), indentationLevel)
-        case 'tm app': return go(node, ["tm_app"], [kid(), kid(), [Punc.application]].flat(), indentationLevel)
+        case 'tm app': return go(node, ["tm_app"], [kid(), [Punc.space], kid(), [Punc.application]].flat(), indentationLevel)
         case 'tm lam': return go(node, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
         case 'tm var': return go(node, ["tm_var"], [renderLabel(node.label), kid()].flat(), indentationLevel)
         case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)

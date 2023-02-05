@@ -23,6 +23,7 @@ export const buffer = makePunc(["buffer"], "buf")
 
 export const arrowR = makePunc(["arrowR"], "→")
 export const application = makePunc(["application"], "•")
+export const space = makePunc(["space"], " ")
 export const colon = makePunc(["colon"], ":")
 export const colon_shortFront = makePunc(["colon_shortFront"], ":")
 export const mapsto = makePunc(["mapsto"], "↦")

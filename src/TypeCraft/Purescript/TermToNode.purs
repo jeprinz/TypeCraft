@@ -91,14 +91,17 @@ arrangeNodeKids args kids =
 arrangeKidAI :: forall a recVal. AboveInfo a -> (AboveInfo a -> recVal -> Node) -> recVal -> PreNode
 arrangeKidAI info k rv th = k (stepAI th info) rv
 
+modifyNodeIsParenthesized :: (Node -> Boolean) -> Node -> Node
+modifyNodeIsParenthesized f n = setNodeIsParenthesized (f n) n
+
 -- ** Term
 -- | here is where indentation and parenthesization happens
 stepKidsTerm :: Boolean -> Term -> Array PreNode -> Array Node
 stepKidsTerm isActive term kids = case term of
   App md apl arg ty1 ty2
     | [ k_apl, k_arg ] <- kids ->
-      [ k_apl (App1 md arg ty1 ty2)
-      , setNodeIndentation (indentIf isActive md.argIndented) $ k_arg (App2 md apl ty1 ty2)
+      [ modifyNodeIsParenthesized (not <<< (_ `Array.elem` [ VarNodeTag, AppNodeTag, HoleNodeTag ]) <<< getNodeTag) $ k_apl (App1 md arg ty1 ty2)
+      , setNodeIndentation (indentIf isActive md.argIndented) $ modifyNodeIsParenthesized (not <<< (_ `Array.elem` [ VarNodeTag, HoleNodeTag ]) <<< getNodeTag) $ k_arg (App2 md apl ty1 ty2)
       ]
   Lambda md bnd sig body ty
     | [ k_bnd, k_ty, k_body ] <- kids ->
