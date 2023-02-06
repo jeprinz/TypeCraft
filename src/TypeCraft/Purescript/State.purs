@@ -60,7 +60,7 @@ isEmptyQuery { string } = String.null string
 -- TODO: completions for other syntax kinds
 data Completion
   = CompletionTerm Term {-Type-} Sub -- I don't think we need a Type here? Aren't terms only filled when they are the correct type up to unification? (Or if not, at least make it a typechange?)
-  | CompletionTermPath UpPath Change
+  | CompletionTermPath UpPath Change (CursorLocation -> CursorLocation)
   | CompletionType Type Sub
   | CompletionTypePath UpPath Change
   | CompletionCtrListPath UpPath ListCtrChange
@@ -70,7 +70,7 @@ data Completion
 derive instance genericCompletion :: Generic Completion _
 
 instance showCompletion :: Show Completion where
-  show x = genericShow x
+  show x = "TODO: Show Completion" -- genericShow x
 
 emptyQuery :: Query
 emptyQuery =

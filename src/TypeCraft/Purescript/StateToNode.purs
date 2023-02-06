@@ -13,7 +13,7 @@ import Data.Tuple.Nested ((/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Dentist (downPathToCtxChange)
 import TypeCraft.Purescript.Grammar (freshHole)
-import TypeCraft.Purescript.ModifyState (modifyQuery, setCursor, submitQuery)
+import TypeCraft.Purescript.ModifyState (modifyQuery, submitQuery)
 import TypeCraft.Purescript.Node (Node, NodeStyle(..), addNodeStyle, setNodeCompletions, setNodeGetCursor, setNodeQueryString)
 import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), Mode(..), Select(..), State, CursorMode, getCompletion)
@@ -168,7 +168,7 @@ cursorModeToNode cursorMode =
                     AINothing -- (AISelect termPath ctxs (term /\ ty) Nil)
                     { ctxs, term, ty }
           _ -> hole' "completionToNode CompletionTerm non-TermCursor"
-        CompletionTermPath termPath ch -> case cursorMode.cursorLocation of
+        CompletionTermPath termPath ch _ -> case cursorMode.cursorLocation of
           TermCursor ctxs ty termPath' term ->
             let
               chCtxs = downPathToCtxChange ctxs (reverse termPath)

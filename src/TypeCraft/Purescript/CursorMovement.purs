@@ -8,6 +8,7 @@ import TypeCraft.Purescript.PathRec
 import TypeCraft.Purescript.State
 import TypeCraft.Purescript.TermRec
 
+import Data.Array as Array
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..), (:), find, last, init)
@@ -16,12 +17,13 @@ import Data.List (index)
 import Data.List (length)
 import Data.Maybe (Maybe(..))
 import Data.Maybe (Maybe)
+import Data.Maybe (maybe)
+import Data.Ord (abs)
 import Data.Tuple.Nested (type (/\), (/\))
+import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Util (fromJust, hole, hole')
 import TypeCraft.Purescript.Util (head')
-import Debug (trace)
-import Data.Maybe (maybe)
 
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor ctxs ty up term) =
@@ -225,6 +227,18 @@ stepCursorBackwards cursor =
                 case index (getCursorChildren par) (me - 1) of
                     Just newCur -> getLastChild newCur
                     Nothing -> unsafeThrow "shouldn't happen stepCursorBackwards"
+
+stepCursor_n :: Int -> CursorLocation -> CursorLocation
+stepCursor_n n 
+    | n < 0 = stepCursorBackwards_n (abs n)
+    | n > 0 = stepCursorForwards_n n
+    | otherwise = identity
+
+stepCursorBackwards_n :: Int -> CursorLocation -> CursorLocation
+stepCursorBackwards_n n loc = Array.foldr identity loc (Array.replicate n stepCursorBackwards)
+
+stepCursorForwards_n :: Int -> CursorLocation -> CursorLocation
+stepCursorForwards_n n loc = Array.foldr identity loc (Array.replicate n stepCursorForwards)
 
 getLastChild :: CursorLocation -> CursorLocation
 getLastChild cursor =

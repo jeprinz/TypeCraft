@@ -100,7 +100,7 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
                 { cursorLocation: TermCursor ctxs' ty' path' tm'
                 , query: emptyQuery
                 }
-          CompletionTermPath pathNew ch ->
+          CompletionTermPath pathNew ch move ->
             let
               (kctx' /\ ctx') /\ path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
 
@@ -113,7 +113,7 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
               newCtxs = snd (getAllEndpoints chCtxs)
             in
               pure
-                { cursorLocation: TermCursor newCtxs ty (pathNew <> path') tm'
+                { cursorLocation: move $ TermCursor newCtxs ty (pathNew <> path') tm'
                 , query: emptyQuery
                 }
           _ -> unsafeThrow "tried to submit a non-CompletionTerm* completion at a TermCursor"
@@ -184,9 +184,6 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
 
 checkpoint :: State -> State
 checkpoint st = st { history = st.mode : st.history }
-
-setCursor :: CursorLocation -> State -> Maybe State
-setCursor cursorLocation st = pure $ st { mode = makeCursorMode cursorLocation }
 
 -- doesn't `checkpoint`
 moveCursorPrev :: State -> Maybe State

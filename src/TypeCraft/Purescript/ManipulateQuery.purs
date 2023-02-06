@@ -21,10 +21,11 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Data.UUID (UUID)
 import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.CursorMovement (stepCursor_n)
 import TypeCraft.Purescript.Key (Key)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
-import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State)
-import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State, makeCursorMode)
+import TypeCraft.Purescript.Util (hole, hole')
 import TypeCraft.Purescript.Util (lookup')
 
 isNonemptyQueryString :: Query -> Boolean
@@ -90,10 +91,13 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
         $ Writer.tell
             [ [ let
                   alpha = freshTHole unit
+
+                  tmBind = freshTermBind Nothing
                 in
                   CompletionTermPath -- lam (~ : alpha) ↦ ({} : ty)
-                    (List.singleton $ Lambda3 defaultLambdaMD (freshTermBind Nothing) alpha ty)
+                    (List.singleton $ Lambda3 defaultLambdaMD tmBind alpha ty)
                     (Plus alpha (tyInject ty))
+                    (stepCursor_n (-2)) -- step to bind
               ]
             ]
       -- Let
@@ -102,6 +106,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionTermPath -- let ~<∅> : alpha = ? in {} : ty
                   (List.singleton $ Let5 defaultLetMD (freshTermBind Nothing) List.Nil (freshHole unit) (freshTHole unit) ty)
                   (tyInject ty)
+                  (stepCursor_n (-4)) -- step to bind
               ]
             ]
       -- App
@@ -112,6 +117,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
                 [ [ CompletionTermPath -- ({} ?)
                       (List.singleton $ App1 defaultAppMD (freshHole unit) ty1 ty2)
                       (Minus ty1 (tyInject ty2))
+                      (stepCursor_n 1) -- step to arg
                   ]
                 ]
             _ -> pure unit
@@ -121,6 +127,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionTermPath
                   (List.singleton $ TLet4 defaultTLetMD (freshTypeBind Nothing) List.Nil (freshTHole unit) ty)
                   (tyInject ty)
+                  (stepCursor_n (-3)) -- step to bind
               ]
             ]
       -- Data
@@ -129,6 +136,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionTermPath
                   (List.singleton $ Data4 defaultGADTMD (freshTypeBind Nothing) List.Nil List.Nil ty)
                   (tyInject ty)
+                  (stepCursor_n (-3)) -- step to bind
               ]
             ]
       -- TypeBoundary
@@ -137,14 +145,14 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionTermPath
                   (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (tyInject ty))
                   (tyInject ty)
+                  identity
               ]
             ]
       -- Hole
       when (str `kindaStartsWithAny` [ "hole", "?" ])
         $ Writer.tell
             [ [ CompletionTerm
-                  (freshHole unit)
-                  --                  ty
+                  (freshHole unit) -- ty
                   { subTypeVars: Map.empty, subTHoles: Map.empty }
               ]
             ]
@@ -154,6 +162,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionTermPath
                   (List.singleton $ Buffer3 defaultBufferMD (freshHole unit) (freshTHole unit) ty)
                   (tyInject ty)
+                  (stepCursor_n (-2)) -- step to buffer term
               ]
             ]
   TypeCursor ctxs path ty ->
@@ -251,3 +260,6 @@ makeEmptyTNeu x k = TNeu defaultTNeuMD x (helper k)
   helper Type = List.Nil
 
   helper (KArrow k) = TypeArg defaultTypeArgMD (freshTHole unit) List.: (helper k)
+
+setCursor :: CursorLocation -> State -> Maybe State
+setCursor cursorLocation st = pure $ st { mode = makeCursorMode cursorLocation }

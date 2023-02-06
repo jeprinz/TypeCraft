@@ -26,10 +26,6 @@ export function moveCursorNext(st: State): State | undefined {
   return Nullable.fromMaybe(ModifyState.moveCursorNext(st))
 }
 
-export function setCursor(cursorLoc: CursorLocation, st: State): State | undefined {
-  return Nullable.fromMaybe(ModifyState.setCursor(cursorLoc)(st))
-}
-
 export function moveSelectPrev(st: State): State | undefined {
   return Nullable.fromMaybe(ModifyState.moveSelectPrev(st))
 }
