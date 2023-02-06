@@ -84,7 +84,7 @@ termToothCtxChange kctx ctx actx mdctx mdkctx tooth =
         Buffer3 md def defTy {-Term-} bodyTy -> ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
         TypeBoundary1 md ch {-Term-} -> ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
         ContextBoundary1 md x vch {-Term-} -> alterCCtxVarChange (ctxInject ctx) x vch /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
-        TLet4 md tyBind tyBinds def {-Term-} bodyTy -> hole' "termToothChange"
+        TLet4 md tyBind tyBinds def {-Term-} bodyTy -> hole' "termToothCtxChange"
         Data4 md tyBind@(TypeBind xmd x) tyBinds ctrs {-Term-} bodyTy ->
             let ctrTypes = constructorTypes tyBind tyBinds ctrs in
                let startingCtx = ctxInject ctx in

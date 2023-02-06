@@ -198,7 +198,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm app': return go(node, ["tm_app"], [kid(), [Punc.space], kid(), [Punc.application]].flat(), indentationLevel)
         case 'tm lam': return go(node, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
         case 'tm var': 
-          assert(node.metadata !== undefined && node.metadata.case === 'tm var')
+          assert(node.metadata !== undefined)
+          assert(node.metadata.case === 'tm var')
           return go(node, ["tm_var"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
         case 'tm let': return go(node, ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm dat': return go(node, ["tm_dat"], [[Punc.data], kid(), kid(), [Punc.assign_shortFront], kid(), [Punc.in_], kid()].flat(), indentationLevel)

@@ -8,11 +8,12 @@ import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, Tooth(..), Type, TypeArg, TypeBind, UpPath)
-import TypeCraft.Purescript.Node (Node, NodeTag, makeNode)
+import TypeCraft.Purescript.Node
 import TypeCraft.Purescript.State
 import TypeCraft.Purescript.Util (hole', justWhen)
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (lookup')
+import Debug (trace)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
@@ -512,7 +513,13 @@ typeArgListPathToNode isActive abovePath belowInfo listTypeArgPath innerNode =
                     arrangeKid listTypeArgPath.listTypeArgPath abovePath (typeArgToNode isActive) tyArg
                     , arrangeKid listTypeArgPath.listTypeArgPath abovePath (\_ _ -> innerNode) tyArgs
                 ]
-        , var1: \termPath md x -> hole' "typeArgListPathToNode"
+        , var1: \termPath md x ->
+            let newBI = BITerm in
+            termPathToNode isActive abovePath newBI termPath $
+            setNodeMetadata (makeVarNodeMetadata (x `lookup'` termPath.ctxs.mdctx)) -- TODO: This should really be part of arrangeTerm
+                $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath) [
+                    arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) tyArgs
+                ]
     } listTypeArgPath
 
 makeTypeBindListArgs :: Boolean -> UpPath -> BelowInfo (List TypeBind) Unit -> ListTypeBindPathRecValue -> TypeBindListNodeCursorInfo
