@@ -39,6 +39,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       function onMouseDown(event: React.MouseEvent) {
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
+          console.log("onMouseDown on node with tag: " + node.tag.case)
           editor.setState(getCursor(editor.state))
           event.stopPropagation()
         }

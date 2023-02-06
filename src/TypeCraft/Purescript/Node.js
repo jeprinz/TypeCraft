@@ -4,6 +4,10 @@ export const makeNode_ = (node) => node
 
 export const getNodeTag_ = (data) => data.tag
 
+// Cursor
+
+export const setNodeGetCursor_ = getCursor => node => ({...node, getCursor})
+
 // NodeTag
 
 export const makeNodeTag_ = (case_) => ({ case: case_ })

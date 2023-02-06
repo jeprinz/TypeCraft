@@ -7,7 +7,7 @@
 .tm_hol-inner {
   display: inline-block;
   border-radius: 0.2rem;
-  padding: 0 0.2rem;
+  padding: 0 0.4rem;
   display: inline-block;
   background-color: rgb(255, 173, 145);
   box-shadow:  0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
@@ -15,7 +15,7 @@
 
 .ty_hol-inner {
   display: inline-block;
-  border-radius: 0.4rem;
+  border-radius: 0.2rem;
   padding: 0 0.2rem;
   display: inline-block;
   background-color: rgb(255, 114, 147);
@@ -66,6 +66,11 @@
 .query-completion {
   padding: 0.2rem;
   background-color: white;
+}
+.query-completion:hover {
+  cursor: pointer;
+  padding: 0.2rem;
+  background-color: rgb(100, 100, 255);
 }
 
 .query-completion-active {
@@ -198,15 +203,31 @@
 /* cursor, select, etc. */
 
 
-.node.cursorable {}
+.node.cursorable {
+  border-radius: 0.2rem;
+}
 
-.node.selectable {}
+.node.cursorable:hover {
+  cursor: pointer;
+  box-shadow:
+    -2px 0 0 0 rgb(206, 206, 255),
+    2px 0 0 0 rgb(206, 206, 255);
+}
 
 .node.cursor {
-  border-radius: 0.2rem;
   box-shadow:
     -2px 0 0 0 blue,
     2px 0 0 0 blue;
+}
+.node.cursor.cursorable:hover {
+  cursor: pointer;
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+}
+
+.node.selectable {
+  border-radius: 0.2rem;
 }
 
 .node.select-top {

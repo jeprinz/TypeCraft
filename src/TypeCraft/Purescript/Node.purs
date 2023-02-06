@@ -71,6 +71,11 @@ foreign import setNodeQueryString :: String -> Node -> Node
 
 foreign import setNodeCompletions :: Array Node -> Number -> Node -> Node
 
+-- export const setNodeGetCursor_ = getCursor => node => ({...node, getCursor})
+foreign import setNodeGetCursor_ :: Nullable (State -> State) -> Node -> Node 
+setNodeGetCursor :: Maybe (State -> State) -> Node -> Node
+setNodeGetCursor mb_f = setNodeGetCursor_ (Nullable.fromMaybe mb_f)
+
 -- NodeIndentation
 foreign import data NodeIndentation :: Prim.Type
 
