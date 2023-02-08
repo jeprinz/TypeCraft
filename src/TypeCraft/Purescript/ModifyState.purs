@@ -12,7 +12,7 @@ import TypeCraft.Purescript.ChangePath
 import TypeCraft.Purescript.ChangeTerm
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.CursorMovement
-import TypeCraft.Purescript.Dentist (downPathToCtxChange)
+import TypeCraft.Purescript.Dentist
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Key (Key)
 import TypeCraft.Purescript.MD (defaultTypeBoundaryMD)
@@ -325,6 +325,12 @@ delete st =
       _ -> hole' "delete: other syntactical kids of cursors"
     SelectMode selectMode -> case selectMode.select of
       TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori -> pure $ st { mode = makeCursorMode $ TermCursor ctxs1 ty1 ((TypeBoundary1 defaultTypeBoundaryMD (Replace ty2 ty1)) List.: tmPath1) tm2 }
+      TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 ori ->
+        let change = typePathToChange ty2 middlePath in
+--chTypePath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> CAllContext /\ UpPath
+        let (kctx' /\ ctx') /\ topPath' = chTypePath (kCtxInject ctxs2.kctx ctxs2.actx) (ctxInject ctxs2.ctx) (invert change) topPath in
+        let ctxs' = ctxs2 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
+        pure $ st {mode = makeCursorMode $ TypeCursor ctxs' topPath' ty2}
       _ -> hole' "delete: other syntactical kinds of selects"
 
 escape :: State -> Maybe State

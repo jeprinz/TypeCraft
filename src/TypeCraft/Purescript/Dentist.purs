@@ -28,6 +28,15 @@ For each of these, we need to look at a selection and get the TypeChange and Con
 *TooothChange inputs an UpTooth, so the context and type input starts from the bottom!
 -}
 
+-- The input type comes from the bottom, and the output Change goes from bottom to top.
+typePathToChange :: Type -> UpPath -> Change
+typePathToChange ty Nil = tyInject ty
+typePathToChange ty (tooth : teeth) =
+    case tooth of
+        Arrow1 md {--} t2 -> composeChange (Replace ty (Arrow md ty t2)) (typePathToChange (Arrow md ty t2) teeth)
+        Arrow2 md t1 {--} -> composeChange (Plus t1 (tyInject ty)) (typePathToChange (Arrow md t1 ty) teeth)
+        TNeu1 _ x {-tyArgs-} -> hole' "typeToothChange" -- TODO: need to look up through tyArgsPath to next type, and use CNeu
+        _ -> unsafeThrow "path that isn't a type tooth given to typePathToChange"
 
 -- The input type comes from the bottom, and the output Change goes from bottom to top.
 termToothChange :: Type -> Tooth -> Change

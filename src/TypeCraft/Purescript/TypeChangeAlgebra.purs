@@ -23,6 +23,7 @@ import TypeCraft.Purescript.Util (lookup')
 import TypeCraft.Purescript.Alpha
 import TypeCraft.Purescript.Util (hole)
 import Data.Maybe (maybe)
+import Debug (trace)
 
 getEndpoints :: Change -> Type /\ Type
 getEndpoints (CArrow a b) =
@@ -101,6 +102,12 @@ composeChange (CHole x) (CHole y) | x == y = CHole x
 composeChange (Minus tooth a) b = Minus tooth (composeChange a b)
 composeChange a (Plus tooth b) = Plus tooth (composeChange a b)
 composeChange (Plus t1 a) (Minus t2 b) | t1 == t2 = composeChange a b
+composeChange (Plus t a) (CArrow c b) =
+    if not (tyInject t == c) then unsafeThrow "shouldn't happen in composeChange 1" else
+    Plus t (composeChange a b)
+composeChange (CArrow c b) (Minus t a) =
+    if not (tyInject t == c) then unsafeThrow "shouldn't happen in composeChange 2" else
+    Minus t (composeChange a b)
 composeChange (Minus t1 a) (Plus t2 b) | t1 == t2 = CArrow (tyInject t1) (composeChange a b)
 composeChange (CNeu x1 args1) (CNeu x2 args2) | x1 == x2 =
     CNeu x1 (composeParamChanges args1 args2)
