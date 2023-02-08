@@ -11,7 +11,7 @@ import Data.List as List
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
 import Data.UUID as UUID
-import Debug (trace)
+import Debug (trace, traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.CursorMovement (getMiddlePath)
@@ -72,6 +72,7 @@ arrangeNodeKids args kids =
     getCursor =
       join
         $ justWhen args.isActive \_ -> do
+            traceM "getCursor [purs]"
             cursorLocation <- args.makeCursor unit
             Just (_ { mode = makeCursorMode cursorLocation })
   in
@@ -293,7 +294,7 @@ stepKidsType isActive ty kids = case ty of
       , setNodeIndentation (indentIf isActive md.codIndented) $ k_ty2 (Arrow2 md ty1)
       ]
   TNeu md x args
-    | [ k_args ] <- kids -> [ k_args (TNeu1 md x) ]
+    | [ k_args ] <- kids -> [ addNodeStyle (NodeStyle "list-head-var") $ k_args (TNeu1 md x) ]
   THole md id
     | [] <- kids -> []
   _ -> unsafeThrow "stepKidsType: wrong number of kids"

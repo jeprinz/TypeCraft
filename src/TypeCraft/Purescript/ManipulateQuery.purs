@@ -140,7 +140,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
               ]
             ]
       -- TypeBoundary
-      when (str `kindaStartsWithAny` [ "{}", "boundary" ])
+      when (str `kindaStartsWithAny` [ "{" ])
         $ Writer.tell
             [ [ CompletionTermPath
                   (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (tyInject ty))
@@ -148,16 +148,16 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
                   identity
               ]
             ]
-      -- Hole
-      when (str `kindaStartsWithAny` [ "hole", "?" ])
-        $ Writer.tell
-            [ [ CompletionTerm
-                  (freshHole unit) -- ty
-                  { subTypeVars: Map.empty, subTHoles: Map.empty }
-              ]
-            ]
+      -- -- Hole
+      -- when (str `kindaStartsWithAny` [ "hole", "?" ])
+      --   $ Writer.tell
+      --       [ [ CompletionTerm
+      --             (freshHole unit) -- ty
+      --             { subTypeVars: Map.empty, subTHoles: Map.empty }
+      --         ]
+      --       ]
       -- Buffer
-      when (str `kindaStartsWithAny` [ "buffer", "#" ])
+      when (str `kindaStartsWithAny` [ "buf", "#" ])
         $ Writer.tell
             [ [ CompletionTermPath
                   (List.singleton $ Buffer3 defaultBufferMD (freshHole unit) (freshTHole unit) ty)
@@ -182,7 +182,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
           )
           (Map.toUnfoldable ctxs.mdkctx :: Array (UUID /\ String))
         -- Arrow
-        when (str `kindaStartsWithAny` [ "arrow", "->" ])
+        when (str `kindaStartsWithAny` [ "->" ])
           $ Writer.tell
               [ [ let
                     thole = freshTHole unit
@@ -218,7 +218,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
   CtrListCursor ctxs path ctrs ->
     Writer.execWriter do
       -- add a constructor
-      when (str `kindaStartsWithAny` [ "|", "constructor", "," ])
+      when (str `kindaStartsWithAny` [ "|"  ])
         $ Writer.tell
             [ [ let
                   kctx = kCtxInject ctxs.kctx ctxs.actx
