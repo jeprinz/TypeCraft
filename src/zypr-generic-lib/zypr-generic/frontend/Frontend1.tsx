@@ -7,10 +7,10 @@ import { showList } from '../../../TypeCraft/Purescript/output/Data.List.Types';
 import { showTooth } from '../../../TypeCraft/Purescript/output/TypeCraft.Purescript.Grammar';
 import { showCursorLocation } from '../../../TypeCraft/Purescript/output/TypeCraft.Purescript.State';
 import assert from 'assert';
+import { fromBackendState, toBackendState } from '../../../TypeCraft/Typescript/State';
 
 export default function makeFrontend(backend: Backend): JSX.Element {
   function render(editor: Editor): JSX.Element[] {
-
     function go(
       node: Node,
       classNames: string[],
@@ -37,10 +37,11 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       node.styles.forEach(style => classNames.push(style))
 
       function onMouseDown(event: React.MouseEvent) {
+        console.log("node.onMouseDown")
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
           console.log("onMouseDown on node with tag: " + node.tag.case)
-          editor.setState(getCursor(editor.state))
+          editor.setBackendState(toBackendState(getCursor(fromBackendState(editor.state.backendState))))
           event.stopPropagation()
         }
         // else console.log(`getCursor is undefined for this '${node.tag.case}' node`)
@@ -50,7 +51,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         let getSelect = node.getSelect
         if (getSelect !== undefined) {
           // console.log(`getSelect for this '${node.tag.case}' node`)
-          editor.setState(getSelect(editor.state))
+          editor.setBackendState(fromBackendState(getSelect(toBackendState(editor.state.backendState))))
           event.stopPropagation()
         }
         else console.log(`getSelect is undefined for this '${node.tag.case}' node`)
@@ -187,18 +188,18 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
       switch (node.tag.case) {
         case 'ty arr': return go(node, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat(), indentationLevel)
-        case 'ty hol': 
+        case 'ty hol':
           assert(node.metadata !== undefined && node.metadata.case === 'ty hol')
           return go(node, ["ty_hol"], [<div className="ty_hol-inner">✶{node.metadata.typeHoleId.substring(0, 2)}</div>].flat(), indentationLevel)
-        case 'ty neu': 
-        assert(node.metadata !== undefined && node.metadata.case === 'ty neu')
-        return go(node, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
+        case 'ty neu':
+          assert(node.metadata !== undefined && node.metadata.case === 'ty neu')
+          return go(node, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
         case 'poly-ty forall': return go(node, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
         case 'poly-ty ty': return go(node, ["poly-ty_ty"], kid(), indentationLevel)
         case 'ty-arg': return go(node, ["ty-arg"], kid(), indentationLevel)
         case 'tm app': return go(node, ["tm_app"], [kid(), [Punc.space], kid(), [Punc.application]].flat(), indentationLevel)
         case 'tm lam': return go(node, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
-        case 'tm var': 
+        case 'tm var':
           assert(node.metadata !== undefined)
           assert(node.metadata.case === 'tm var')
           return go(node, ["tm_var"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
@@ -209,16 +210,16 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm cx-boundary': return go(node, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
         case 'tm hol': return go(node, ["tm_hol"], [<div className="tm_hol-inner">?:{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
         case 'tm buf': return go(node, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat(), indentationLevel)
-        case 'ty-bnd': 
+        case 'ty-bnd':
           assert(node.metadata !== undefined && node.metadata.case === 'ty-bnd')
           return go(node, ["ty-bnd"], renderLabel(node.metadata.label), indentationLevel)
-        case 'tm-bnd': 
+        case 'tm-bnd':
           assert(node.metadata !== undefined && node.metadata.case === 'tm-bnd')
           return go(node, ["tm-bnd"], renderLabel(node.metadata.label), indentationLevel)
         case 'ctr-prm':
           // TODO: label
           assert(node.metadata !== undefined && node.metadata.case === 'ctr-prm')
-          return go(node, ["ctr-prm"], [renderLabel(node.metadata.label), [Punc.colon], kid()].flat(), indentationLevel) 
+          return go(node, ["ctr-prm"], [renderLabel(node.metadata.label), [Punc.colon], kid()].flat(), indentationLevel)
         case 'ctr': return go(node, ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat(), indentationLevel)
         // ty-arg-list
         case 'ty-arg-list cons': return go(node, ["ty-arg-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.comma])].flat(), indentationLevel)
@@ -239,7 +240,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       }
     }
 
-    return renderNode(backend.props.format(editor.state), 0)
+    return renderNode(backend.props.format(editor.state.backendState), 0)
   }
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
@@ -247,11 +248,11 @@ export default function makeFrontend(backend: Backend): JSX.Element {
     if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter"].includes(event.key) && !(event.metaKey || event.ctrlKey))
       event.preventDefault()
 
-    const state = editor.props.backend.handleKeyboardEvent(event)(editor.state)
-    if (state === undefined) {
+    const backendState = editor.props.backend.handleKeyboardEvent(event)(editor.state.backendState)
+    if (backendState === undefined) {
       return
     }
-    editor.setState(state)
+    editor.setBackendState(backendState)
   }
 
   const initState = backend.state
@@ -261,6 +262,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       backend={backend.props}
       render={render}
       handleKeyboardEvent={handleKeyboardEvent}
-      initState={initState}
+      initBackendState={initState}
     />)
 }

@@ -1,26 +1,32 @@
 import React, { MouseEvent } from "react"
 import * as Backend from './Backend'
-import { State } from "../../TypeCraft/Typescript/State"
-
-export var isMouseDown: boolean = false
-export function setMouseDown(event: MouseEvent) { isMouseDown = event.button === 0 ? true : isMouseDown }
-export function setMouseUp(event: MouseEvent) { isMouseDown = event.button === 0 ? false : isMouseDown }
+import { BackendState } from "../../TypeCraft/Typescript/State"
 
 export type Props = {
     backend: Backend.Props,
     render: (editor: Editor) => JSX.Element[],
     handleKeyboardEvent: (editor: Editor, event: KeyboardEvent) => void,
-    initState: State
+    initBackendState: BackendState
+}
+
+export type EditorState = {
+    backendState: BackendState
 }
 
 export default class Editor
-    extends React.Component<Props, State>
+    extends React.Component<Props, EditorState>
 {
     constructor(
         props: Props,
     ) {
         super(props)
-        this.state = props.initState
+        this.state = {
+            backendState: props.initBackendState
+        }
+    }
+
+    setBackendState(backendState: BackendState) {
+        this.setState({ ...this.state, backendState })
     }
 
     keyboardEventListener = (event: KeyboardEvent): any => {

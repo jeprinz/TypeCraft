@@ -5,11 +5,11 @@ import { Node } from './Node'
 
 export type Backend = {
     props: Props,
-    state: State.State
+    state: State.BackendState
 }
 
 export type Props = {
     language: Language,
-    format: (st: State.State) => Node,
-    handleKeyboardEvent: (event: KeyboardEvent) => EndoPart<State.State>,
+    format: (st: State.BackendState) => Node,
+    handleKeyboardEvent: (event: KeyboardEvent) => EndoPart<State.BackendState>,
 }

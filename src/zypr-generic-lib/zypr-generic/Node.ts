@@ -1,12 +1,12 @@
-import { State } from "../../TypeCraft/Typescript/State"
+import { BackendState } from "../../TypeCraft/Typescript/State"
 
 export type Cursor = any // Purescript
 export type Select = any // Purescript
 
 export type Node = {
     kids: Node[],
-    getCursor?: ((st: State) => State),
-    getSelect?: ((st: State) => State),
+    getCursor?: ((st: BackendState) => BackendState),
+    getSelect?: ((st: BackendState) => BackendState),
     styles: NodeStyle[],
     indentation: NodeIndentation,
     isParenthesized: boolean,
