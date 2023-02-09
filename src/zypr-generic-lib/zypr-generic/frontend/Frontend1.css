@@ -263,8 +263,7 @@
 /* .node.list.cons */
 
 .node.list.cons {
-  padding-left: 0.1rem;
-  margin-left: 0.2rem;
+  padding-left: 0.3rem;
 }
 
 .node.list.cons.list-head {
@@ -293,9 +292,9 @@
 
 /* .list and .cursor */
 
-.node.list.cursor {
+.node.list.cons.cursor {
   border-radius: 0;
-  box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue;
+  box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
 }
 
 .node.list.nil.cursor {
@@ -306,15 +305,15 @@
   background-color: blue;
 }
 
-.node.list.select-top {
+.node.list.cons.select-top {
   border-radius: 0;
-  box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue;
+  box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
   background-color: rgb(208, 236, 255)
 }
 
-.node.list.select-bot {
+.node.list.cons.select-bot {
   border-radius: 0;
-  box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue;
+  box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
   background-color: white;
 }
 
@@ -352,6 +351,12 @@
 
 .list-head-nil-wrapper>.cursor {
   visibility: visible;
+}
+
+/* specific lists */
+
+.ty-bnd-list_nil {
+  margin-right: -0.1rem;
 }
 
 /* hover */
