@@ -32,7 +32,7 @@ export function pushHoverId(hoverId: HoverId) {
     const hoverId_parent = hoverIdStack.at(hoverIdStack.length - 1)
     if (hoverId_parent !== undefined) {
         const elem = document.getElementById(hoverId_parent.id)
-        assert(elem !== null, "before pushing a cursor hover id, could not find the element with the id of the next cursor hover id in the stack")
+        assert(elem !== null, "before pushing a hover id, could not find the element with the id of the next hover id in the stack")
         elem.classList.remove(hover_className)
     }
 
@@ -41,25 +41,25 @@ export function pushHoverId(hoverId: HoverId) {
 
     // hover at the pushed hoverId
     const elem = document.getElementById(hoverId.id)
-    assert(elem !== null, "after pushing a cursor hover id, could not find the element with that id")
+    assert(elem !== null, "after pushing a hover id, could not find the element with that id")
     elem.classList.add(hover_className)
 }
 
 export function popHoverId(hoverId: HoverId) {
     // pop the next hoverId
     const hoverId_ = hoverIdStack.pop()
-    assert(hoverId_ !== undefined && hoverId.id === hoverId_.id, "after popping a cursor hover id, found that the popped id is not the expected id")
+    assert(hoverId_ !== undefined && hoverId.id === hoverId_.id, "after popping a hover id, found that the popped id is not the expected id")
 
     // un-hover at the popped hoverId
     const elem = document.getElementById(hoverId.id)
-    assert(elem !== null, "after popping a cursor hover id, could not find the element with that id")
+    assert(elem !== null, "after popping a hover id, could not find the element with that id")
     elem.classList.remove(hover_className)
 
     // if there is a next hoverId_parent in the stack, hover at hoverId_parent
     const hoverId_parent = hoverIdStack.at(hoverIdStack.length - 1)
     if (hoverId_parent !== undefined) {
         const elem = document.getElementById(hoverId_parent.id)
-        assert(elem !== null, "after popping a cursor hover id, could not find the element with the id of the next cursor hover id in the stack")
+        assert(elem !== null, "after popping a hover id, could not find the element with the id of the next hover id in the stack")
         elem.classList.add(hover_className)
     }
 }
