@@ -33,10 +33,20 @@ export function setMouseDown(isMouseDown_: boolean) {
 
 export type HoverId = { id: string }
 
-function getHoverIdElement(hoverId: HoverId): HTMLElement {
+// function getHoverIdElement(hoverId: HoverId): HTMLElement {
+//     const elem = document.getElementById(hoverId.id)
+//     assert(elem !== null, "getHoverIdElement: could not find element with hover id")
+//     return elem
+// }
+
+function withHoverIdElement(hoverId: HoverId, k: (e: HTMLElement) => void): void {
     const elem = document.getElementById(hoverId.id)
-    assert(elem !== null, "getHoverIdElement: could not find element with hover id")
-    return elem
+    // assert(elem !== null, "getHoverIdElement: could not find element with hover id")
+    if (elem !== null) {
+        k(elem)
+    } else {
+        current_hoverId = undefined
+    }
 }
 
 // export const hover_className = () => `hover-${isMouseDown ? "mouseDown" : "mouseUp"}`
@@ -52,21 +62,24 @@ export function setHoverId(hoverId: HoverId) {
     if (current_hoverId === undefined || (current_hoverId !== undefined && current_hoverId.id !== hoverId.id)) {
         if (current_hoverId !== undefined) {
             // unhover current hover element
-            const current_elem = getHoverIdElement(current_hoverId)
-            current_elem.classList.remove(hover_className)
+            withHoverIdElement(current_hoverId, current_elem => {
+                current_elem.classList.remove(hover_className)
+            })
         }
 
         // hover the new hover element
-        const elem = getHoverIdElement(hoverId)
-        elem.classList.add(hover_className)
-        current_hoverId = hoverId
+        withHoverIdElement(hoverId, elem => {
+            elem.classList.add(hover_className)
+            current_hoverId = hoverId
+        })
     }
 }
 
 export function unsetHoverId(hoverId: HoverId) {
     // unhover hover element
-    const elem = getHoverIdElement(hoverId)
-    elem.classList.remove(hover_className)
+    withHoverIdElement(hoverId, elem => {
+        elem.classList.remove(hover_className)
+    })
 }
 
 // Editor

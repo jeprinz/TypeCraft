@@ -14,8 +14,13 @@
   box-shadow: 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }
 
+.node.cursorable > .tm_hol-inner:hover {
+  background-color: rgb(255, 204, 187);
+}
+
 .ty_hol-inner {
   display: inline-block;
+  white-space: pre;
   border-radius: 0.2rem;
   padding: 0 0.2rem;
   display: inline-block;
@@ -23,10 +28,10 @@
   box-shadow: 0 0 0 1px rgb(255, 86, 126) inset, 0 0 2px 1px black inset;
 }
 
-.ty_hol-inner {
-  display: inline;
-  white-space: pre;
+.node.cursorable > .ty_hol-inner:hover {
+  background-color: rgb(255, 174, 193);
 }
+
 
 .node.tm_ty-boundary-change {}
 
@@ -208,11 +213,16 @@
   box-shadow: 0 0 0 1px rgb(255, 182, 80) inset, 0 0 2px 1px black inset;
 }
 
+.node.cursorable > .label-empty:hover {
+  background-color: rgb(255, 231, 198);
+}
+
 /* cursor, select, etc. */
 
 
 .node.cursorable {
   border-radius: 0.2rem;
+  cursor: pointer;
 }
 
 .node.cursor {
@@ -223,6 +233,7 @@
 
 .node.selectable {
   border-radius: 0.2rem;
+  cursor: pointer;
 }
 
 .node.select-top {
