@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Backend } from '../Backend';
-import Editor, { freshHoverId, popHoverId, pushHoverId } from "../Editor";
+import Editor, { setHoverId, HoverId, setMouseDown, freshHoverId, unsetHoverId } from "../Editor";
 import { Node } from "../Node";
 import * as Punc from './Punctuation';
 import assert from 'assert';
@@ -34,7 +34,12 @@ function hashString(str: string): number {
 }
 
 function idOfEIDSteps(eidSteps: EIDSteps): string {
-  return hashString(fromNewtype(eidSteps).join("/")).toString()
+  // return hashString(fromNewtype(eidSteps).join("/")).toString()
+  return fromNewtype(eidSteps).map(eidStep => fromNewtype(eidStep)).join("/")
+}
+
+function hoverIdOfEIDSteps(eidSteps: EIDSteps): HoverId {
+  return ({ id: idOfEIDSteps(eidSteps) })
 }
 
 export default function makeFrontend(backend: Backend): JSX.Element {
@@ -46,7 +51,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       kids: JSX.Element[],
       indentationLevel: number,
     ): JSX.Element[] {
-      const hoverId = freshHoverId()
+      const hoverId = hoverIdOfEIDSteps(eidSteps)
+      // const hoverId = freshHoverId()
 
       // Parenthesization
       if (node.isParenthesized)
@@ -67,20 +73,28 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
       function onMouseEnter(event: React.MouseEvent) {
         // console.log("onMouseEnter")
-        if (node.getCursor !== undefined || node.getSelect !== undefined) {
-          pushHoverId(hoverId)
-        }
       }
 
       function onMouseLeave(event: React.MouseEvent) {
         // console.log("onMouseLeave")
         if (node.getCursor !== undefined || node.getSelect !== undefined) {
-          popHoverId(hoverId)
+          unsetHoverId(hoverId)
+        }
+      }
+
+      function onMouseMove(event: React.MouseEvent) {
+        // console.log("onMouseMove")
+        if (node.getCursor !== undefined || node.getSelect !== undefined) {
+          setHoverId(hoverId)
+          event.stopPropagation()
         }
       }
 
       function onMouseDown(event: React.MouseEvent) {
-        console.log("node.onMouseDown")
+        // console.log("node.onMouseDown")
+
+        setMouseDown(true)
+
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
           console.log("onMouseDown on node with tag: " + node.tag)
@@ -91,6 +105,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       }
 
       function onMouseUp(event: React.MouseEvent) {
+        // console.log("node.onMouseUp")
+        
+        setMouseDown(false)
+        
         let getSelect = node.getSelect
         if (getSelect !== undefined) {
           // console.log(`getSelect for this '${node.tag}' node`)
@@ -114,18 +132,13 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         kids = ([] as JSX.Element[]).concat([Punc.angleL], kids)
       }
 
-      const id = hoverId.id
-
-      // if (editor.state.cursorNodeIdStack.at(0) === id) {
-      //   classNames.push('cursor-hover')
-      // }
-
       kids = [
         <div
-          id={id}
+          id={hoverId.id}
           className={([] as string[]).concat(["node"], classNames).join(" ")}
           onMouseDown={onMouseDown}
           onMouseUp={onMouseUp}
+          onMouseMove={onMouseMove}
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
         >
@@ -196,8 +209,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       // assumes that kids are always rendered in the order of the node's
       // children
       var kid_i = -1
-      function kid(skip = 0): JSX.Element[] {
-        kid_i += 1 + skip
+      function kid(): JSX.Element[] {
+        kid_i += 1
         if (!(0 <= kid_i && kid_i < node.kids.length))
           throw new Error(`kid index ${kid_i} out of range for node tag '${node.tag}', which has ${node.kids.length} kids`);
 
@@ -214,7 +227,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           case 'newline': break
         }
 
-        return renderNode(node.kids[kid_i], eidSteps, indentationLevel_kid)
+        return renderNode(node.kids[kid_i], nextEIDStep(kid_i.toString(), eidSteps), indentationLevel_kid)
       }
 
       // const showLabel = (label: string | undefined) => label !== undefined ? (label.length > 0 ? label : "~") : "<undefined>"
@@ -239,56 +252,56 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       }
 
       switch (node.tag) {
-        case 'ty arr': return go(node, nextEIDStep(node.tag, eidSteps), ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat(), indentationLevel)
+        case 'ty arr': return go(node, eidSteps, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat(), indentationLevel)
         case 'ty hol':
           assert(node.metadata !== undefined && node.metadata.case === 'ty hol')
-          return go(node, nextEIDStep(node.tag, eidSteps), ["ty_hol"], [<div className="ty_hol-inner">✶{node.metadata.typeHoleId.substring(0, 2)}</div>].flat(), indentationLevel)
+          return go(node, eidSteps, ["ty_hol"], [<div className="ty_hol-inner">✶{node.metadata.typeHoleId.substring(0, 2)}</div>].flat(), indentationLevel)
         case 'ty neu':
           assert(node.metadata !== undefined && node.metadata.case === 'ty neu')
-          return go(node, nextEIDStep(node.tag, eidSteps), ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
-        case 'poly-ty forall': return go(node, nextEIDStep(node.tag, eidSteps), ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
-        case 'poly-ty ty': return go(node, nextEIDStep(node.tag, eidSteps), ["poly-ty_ty"], kid(), indentationLevel)
-        case 'ty-arg': return go(node, nextEIDStep(node.tag, eidSteps), ["ty-arg"], kid(), indentationLevel)
-        case 'tm app': return go(node, nextEIDStep(node.tag, eidSteps), ["tm_app"], [kid(), [Punc.space], kid(), [Punc.application]].flat(), indentationLevel)
-        case 'tm lam': return go(node, nextEIDStep(node.tag, eidSteps), ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
+          return go(node, eidSteps, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
+        case 'poly-ty forall': return go(node, eidSteps, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
+        case 'poly-ty ty': return go(node, eidSteps, ["poly-ty_ty"], kid(), indentationLevel)
+        case 'ty-arg': return go(node, eidSteps, ["ty-arg"], kid(), indentationLevel)
+        case 'tm app': return go(node, eidSteps, ["tm_app"], [kid(), [Punc.space], kid(), [Punc.application]].flat(), indentationLevel)
+        case 'tm lam': return go(node, eidSteps, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
         case 'tm var':
           assert(node.metadata !== undefined)
           assert(node.metadata.case === 'tm var')
-          return go(node, nextEIDStep(node.tag, eidSteps), ["tm_var"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
-        case 'tm let': return go(node, nextEIDStep(node.tag, eidSteps), ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
-        case 'tm dat': return go(node, nextEIDStep(node.tag, eidSteps), ["tm_dat"], [[Punc.data], kid(), kid(), [Punc.assign_shortFront], kid(), [Punc.in_], kid()].flat(), indentationLevel)
-        case 'tm ty-let': return go(node, nextEIDStep(node.tag, eidSteps), ["tm_ty-let"], [[Punc.let_], kid(), kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
-        case 'tm ty-boundary': return go(node, nextEIDStep(node.tag, eidSteps), ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat(), indentationLevel) // TODO: render typechange
-        case 'tm cx-boundary': return go(node, nextEIDStep(node.tag, eidSteps), ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
-        case 'tm hol': return go(node, nextEIDStep(node.tag, eidSteps), ["tm_hol"], [<div className="tm_hol-inner">?:{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
-        case 'tm buf': return go(node, nextEIDStep(node.tag, eidSteps), ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat(), indentationLevel)
+          return go(node, eidSteps, ["tm_var"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
+        case 'tm let': return go(node, eidSteps, ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
+        case 'tm dat': return go(node, eidSteps, ["tm_dat"], [[Punc.data], kid(), kid(), [Punc.assign_shortFront], kid(), [Punc.in_], kid()].flat(), indentationLevel)
+        case 'tm ty-let': return go(node, eidSteps, ["tm_ty-let"], [[Punc.let_], kid(), kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
+        case 'tm ty-boundary': return go(node, eidSteps, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat(), indentationLevel) // TODO: render typechange
+        case 'tm cx-boundary': return go(node, eidSteps, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
+        case 'tm hol': return go(node, eidSteps, ["tm_hol"], [<div className="tm_hol-inner">?:{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
+        case 'tm buf': return go(node, eidSteps, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'ty-bnd':
           assert(node.metadata !== undefined && node.metadata.case === 'ty-bnd')
-          return go(node, nextEIDStep(node.tag, eidSteps), ["ty-bnd"], renderLabel(node.metadata.label), indentationLevel)
+          return go(node, eidSteps, ["ty-bnd"], renderLabel(node.metadata.label), indentationLevel)
         case 'tm-bnd':
           assert(node.metadata !== undefined && node.metadata.case === 'tm-bnd')
-          return go(node, nextEIDStep(node.tag, eidSteps), ["tm-bnd"], renderLabel(node.metadata.label), indentationLevel)
+          return go(node, eidSteps, ["tm-bnd"], renderLabel(node.metadata.label), indentationLevel)
         case 'ctr-prm':
           // TODO: label
           assert(node.metadata !== undefined && node.metadata.case === 'ctr-prm')
-          return go(node, nextEIDStep(node.tag, eidSteps), ["ctr-prm"], [renderLabel(node.metadata.label), [Punc.colon], kid()].flat(), indentationLevel)
-        case 'ctr': return go(node, nextEIDStep(node.tag, eidSteps), ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat(), indentationLevel)
+          return go(node, eidSteps, ["ctr-prm"], [renderLabel(node.metadata.label), [Punc.colon], kid()].flat(), indentationLevel)
+        case 'ctr': return go(node, eidSteps, ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat(), indentationLevel)
         // ty-arg-list
-        case 'ty-arg-list cons': return go(node, nextEIDStep(node.tag, eidSteps), ["ty-arg-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.comma])].flat(), indentationLevel)
-        case 'ty-arg-list nil': return go(node, nextEIDStep(node.tag, eidSteps), ["ty-arg-list_nil list nil"], [Punc.listNil], indentationLevel)
+        case 'ty-arg-list cons': return go(node, eidSteps, ["ty-arg-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.comma])].flat(), indentationLevel)
+        case 'ty-arg-list nil': return go(node, eidSteps, ["ty-arg-list_nil list nil"], [Punc.listNil], indentationLevel)
         // ty-bnd-list
-        case 'ty-bnd-list cons': return go(node, nextEIDStep(node.tag, eidSteps), ["ty-bnd-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.comma])].flat(), indentationLevel)
-        case 'ty-bnd-list nil': return go(node, nextEIDStep(node.tag, eidSteps), ["ty-bnd-list_nil list nil"], [Punc.listNil], indentationLevel)
+        case 'ty-bnd-list cons': return go(node, eidSteps, ["ty-bnd-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.comma])].flat(), indentationLevel)
+        case 'ty-bnd-list nil': return go(node, eidSteps, ["ty-bnd-list_nil list nil"], [Punc.listNil], indentationLevel)
         // ctr-list
-        case 'ctr-list cons': return go(node, nextEIDStep(node.tag, eidSteps), ["ctr-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.vertical])].flat(), indentationLevel)
-        case 'ctr-list nil': return go(node, nextEIDStep(node.tag, eidSteps), ["ctr-list_nil list nil"], [Punc.listNil], indentationLevel)
+        case 'ctr-list cons': return go(node, eidSteps, ["ctr-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.vertical])].flat(), indentationLevel)
+        case 'ctr-list nil': return go(node, eidSteps, ["ctr-list_nil list nil"], [Punc.listNil], indentationLevel)
         // ctr-prm-list
-        case 'ctr-prm-list cons': return go(node, nextEIDStep(node.tag, eidSteps), ["ctr-prm-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.comma])].flat(), indentationLevel)
-        case 'ctr-prm-list nil': return go(node, nextEIDStep(node.tag, eidSteps), ["ctr-prm-list_nil list nil"], [Punc.listNil], indentationLevel)
+        case 'ctr-prm-list cons': return go(node, eidSteps, ["ctr-prm-list_cons list cons"], [kid(), renderConsTail(node.kids[1], kid(), [Punc.comma])].flat(), indentationLevel)
+        case 'ctr-prm-list nil': return go(node, eidSteps, ["ctr-prm-list_nil list nil"], [Punc.listNil], indentationLevel)
         // change
-        case 'replace': return go(node, nextEIDStep(node.tag, eidSteps), ["replace"], [kid(), [Punc.rewrite], kid()].flat(), indentationLevel)
-        case 'plus': return go(node, nextEIDStep(node.tag, eidSteps), ["plus"], [kid(), [Punc.plus], [Punc.bracketL], kid(), [Punc.bracketR]].flat(), indentationLevel)
-        case 'minus': return go(node, nextEIDStep(node.tag, eidSteps), ["minus"], [[Punc.bracketL], kid(), [Punc.bracketR], [Punc.minus], kid()].flat(), indentationLevel)
+        case 'replace': return go(node, eidSteps, ["replace"], [kid(), [Punc.rewrite], kid()].flat(), indentationLevel)
+        case 'plus': return go(node, eidSteps, ["plus"], [kid(), [Punc.plus], [Punc.bracketL], kid(), [Punc.bracketR]].flat(), indentationLevel)
+        case 'minus': return go(node, eidSteps, ["minus"], [[Punc.bracketL], kid(), [Punc.bracketR], [Punc.minus], kid()].flat(), indentationLevel)
         case 'cursor-mode-wrapper': return go(node, eidSteps, ["cursor-mode-wrapper"], kid(), indentationLevel)
         case 'select-mode-wrapper': return go(node, eidSteps, ["select-mode-wrapper"], kid(), indentationLevel)
       }

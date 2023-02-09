@@ -15,53 +15,50 @@ export type EditorState = {
     backendState: BackendState,
 }
 
+// isMouseDown
+
+export var isMouseDown = false
+
+export function setMouseDown(isMouseDown_: boolean) {
+    isMouseDown = isMouseDown_
+
+    if (isMouseDown) {
+        document.body.classList.add("mouseDown")
+    } else {
+        document.body.classList.remove("mouseDown")
+    }
+}
+
 // HoverId
 
-type HoverId = { id: string }
+export type HoverId = { id: string }
 
-export var hoverIdStack: HoverId[] = []
+function getHoverIdElement(hoverId: HoverId): HTMLElement {
+    const elem = document.getElementById(hoverId.id)
+    assert(elem !== null, "getHoverIdElement: could not find element with hover id")
+    return elem
+}
 
-export const hover_className = "cursor-hover"
+// export const hover_className = () => `hover-${isMouseDown ? "mouseDown" : "mouseUp"}`
+export const hover_className = "hover"
+
+export var current_hoverId: HoverId | undefined = undefined
 
 export function freshHoverId(): HoverId {
     return { id: uuid() }
 }
 
-export function pushHoverId(hoverId: HoverId) {
-    // if there is a hoverId_parent already in the stack, un-hover at hoverId_parent
-    const hoverId_parent = hoverIdStack.at(hoverIdStack.length - 1)
-    if (hoverId_parent !== undefined) {
-        const elem = document.getElementById(hoverId_parent.id)
-        assert(elem !== null, "before pushing a hover id, could not find the element with the id of the next hover id in the stack")
-        elem.classList.remove(hover_className)
-    }
-
-    // push the next hoverId
-    hoverIdStack.push(hoverId)
-
-    // hover at the pushed hoverId
-    const elem = document.getElementById(hoverId.id)
-    assert(elem !== null, "after pushing a hover id, could not find the element with that id")
+export function setHoverId(hoverId: HoverId) {
+    // hover the new element
+    const elem = getHoverIdElement(hoverId)
     elem.classList.add(hover_className)
+    current_hoverId = hoverId
 }
 
-export function popHoverId(hoverId: HoverId) {
-    // pop the next hoverId
-    const hoverId_ = hoverIdStack.pop()
-    assert(hoverId_ !== undefined && hoverId.id === hoverId_.id, "after popping a hover id, found that the popped id is not the expected id")
-
-    // un-hover at the popped hoverId
-    const elem = document.getElementById(hoverId.id)
-    assert(elem !== null, "after popping a hover id, could not find the element with that id")
+export function unsetHoverId(hoverId: HoverId) {
+    // unhover element
+    const elem = getHoverIdElement(hoverId)
     elem.classList.remove(hover_className)
-
-    // if there is a next hoverId_parent in the stack, hover at hoverId_parent
-    const hoverId_parent = hoverIdStack.at(hoverIdStack.length - 1)
-    if (hoverId_parent !== undefined) {
-        const elem = document.getElementById(hoverId_parent.id)
-        assert(elem !== null, "after popping a hover id, could not find the element with the id of the next hover id in the stack")
-        elem.classList.add(hover_className)
-    }
 }
 
 // Editor
