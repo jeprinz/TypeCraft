@@ -186,6 +186,12 @@ invertVarChange (VarTypeChange pch) = VarTypeChange (invertPolyChange pch)
 invertVarChange (VarDelete ty) = VarInsert ty
 invertVarChange (VarInsert ty) = VarDelete ty
 
+invertListTypeBindChange :: ListTypeBindChange -> ListTypeBindChange
+invertListTypeBindChange (ListTypeBindChangeCons tyBind ch) = ListTypeBindChangeCons tyBind (invertListTypeBindChange ch)
+invertListTypeBindChange (ListTypeBindChangePlus tyBind ch) = ListTypeBindChangeMinus tyBind (invertListTypeBindChange ch)
+invertListTypeBindChange (ListTypeBindChangeMinus tyBind ch) = ListTypeBindChangePlus tyBind (invertListTypeBindChange ch)
+invertListTypeBindChange ListTypeBindChangeNil = ListTypeBindChangeNil
+
 chIsId :: Change -> Boolean
 chIsId (CArrow c1 c2) = chIsId c1 && chIsId c2
 chIsId (CHole _) = true
