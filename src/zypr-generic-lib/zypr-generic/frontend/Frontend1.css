@@ -299,6 +299,7 @@
 
 .node.list.nil.cursor {
   box-shadow: none;
+  background-color: unset;
 }
 
 .node.list.nil.cursor>.listNil {
@@ -366,6 +367,11 @@
   background-color: rgb(208, 236, 255)
 }
 
+.hover.node.list.nil {
+  cursor: pointer;
+  background-color: unset;
+}
+
 /* mouseDown hover and cursor */
 
 /* mouseDown: hover outside of cursor */
@@ -389,5 +395,65 @@
 /* mouseDown: cursor inside of hover */
 .mouseDown .hover .cursor {
   box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue, var(--node-box-shadow-thickness) 0 0 0 blue;
+  background-color: white;
+}
+
+/* mouseDown hover and cursor for .node.list.cons */
+
+/* mouseDown: hover outside of cursor */
+.mouseDown .hover.node.list.cons {
+  border-radius: 0;
+  box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
+  background-color: rgb(208, 236, 255);
+}
+
+/* mouseDown: hover inside of cursor */
+.mouseDown .cursor .hover.node.list.cons {
+  border-radius: 0;
+  box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
+  background-color: white;
+}
+
+/* mouseDown: cursor outside of hover */
+.mouseDown .cursor.node.list.cons {
+  border-radius: 0;
+  box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
+  background-color: rgb(208, 236, 255);
+}
+
+/* mouseDown: cursor inside of hover */
+.mouseDown .hover .cursor.node.list.cons {
+  border-radius: 0;
+  box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
+  background-color: white;
+}
+
+/* mouseDown hover and cursor for .node.list.nil */
+
+/* mouseDown: hover outside of cursor */
+.mouseDown .hover.node.list.nil {
+  border-radius: 0;
+  box-shadow: none;
+  background-color: unset;
+}
+
+/* mouseDown: hover inside of cursor */
+.mouseDown .cursor .hover.node.list.nil {
+  border-radius: 0;
+  box-shadow: none;
+  background-color: white;
+}
+
+/* mouseDown: cursor outside of hover */
+.mouseDown .cursor.node.list.nil {
+  border-radius: 0;
+  box-shadow: none;
+  background-color: unset;
+}
+
+/* mouseDown: cursor inside of hover */
+.mouseDown .hover .cursor.node.list.nil {
+  border-radius: 0;
+  box-shadow: none;
   background-color: white;
 }
