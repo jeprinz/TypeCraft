@@ -6,6 +6,7 @@
 
 .tm_hol-inner {
   display: inline-block;
+  white-space: pre;
   border-radius: 0.2rem;
   padding: 0 0.4rem;
   display: inline-block;
@@ -125,6 +126,9 @@
 
 .punctuation.colon {
   margin: 0 0.5rem;
+}
+.punctuation.colonHole {
+  margin: 0 0.2rem;
 }
 
 .punctuation.colon_shortFront {
