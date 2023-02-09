@@ -97,7 +97,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         let getSelect = node.getSelect
         if (getSelect !== undefined) {
           // console.log(`getSelect for this '${node.tag.case}' node`)
-          editor.setBackendState(fromBackendState(getSelect(toBackendState(editor.state.backendState))))
+          editor.setBackendState(toBackendState(getSelect(fromBackendState(editor.state.backendState))))
           event.stopPropagation()
         }
         else console.log(`getSelect is undefined for this '${node.tag.case}' node`)
