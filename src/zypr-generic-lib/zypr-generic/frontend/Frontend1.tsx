@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Backend } from '../Backend';
-import Editor, { setHoverId, HoverId, setMouseDown, freshHoverId, unsetHoverId } from "../Editor";
+import Editor, { setHoverId, HoverId, setMouseDown, freshHoverId, unsetHoverId, isMouseDown } from "../Editor";
 import { Node } from "../Node";
 import * as Punc from './Punctuation';
 import assert from 'assert';
@@ -78,9 +78,16 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
       function onMouseMove(event: React.MouseEvent) {
         // console.log("onMouseMove")
-        if (node.getCursor !== undefined || node.getSelect !== undefined) {
-          setHoverId(hoverId)
-          event.stopPropagation()
+        if (isMouseDown) {
+          if (node.getSelect !== undefined) {
+            setHoverId(hoverId)
+            event.stopPropagation()
+          }
+        } else {
+          if (node.getCursor !== undefined) {
+            setHoverId(hoverId)
+            event.stopPropagation()
+          }
         }
       }
 
