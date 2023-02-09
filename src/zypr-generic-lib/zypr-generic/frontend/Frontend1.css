@@ -267,7 +267,7 @@
   margin-left: 0.2rem;
 }
 
-.list-head.node.list.cons {
+.node.list.cons.list-head {
   /* padding-left: 0.1rem; */
 }
 
@@ -280,20 +280,15 @@
 
 /* .listNil */
 
-.listNil {
+.punctuation.listNil {
   display: inline-block;
-  /* width: 0.2rem; */
   width: var(--node-box-shadow-thickness);
   margin-left: 0.1rem;
-  /* margin-left: 0.1rem;
-  margin-right: 0.1rem; */
 }
 
-.listNil {
-  /* margin-left: 1rem; */
-}
-.list-head > .punctuation.listNil {
-  margin-left: 0;
+.node.list.nil.list-head > .punctuation.listNil {
+  margin-left: -0.1rem;
+  margin-right: -0.1rem;
 }
 
 /* .list and .cursor */
