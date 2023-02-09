@@ -28,6 +28,13 @@ For each of these, we need to look at a selection and get the TypeChange and Con
 *TooothChange inputs an UpTooth, so the context and type input starts from the bottom!
 -}
 
+typeBindPathToChange :: ListTypeBindChange -> UpPath -> ListTypeBindChange
+typeBindPathToChange inside Nil = inside
+typeBindPathToChange inside (tooth : teeth) =
+    case tooth of
+        TypeBindListCons2 tyBind {--} -> ListTypeBindChangePlus tyBind (typeBindPathToChange inside teeth)
+        _ -> unsafeThrow "path that isn't a TypeBindListCons2 given to typeBindPathToChange"
+
 -- The input type comes from the bottom, and the output Change goes from bottom to top.
 typePathToChange :: Type -> UpPath -> Change
 typePathToChange ty Nil = tyInject ty
