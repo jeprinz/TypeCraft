@@ -45,7 +45,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       indentationLevel: number,
     ): JSX.Element[] {
       const hoverId = hoverIdOfRenderContext(rndCtx)
-      if (rndCtx.isInsideCursor) { classNames.push("insideCursor") }
+      // TODO: temporarily disabled until this is useful
+      // if (rndCtx.isInsideCursor) { classNames.push("insideCursor") }
 
       // Parenthesization
       if (node.isParenthesized)
