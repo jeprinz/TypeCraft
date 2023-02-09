@@ -10,9 +10,8 @@ export const setNodeGetCursor_ = getCursor => node => ({...node, getCursor})
 
 // NodeTag
 
-export const makeNodeTag_ = (case_) => ({ case: case_ })
-
-export const fromNodeTag_ = (nodeTag) => nodeTag.case
+export const makeNodeTag_ = (tag) => tag
+export const fromNodeTag_ = (tag) => tag
 
 // NodeStyle
 

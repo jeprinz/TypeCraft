@@ -34,7 +34,7 @@ stateToNode st = case st.mode of
   CursorMode cursorMode -> cursorModeToNode cursorMode
   SelectMode select -> case select of
     -- TODO: need more info about root to render it
-    { select: TermSelect topPath ctx1 ty1 term1 middlePath ctx2 ty2 term2 root } ->  -- TODO: render something differently depending on root?
+    { select: TermSelect topPath ctx1 ty1 term1 middlePath ctx2 ty2 term2 _root } ->  -- TODO: render something differently depending on root?
       termPathToNode true Nil BITerm
         { ctxs: ctx1, ty: ty1, term: term1, termPath: topPath }
         $ addNodeStyle (NodeStyle "select-top")
@@ -42,7 +42,7 @@ stateToNode st = case st.mode of
             { ctxs: ctx2, ty: ty2, term: term2, termPath: middlePath }
         $ addNodeStyle (NodeStyle "select-bot")
         $ termToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2, term: term2 }
-    { select: TypeSelect topPath ctx1 ty1 middlePath ctx2 ty2 root } ->
+    { select: TypeSelect topPath ctx1 ty1 middlePath ctx2 ty2 _root } ->
       typePathToNode true Nil BITerm
         { ctxs: ctx1, ty: ty1, typePath: topPath }
         $ addNodeStyle (NodeStyle "select-top")
@@ -50,7 +50,7 @@ stateToNode st = case st.mode of
             { ctxs: ctx2, ty: ty2, typePath: middlePath }
         $ addNodeStyle (NodeStyle "select-bot")
         $ typeToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2 }
-    { select: CtrListSelect topPath ctx1 ctrs1 middlePath ctx2 ctrs2 root } ->
+    { select: CtrListSelect topPath ctx1 ctrs1 middlePath ctx2 ctrs2 _root } ->
       ctrListPathToNode true Nil BITerm
         { ctxs: ctx1, ctrs: ctrs1, listCtrPath: topPath }
         $ addNodeStyle (NodeStyle "select-top")
@@ -58,7 +58,7 @@ stateToNode st = case st.mode of
             { ctxs: ctx2, ctrs: ctrs2, listCtrPath: middlePath }
         $ addNodeStyle (NodeStyle "select-bot")
         $ ctrListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ctrs: ctrs2 }
-    { select: CtrParamListSelect topPath ctx1 ctrParams1 middlePath ctx2 ctrParams2 root } ->
+    { select: CtrParamListSelect topPath ctx1 ctrParams1 middlePath ctx2 ctrParams2 _root } ->
       ctrParamListPathToNode true Nil BITerm
         { ctxs: ctx1, ctrParams: ctrParams1, listCtrParamPath: topPath }
         $ addNodeStyle (NodeStyle "select-top")
@@ -66,7 +66,7 @@ stateToNode st = case st.mode of
             { ctxs: ctx2, ctrParams: ctrParams2, listCtrParamPath: middlePath }
         $ addNodeStyle (NodeStyle "select-bot")
         $ ctrParamListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ctrParams: ctrParams2 }
-    { select: TypeBindListSelect topPath ctx1 tyBinds1 middlePath ctx2 tyBinds2 root } ->
+    { select: TypeBindListSelect topPath ctx1 tyBinds1 middlePath ctx2 tyBinds2 _root } ->
       typeBindListPathToNode true Nil BITerm
         { ctxs: ctx1, tyBinds: tyBinds1, listTypeBindPath: topPath }
         $ addNodeStyle (NodeStyle "select-top")
@@ -153,12 +153,12 @@ cursorModeToNode cursorMode =
       getCursor =
         Just \st ->
           maybe st identity do
-            st <- modifyQuery (_ { completionGroup_i = opts.completionIndex.completionGroup_i, completionGroupItem_i = opts.completionIndex.completionGroup_i }) st
-            submitQuery st
+            st' <- modifyQuery (_ { completionGroup_i = opts.completionIndex.completionGroup_i, completionGroupItem_i = opts.completionIndex.completionGroup_i }) st
+            submitQuery st'
     in
       case cmpl of
         CompletionTerm term {-ty-} sub -> case cursorMode.cursorLocation of
-          TermCursor ctxs ty' termPath _ ->
+          TermCursor ctxs ty' _termPath _ ->
             let
               ty = applySubType sub ty'
             in
@@ -168,8 +168,8 @@ cursorModeToNode cursorMode =
                     AINothing -- (AISelect termPath ctxs (term /\ ty) Nil)
                     { ctxs, term, ty }
           _ -> hole' "completionToNode CompletionTerm non-TermCursor"
-        CompletionTermPath termPath ch _ -> case cursorMode.cursorLocation of
-          TermCursor ctxs ty termPath' term ->
+        CompletionTermPath termPath _ch _ -> case cursorMode.cursorLocation of
+          TermCursor ctxs ty _termPath' term ->
             let
               chCtxs = downPathToCtxChange ctxs (reverse termPath)
 
@@ -191,15 +191,15 @@ cursorModeToNode cursorMode =
                     )
           _ -> hole' "completionToNode CompletionPath non-TermCursor"
         CompletionType ty _sub -> case cursorMode.cursorLocation of
-          TypeCursor ctxs path _ty ->
+          TypeCursor ctxs _path _ty ->
             setNodeGetCursor getCursor
               $ addNodeStyle (NodeStyle "query-replace-new")
               $ typeToNode false
                   AINothing -- (AISelect path ctxs ty Nil)
                   { ctxs, ty }
           _ -> hole' "completionToNode CompletionType non-TypeCursor"
-        CompletionTypePath path' ch -> case cursorMode.cursorLocation of
-          TypeCursor ctxs path ty ->
+        CompletionTypePath path' _ch -> case cursorMode.cursorLocation of
+          TypeCursor ctxs _path ty ->
             setNodeGetCursor getCursor
               $ addNodeStyle (NodeStyle "query-insert-top")
               $ typePathToNode false Nil BITerm -- ideally we shouldn't have to specify Nil and BITerm here, as they are irrelevant. See refactors.
@@ -214,8 +214,8 @@ cursorModeToNode cursorMode =
                         makeMetahole unit
                   )
           _ -> unsafeThrow "completionToNode CompletionTypePath non-TypeCursor"
-        CompletionCtrParamListPath path' ch -> case cursorMode.cursorLocation of
-          CtrParamListCursor ctxs path ctrParams ->
+        CompletionCtrParamListPath path' _ch -> case cursorMode.cursorLocation of
+          CtrParamListCursor ctxs _path ctrParams ->
             setNodeGetCursor getCursor
               $ addNodeStyle (NodeStyle "query-insert-top")
               $ ctrParamListPathToNode false Nil BITerm
@@ -233,8 +233,8 @@ cursorModeToNode cursorMode =
                               { ctxs, ctrParams }
                   )
           _ -> unsafeThrow "Shouldn't get here: non-CtrParamListCursor, but tried a CtrParamListPath completion!"
-        CompletionCtrListPath path' listCtrCh -> case cursorMode.cursorLocation of
-          CtrListCursor ctxs path ctrs ->
+        CompletionCtrListPath path' _listCtrCh -> case cursorMode.cursorLocation of
+          CtrListCursor ctxs _path ctrs ->
             setNodeGetCursor getCursor
               $ addNodeStyle (NodeStyle "query-insert-top")
               $ ctrListPathToNode false Nil BITerm
@@ -251,8 +251,8 @@ cursorModeToNode cursorMode =
                                 { ctxs, ctrs }
                   )
           _ -> unsafeThrow "Shouldn't get here: non-CtrListCursor, but tried a CtrPath completion!"
-        CompletionTypeBindListPath path' listTyBindCh -> case cursorMode.cursorLocation of
-          TypeBindListCursor ctxs path tyBinds ->
+        CompletionTypeBindListPath path' _listTyBindCh -> case cursorMode.cursorLocation of
+          TypeBindListCursor ctxs _path tyBinds ->
             setNodeGetCursor getCursor
               $ addNodeStyle (NodeStyle "query-insert-top")
               $ typeBindListPathToNode false Nil BITerm { ctxs, tyBinds, listTypeBindPath: path' }

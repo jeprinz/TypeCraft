@@ -2,7 +2,6 @@ module TypeCraft.Purescript.Node where
 
 import Prelude
 import Prim hiding (Type)
-
 import Data.Array (find)
 import Data.Bounded.Generic (genericBottom, genericTop)
 import Data.Enum (class BoundedEnum, class Enum, enumFromTo)
@@ -38,6 +37,15 @@ foreign import makeNode_ ::
   } ->
   Node
 
+makeWrapperNode :: NodeTag -> Array Node -> Node
+makeWrapperNode tag kids =
+  makeNode
+    { kids
+    , getCursor: Nothing
+    , getSelect: Nothing
+    , tag
+    }
+
 makeNode ::
   { kids :: Array Node
   , getCursor :: Maybe (State -> State)
@@ -72,7 +80,8 @@ foreign import setNodeQueryString :: String -> Node -> Node
 foreign import setNodeCompletions :: Array Node -> Number -> Node -> Node
 
 -- export const setNodeGetCursor_ = getCursor => node => ({...node, getCursor})
-foreign import setNodeGetCursor_ :: Nullable (State -> State) -> Node -> Node 
+foreign import setNodeGetCursor_ :: Nullable (State -> State) -> Node -> Node
+
 setNodeGetCursor :: Maybe (State -> State) -> Node -> Node
 setNodeGetCursor mb_f = setNodeGetCursor_ (Nullable.fromMaybe mb_f)
 
@@ -137,6 +146,8 @@ data NodeTag
   | ReplaceNodeTag
   | PlusNodeTag
   | MinusNodeTag
+  -- Wrapper
+  | WrapperNodeTag
 
 derive instance eqNodeTag :: Eq NodeTag
 
@@ -197,6 +208,7 @@ toNodeTag_ = case _ of
   ReplaceNodeTag -> makeNodeTag_ "replace"
   PlusNodeTag -> makeNodeTag_ "plus"
   MinusNodeTag -> makeNodeTag_ "minus"
+  WrapperNodeTag -> makeNodeTag_ "wrapper"
 
 foreign import getNodeTag_ :: Node -> NodeTag_
 
@@ -218,41 +230,51 @@ termToNodeTag = case _ of
 
 ctrListToNodeTag :: List Constructor -> NodeTag
 ctrListToNodeTag Nil = ConstructorListNilNodeTag
+
 ctrListToNodeTag (_ : _) = ConstructorListConsNodeTag
 
 ctrParamListToNodeTag :: List CtrParam -> NodeTag
 ctrParamListToNodeTag Nil = CtrParamListNilNodeTag
+
 ctrParamListToNodeTag (_ : _) = CtrParamListConsNodeTag
 
 tyBindListToNodeTag :: List TypeBind -> NodeTag
 tyBindListToNodeTag Nil = TypeBindListNilNodeTag
+
 tyBindListToNodeTag (_ : _) = TypeBindListConsNodeTag
 
 tyArgListToNodeTag :: List TypeArg -> NodeTag
 tyArgListToNodeTag Nil = TypeArgListNilNodeTag
+
 tyArgListToNodeTag (_ : _) = TypeArgListConsNodeTag
 
 typeToNodeTag :: Type -> NodeTag
 typeToNodeTag = case _ of
-    Arrow _ _ _ -> ArrowNodeTag
-    THole _ _ -> THoleNodeTag
-    TNeu _ _ _ -> TNeuNodeTag
+  Arrow _ _ _ -> ArrowNodeTag
+  THole _ _ -> THoleNodeTag
+  TNeu _ _ _ -> TNeuNodeTag
 
 -- NodeStyle
-newtype NodeStyle = NodeStyle String
+newtype NodeStyle
+  = NodeStyle String
 
 -- NodeMetadata
 foreign import setNodeMetadata :: NodeMetadata -> Node -> Node
 
 -- takes string of type hole id
 foreign import makeTHoleNodeMetadata_ :: String -> NodeMetadata
+
 makeTHoleNodeMetadata :: TypeHoleID -> NodeMetadata
 makeTHoleNodeMetadata = makeTHoleNodeMetadata_ <<< UUID.toString
 
 foreign import makeTNeuNodeMetadata :: String -> NodeMetadata
+
 foreign import makeVarNodeMetadata :: String -> NodeMetadata
+
 foreign import makeTypeBindNodeMetadata :: String -> NodeMetadata
+
 foreign import makeTermBindNodeMetadata :: String -> NodeMetadata
+
 foreign import makeCtrParamNodeMetadata :: String -> NodeMetadata
 
 -- utilities

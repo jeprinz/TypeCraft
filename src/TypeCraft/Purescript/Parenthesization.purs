@@ -1,12 +1,10 @@
 module TypeCraft.Purescript.Parenthesization where
 
-import Data.Tuple.Nested
+import Data.Tuple.Nested ((/\))
 import Prelude
-
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar (Term(..), Tooth(..))
+import TypeCraft.Purescript.Grammar (Tooth(..))
 import TypeCraft.Purescript.Node (Node, NodeTag(..), getNodeTag, setNodeIsParenthesized)
-import TypeCraft.Purescript.Util (hole)
 
 -- Example: let case
 --letThing :: LetMD -> Node -> Node -> Node -> Node -> Node -> Array Node

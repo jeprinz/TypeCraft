@@ -63,6 +63,56 @@ export function popCursorHoverId(chId: CursorHoverId) {
     }
 }
 
+// SelectHoverId
+
+type SelectHoverId = { id: string }
+
+export var shIdStack: SelectHoverId[] = []
+
+export const selectHover_className = "select-hover"
+
+export function freshSelectHoverId(): SelectHoverId {
+    return { id: uuid() }
+}
+
+export function pushSelectHoverId(shId: SelectHoverId) {
+    // if there is a shId_parent already in the stack, un-hover at shId_parent
+    const shId_parent = shIdStack.at(shIdStack.length - 1)
+    if (shId_parent !== undefined) {
+        const elem = document.getElementById(shId_parent.id)
+        if (elem === null) { throw Error("before pushing a cursor hover id, could not find the element with the id of the next cursor hover id in the stack") }
+        elem.classList.remove(selectHover_className)
+    }
+
+    // push the next shId
+    shIdStack.push(shId)
+
+    // hover at the pushed shId
+    const elem = document.getElementById(shId.id)
+    if (elem === null) { throw new Error("after pushing a cursor hover id, could not find the element with that id") }
+    elem.classList.add(selectHover_className)
+}
+
+export function popSelectHoverId(shId: SelectHoverId) {
+    // pop the next shId
+    const shId_ = shIdStack.pop()
+    if (shId_ === undefined || shId.id !== shId_.id) { throw new Error("after popping a cursor hover id, found that the popped id is not the expected id") }
+
+    // un-hover at the popped shId
+    const elem = document.getElementById(shId.id)
+    if (elem === null) { throw new Error("after popping a cursor hover id, could not find the element with that id") }
+    elem.classList.remove(selectHover_className)
+
+    // if there is a next shId_parent in the stack, hover at shId_parent
+    const shId_parent = shIdStack.at(shIdStack.length - 1)
+    if (shId_parent !== undefined) {
+        const elem = document.getElementById(shId_parent.id)
+        if (elem === null) { throw Error("after popping a cursor hover id, could not find the element with the id of the next cursor hover id in the stack") }
+        elem.classList.add(selectHover_className)
+    }
+}
+
+
 // Editor
 
 export default class Editor
