@@ -19,9 +19,9 @@ export type Node = {
 }
 
 export type NodeIndentation
-    = { case: 'inline' }
-    | { case: 'newline' }
-    | { case: 'indent' }
+    = 'inline'
+    | 'newline'
+    | 'indent'
 
 export type NodeTag
     = 'ty arr'

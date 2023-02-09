@@ -180,7 +180,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       }
 
       // Indentation
-      switch (node.indentation.case) {
+      switch (node.indentation) {
         // no newline nor indent
         case 'inline': break
         // newline and indent
@@ -212,7 +212,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
         // Indentation
         let indentationLevel_kid = indentationLevel;
-        switch (kid.indentation.case) {
+        switch (kid.indentation) {
           // no newline nor indent
           case 'inline': break
           // newline and indent

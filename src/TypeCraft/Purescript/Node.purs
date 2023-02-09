@@ -88,11 +88,9 @@ setNodeGetCursor mb_f = setNodeGetCursor_ (Nullable.fromMaybe mb_f)
 -- NodeIndentation
 foreign import data NodeIndentation :: Prim.Type
 
-foreign import makeInlineNodeIndentation :: NodeIndentation
-
-foreign import makeNewlineNodeIndentation :: NodeIndentation -- doesn't indent
-
-foreign import makeIndentNodeIndentation :: NodeIndentation
+foreign import makeInlineNodeIndentation :: NodeIndentation -- NO newline, NO indent
+foreign import makeNewlineNodeIndentation :: NodeIndentation -- newline, NO indent
+foreign import makeIndentNodeIndentation :: NodeIndentation -- newline, indent
 
 -- NodeTag & NodeTag_
 foreign import data NodeTag_ :: Prim.Type

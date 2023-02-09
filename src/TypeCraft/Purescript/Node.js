@@ -29,9 +29,9 @@ export const setNodeQueryString = queryString => node => ({ ...node, queryString
 export const setNodeCompletions = completions => activeCompletionGroup => node => ({ ...node, completions, activeCompletionGroup })
 
 // NodeIndentation
-export const makeInlineNodeIndentation = { case: 'inline' }
-export const makeIndentNodeIndentation = { case: 'indent' }
-export const makeNewlineNodeIndentation = { case: 'newline' }
+export const makeInlineNodeIndentation = 'inline'
+export const makeIndentNodeIndentation = 'indent'
+export const makeNewlineNodeIndentation = 'newline'
 
 // NodeMetadata
 export const setNodeMetadata = metadata => node => ({ ...node, metadata })
