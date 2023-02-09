@@ -79,6 +79,7 @@ export function unsetHoverId(hoverId: HoverId) {
     // unhover hover element
     withHoverIdElement(hoverId, elem => {
         elem.classList.remove(hover_className)
+        current_hoverId = undefined
     })
 }
 

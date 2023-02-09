@@ -7,6 +7,7 @@ import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.Unification
+
 import Control.Monad.Writer as Writer
 import Data.Array (any)
 import Data.Either (Either(..))
@@ -21,11 +22,11 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Data.UUID (UUID)
 import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.CursorMovement (stepCursor_n)
+import TypeCraft.Purescript.CursorMovement (getCursorChildren, stepCursor_n)
 import TypeCraft.Purescript.Key (Key)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Query, State, makeCursorMode)
-import TypeCraft.Purescript.Util (hole, hole')
+import TypeCraft.Purescript.Util (fromJust', hole, hole')
 import TypeCraft.Purescript.Util (lookup')
 
 isNonemptyQueryString :: Query -> Boolean
@@ -107,6 +108,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
                   (List.singleton $ Let5 defaultLetMD (freshTermBind Nothing) List.Nil (freshHole unit) (freshTHole unit) ty)
                   (tyInject ty)
                   (stepCursor_n (-4)) -- step to bind
+                  -- (\loc -> fromJust' "TODO" $ getCursorChildren loc List.!! let_bind_child_index)
               ]
             ]
       -- App
