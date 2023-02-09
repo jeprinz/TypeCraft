@@ -10,7 +10,7 @@
   padding: 0 0.4rem;
   display: inline-block;
   background-color: rgb(255, 173, 145);
-  box-shadow:  0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
+  box-shadow: 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }
 
 .ty_hol-inner {
@@ -19,7 +19,7 @@
   padding: 0 0.2rem;
   display: inline-block;
   background-color: rgb(255, 114, 147);
-  box-shadow:  0 0 0 1px rgb(255, 86, 126) inset, 0 0 2px 1px black inset;
+  box-shadow: 0 0 0 1px rgb(255, 86, 126) inset, 0 0 2px 1px black inset;
 }
 
 .ty_hol-inner {
@@ -27,9 +27,7 @@
   white-space: pre;
 }
 
-.node.tm_ty-boundary-change {
-
-}
+.node.tm_ty-boundary-change {}
 
 /* query */
 
@@ -67,6 +65,7 @@
   padding: 0.2rem;
   background-color: white;
 }
+
 .query-completion:hover {
   cursor: pointer;
   padding: 0.2rem;
@@ -124,6 +123,7 @@
 .punctuation.colon {
   margin: 0 0.5rem;
 }
+
 .punctuation.colon_shortFront {
   margin-right: 0.5rem;
 }
@@ -147,6 +147,7 @@
 .punctuation.assign {
   margin: 0 0.5rem;
 }
+
 .punctuation.assign_shortFront {
   margin-right: 0.5rem;
 }
@@ -207,20 +208,7 @@
   border-radius: 0.2rem;
 }
 
-.node.cursorable:hover {
-  cursor: pointer;
-  box-shadow:
-    -2px 0 0 0 rgb(206, 206, 255),
-    2px 0 0 0 rgb(206, 206, 255);
-}
-
 .node.cursor {
-  box-shadow:
-    -2px 0 0 0 blue,
-    2px 0 0 0 blue;
-}
-.node.cursor.cursorable:hover {
-  cursor: pointer;
   box-shadow:
     -2px 0 0 0 blue,
     2px 0 0 0 blue;
@@ -284,7 +272,8 @@
 .node.list.nil.cursor {
   box-shadow: none;
 }
-.node.list.nil.cursor > .listNil {
+
+.node.list.nil.cursor>.listNil {
   box-shadow: -2px 0 0 0 blue;
 }
 
@@ -303,7 +292,8 @@
 .node.list.nil.select-bot {
   box-shadow: none;
 }
-.node.list.nil.select-bot > .listNil {
+
+.node.list.nil.select-bot>.listNil {
   box-shadow: -2px 0 0 0 blue;
   background-color: white;
 }
@@ -324,14 +314,24 @@
   display: inline-block;
 }
 
-.list-head-nil-wrapper > * {
+.list-head-nil-wrapper>* {
   visibility: hidden;
 }
 
-.list-head-nil-wrapper:hover > * {
+.list-head-nil-wrapper:hover>* {
   visibility: visible;
 }
 
-.list-head-nil-wrapper > .cursor {
+.list-head-nil-wrapper>.cursor {
   visibility: visible;
+}
+
+/* cursor-hover */
+
+.cursor-hover {
+  cursor: pointer;
+  box-shadow:
+    -2px 0 0 0 rgb(152, 152, 255),
+    2px 0 0 0 rgb(152, 152, 255);
+  background-color: rgb(206, 206, 255);
 }
