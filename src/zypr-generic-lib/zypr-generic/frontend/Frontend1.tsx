@@ -3,9 +3,6 @@ import { Backend } from '../Backend';
 import Editor, { freshCursorHoverId, popCursorHoverId, popSelectHoverId, pushCursorHoverId, pushSelectHoverId } from "../Editor";
 import { Node } from "../Node";
 import * as Punc from './Punctuation';
-import { showList } from '../../../TypeCraft/Purescript/output/Data.List.Types';
-import { showTooth } from '../../../TypeCraft/Purescript/output/TypeCraft.Purescript.Grammar';
-import { showCursorLocation } from '../../../TypeCraft/Purescript/output/TypeCraft.Purescript.State';
 import assert from 'assert';
 import { fromBackendState, toBackendState } from '../../../TypeCraft/Typescript/State';
 import { Newtype, fromNewtype, overNewtype, toNewtype } from '../../Newtype';
@@ -296,6 +293,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'replace': return go(node, nextEIDStep(node.tag, eidSteps), ["replace"], [kid(), [Punc.rewrite], kid()].flat(), indentationLevel)
         case 'plus': return go(node, nextEIDStep(node.tag, eidSteps), ["plus"], [kid(), [Punc.plus], [Punc.bracketL], kid(), [Punc.bracketR]].flat(), indentationLevel)
         case 'minus': return go(node, nextEIDStep(node.tag, eidSteps), ["minus"], [[Punc.bracketL], kid(), [Punc.bracketR], [Punc.minus], kid()].flat(), indentationLevel)
+        case 'cursor-mode-wrapper': return go(node, eidSteps, ["cursor-mode-wrapper"], kid(), indentationLevel)
+        case 'select-mode-wrapper': return go(node, eidSteps, ["select-mode-wrapper"], kid(), indentationLevel)
       }
     }
 

@@ -37,10 +37,10 @@ foreign import makeNode_ ::
   } ->
   Node
 
-makeWrapperNode :: NodeTag -> Array Node -> Node
-makeWrapperNode tag kids =
+makeWrapperNode :: NodeTag -> Node -> Node
+makeWrapperNode tag kid =
   makeNode
-    { kids
+    { kids: [ kid ]
     , getCursor: Nothing
     , getSelect: Nothing
     , tag
@@ -89,7 +89,9 @@ setNodeGetCursor mb_f = setNodeGetCursor_ (Nullable.fromMaybe mb_f)
 foreign import data NodeIndentation :: Prim.Type
 
 foreign import makeInlineNodeIndentation :: NodeIndentation -- NO newline, NO indent
+
 foreign import makeNewlineNodeIndentation :: NodeIndentation -- newline, NO indent
+
 foreign import makeIndentNodeIndentation :: NodeIndentation -- newline, indent
 
 -- NodeTag & NodeTag_
@@ -145,7 +147,8 @@ data NodeTag
   | PlusNodeTag
   | MinusNodeTag
   -- Wrapper
-  | WrapperNodeTag
+  | CursorModeWrapperNodeTag
+  | SelectModeWrapperNodeTag
 
 derive instance eqNodeTag :: Eq NodeTag
 
@@ -206,7 +209,8 @@ toNodeTag_ = case _ of
   ReplaceNodeTag -> makeNodeTag_ "replace"
   PlusNodeTag -> makeNodeTag_ "plus"
   MinusNodeTag -> makeNodeTag_ "minus"
-  WrapperNodeTag -> makeNodeTag_ "wrapper"
+  CursorModeWrapperNodeTag -> makeNodeTag_ "cursor-mode-wrapper"
+  SelectModeWrapperNodeTag -> makeNodeTag_ "select-mode-wrapper"
 
 foreign import getNodeTag_ :: Node -> NodeTag_
 

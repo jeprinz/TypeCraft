@@ -2,6 +2,7 @@ import React, { MouseEvent } from "react"
 import * as Backend from './Backend'
 import { BackendState } from "../../TypeCraft/Typescript/State"
 import { v4 as uuid } from 'uuid'
+import assert from "assert"
 
 export type Props = {
     backend: Backend.Props,
@@ -31,7 +32,7 @@ export function pushCursorHoverId(chId: CursorHoverId) {
     const chId_parent = chIdStack.at(chIdStack.length - 1)
     if (chId_parent !== undefined) {
         const elem = document.getElementById(chId_parent.id)
-        if (elem === null) { throw Error("before pushing a cursor hover id, could not find the element with the id of the next cursor hover id in the stack") }
+        assert(elem !== null, "before pushing a cursor hover id, could not find the element with the id of the next cursor hover id in the stack")
         elem.classList.remove(cursorHover_className)
     }
 
@@ -40,25 +41,25 @@ export function pushCursorHoverId(chId: CursorHoverId) {
 
     // hover at the pushed chId
     const elem = document.getElementById(chId.id)
-    if (elem === null) { throw new Error("after pushing a cursor hover id, could not find the element with that id") }
+    assert(elem !== null, "after pushing a cursor hover id, could not find the element with that id")
     elem.classList.add(cursorHover_className)
 }
 
 export function popCursorHoverId(chId: CursorHoverId) {
     // pop the next chId
     const chId_ = chIdStack.pop()
-    if (chId_ === undefined || chId.id !== chId_.id) { throw new Error("after popping a cursor hover id, found that the popped id is not the expected id") }
+    assert(chId_ !== undefined && chId.id === chId_.id, "after popping a cursor hover id, found that the popped id is not the expected id")
 
     // un-hover at the popped chId
     const elem = document.getElementById(chId.id)
-    if (elem === null) { throw new Error("after popping a cursor hover id, could not find the element with that id") }
+    assert(elem !== null, "after popping a cursor hover id, could not find the element with that id")
     elem.classList.remove(cursorHover_className)
 
     // if there is a next chId_parent in the stack, hover at chId_parent
     const chId_parent = chIdStack.at(chIdStack.length - 1)
     if (chId_parent !== undefined) {
         const elem = document.getElementById(chId_parent.id)
-        if (elem === null) { throw Error("after popping a cursor hover id, could not find the element with the id of the next cursor hover id in the stack") }
+        assert(elem !== null, "after popping a cursor hover id, could not find the element with the id of the next cursor hover id in the stack")
         elem.classList.add(cursorHover_className)
     }
 }
@@ -80,7 +81,7 @@ export function pushSelectHoverId(shId: SelectHoverId) {
     const shId_parent = shIdStack.at(shIdStack.length - 1)
     if (shId_parent !== undefined) {
         const elem = document.getElementById(shId_parent.id)
-        if (elem === null) { throw Error("before pushing a cursor hover id, could not find the element with the id of the next cursor hover id in the stack") }
+        assert(elem !== null, "before pushing a select hover id, could not find the element with the id of the next cursor hover id in the stack")
         elem.classList.remove(selectHover_className)
     }
 
@@ -89,18 +90,18 @@ export function pushSelectHoverId(shId: SelectHoverId) {
 
     // hover at the pushed shId
     const elem = document.getElementById(shId.id)
-    if (elem === null) { throw new Error("after pushing a cursor hover id, could not find the element with that id") }
+    assert(elem !== null, "after pushing a select hover id, could not find the element with that id")
     elem.classList.add(selectHover_className)
 }
 
 export function popSelectHoverId(shId: SelectHoverId) {
     // pop the next shId
     const shId_ = shIdStack.pop()
-    if (shId_ === undefined || shId.id !== shId_.id) { throw new Error("after popping a cursor hover id, found that the popped id is not the expected id") }
+    assert(shId_ !== undefined && shId.id === shId_.id, "after popping a select hover id, found that the popped id is not the expected id")
 
     // un-hover at the popped shId
     const elem = document.getElementById(shId.id)
-    if (elem === null) { throw new Error("after popping a cursor hover id, could not find the element with that id") }
+    assert(elem !== null, "after popping a select hover id, could not find the element with that id")
     elem.classList.remove(selectHover_className)
 
     // if there is a next shId_parent in the stack, hover at shId_parent

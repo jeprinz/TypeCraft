@@ -55,6 +55,8 @@ export type NodeTag
     | 'replace'
     | 'plus'
     | 'minus'
+    | 'cursor-mode-wrapper'
+    | 'select-mode-wrapper'
 
 export type NodeStyle =
     'cursor' |

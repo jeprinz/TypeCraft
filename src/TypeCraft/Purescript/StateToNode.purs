@@ -14,9 +14,9 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Dentist (downPathToCtxChange)
 import TypeCraft.Purescript.Grammar (freshHole)
 import TypeCraft.Purescript.ModifyState (modifyQuery, submitQuery)
-import TypeCraft.Purescript.Node (Node, NodeStyle(..), addNodeStyle, setNodeCompletions, setNodeGetCursor, setNodeQueryString)
+import TypeCraft.Purescript.Node (Node, NodeStyle(..), NodeTag(..), addNodeStyle, makeWrapperNode, setNodeCompletions, setNodeGetCursor, setNodeQueryString)
 import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode)
-import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), Mode(..), Select(..), State, CursorMode, getCompletion)
+import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), State, SelectMode, getCompletion)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode)
 import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 import TypeCraft.Purescript.Unification (applySubType)
@@ -32,84 +32,90 @@ mode another selection is not possible.
 stateToNode :: State -> Node
 stateToNode st = case st.mode of
   CursorMode cursorMode -> cursorModeToNode cursorMode
-  SelectMode select -> case select of
-    -- TODO: need more info about root to render it
-    { select: TermSelect topPath ctx1 ty1 term1 middlePath ctx2 ty2 term2 _root } ->  -- TODO: render something differently depending on root?
-      termPathToNode true Nil BITerm
-        { ctxs: ctx1, ty: ty1, term: term1, termPath: topPath }
-        $ addNodeStyle (NodeStyle "select-top")
-        $ termPathToNode true topPath BITerm
-            { ctxs: ctx2, ty: ty2, term: term2, termPath: middlePath }
-        $ addNodeStyle (NodeStyle "select-bot")
-        $ termToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2, term: term2 }
-    { select: TypeSelect topPath ctx1 ty1 middlePath ctx2 ty2 _root } ->
-      typePathToNode true Nil BITerm
-        { ctxs: ctx1, ty: ty1, typePath: topPath }
-        $ addNodeStyle (NodeStyle "select-top")
-        $ typePathToNode true topPath BITerm
-            { ctxs: ctx2, ty: ty2, typePath: middlePath }
-        $ addNodeStyle (NodeStyle "select-bot")
-        $ typeToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2 }
-    { select: CtrListSelect topPath ctx1 ctrs1 middlePath ctx2 ctrs2 _root } ->
-      ctrListPathToNode true Nil BITerm
-        { ctxs: ctx1, ctrs: ctrs1, listCtrPath: topPath }
-        $ addNodeStyle (NodeStyle "select-top")
-        $ ctrListPathToNode true topPath BITerm
-            { ctxs: ctx2, ctrs: ctrs2, listCtrPath: middlePath }
-        $ addNodeStyle (NodeStyle "select-bot")
-        $ ctrListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ctrs: ctrs2 }
-    { select: CtrParamListSelect topPath ctx1 ctrParams1 middlePath ctx2 ctrParams2 _root } ->
-      ctrParamListPathToNode true Nil BITerm
-        { ctxs: ctx1, ctrParams: ctrParams1, listCtrParamPath: topPath }
-        $ addNodeStyle (NodeStyle "select-top")
-        $ ctrParamListPathToNode true topPath BITerm
-            { ctxs: ctx2, ctrParams: ctrParams2, listCtrParamPath: middlePath }
-        $ addNodeStyle (NodeStyle "select-bot")
-        $ ctrParamListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ctrParams: ctrParams2 }
-    { select: TypeBindListSelect topPath ctx1 tyBinds1 middlePath ctx2 tyBinds2 _root } ->
-      typeBindListPathToNode true Nil BITerm
-        { ctxs: ctx1, tyBinds: tyBinds1, listTypeBindPath: topPath }
-        $ addNodeStyle (NodeStyle "select-top")
-        $ typeBindListPathToNode true topPath BITerm
-            { ctxs: ctx2, tyBinds: tyBinds2, listTypeBindPath: middlePath }
-        $ addNodeStyle (NodeStyle "select-bot")
-        $ typeBindListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, tyBinds: tyBinds2 }
+  SelectMode selectMode -> selectModeToNode selectMode
+
+selectModeToNode :: SelectMode -> Node
+selectModeToNode selectMode =
+  makeWrapperNode SelectModeWrapperNodeTag
+    $ case selectMode.select of
+        -- TODO: need more info about root to render it
+        TermSelect topPath ctx1 ty1 term1 middlePath ctx2 ty2 term2 _root ->  -- TODO: render something differently depending on root?
+          termPathToNode true Nil BITerm
+            { ctxs: ctx1, ty: ty1, term: term1, termPath: topPath }
+            $ addNodeStyle (NodeStyle "select-top")
+            $ termPathToNode true topPath BITerm
+                { ctxs: ctx2, ty: ty2, term: term2, termPath: middlePath }
+            $ addNodeStyle (NodeStyle "select-bot")
+            $ termToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2, term: term2 }
+        TypeSelect topPath ctx1 ty1 middlePath ctx2 ty2 _root ->
+          typePathToNode true Nil BITerm
+            { ctxs: ctx1, ty: ty1, typePath: topPath }
+            $ addNodeStyle (NodeStyle "select-top")
+            $ typePathToNode true topPath BITerm
+                { ctxs: ctx2, ty: ty2, typePath: middlePath }
+            $ addNodeStyle (NodeStyle "select-bot")
+            $ typeToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ty: ty2 }
+        CtrListSelect topPath ctx1 ctrs1 middlePath ctx2 ctrs2 _root ->
+          ctrListPathToNode true Nil BITerm
+            { ctxs: ctx1, ctrs: ctrs1, listCtrPath: topPath }
+            $ addNodeStyle (NodeStyle "select-top")
+            $ ctrListPathToNode true topPath BITerm
+                { ctxs: ctx2, ctrs: ctrs2, listCtrPath: middlePath }
+            $ addNodeStyle (NodeStyle "select-bot")
+            $ ctrListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ctrs: ctrs2 }
+        CtrParamListSelect topPath ctx1 ctrParams1 middlePath ctx2 ctrParams2 _root ->
+          ctrParamListPathToNode true Nil BITerm
+            { ctxs: ctx1, ctrParams: ctrParams1, listCtrParamPath: topPath }
+            $ addNodeStyle (NodeStyle "select-top")
+            $ ctrParamListPathToNode true topPath BITerm
+                { ctxs: ctx2, ctrParams: ctrParams2, listCtrParamPath: middlePath }
+            $ addNodeStyle (NodeStyle "select-bot")
+            $ ctrParamListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, ctrParams: ctrParams2 }
+        TypeBindListSelect topPath ctx1 tyBinds1 middlePath ctx2 tyBinds2 _root ->
+          typeBindListPathToNode true Nil BITerm
+            { ctxs: ctx1, tyBinds: tyBinds1, listTypeBindPath: topPath }
+            $ addNodeStyle (NodeStyle "select-top")
+            $ typeBindListPathToNode true topPath BITerm
+                { ctxs: ctx2, tyBinds: tyBinds2, listTypeBindPath: middlePath }
+            $ addNodeStyle (NodeStyle "select-bot")
+            $ typeBindListToNode true (AICursor (middlePath <> topPath)) { ctxs: ctx2, tyBinds: tyBinds2 }
 
 cursorModeToNode :: CursorMode -> Node
 cursorModeToNode cursorMode =
-  cursorModePathToNode
-    if not (String.null cursorMode.query.string) then
-      -- if the query has content
-      flip (foldr ($))
-        [ setNodeQueryString cursorMode.query.string
-        , setNodeCompletions
-            ( (Array.range 0 (n_completionGroups - 1) `Array.zip` cursorMode.query.completionGroups)
-                <#> \(completionGroup_j /\ cmpls) ->
-                    if completionGroup_j == completionGroup_i then
-                      let
-                        completionGroupItem_i' = fromJust' "cursorModeToNode: completionGroupItem_i == Nothing" completionGroupItem_i
-                      in
-                        completionToNode { isInline: false, completionIndex: { completionGroup_i, completionGroupItem_i: completionGroupItem_i' } }
-                          $ fromJust' "cursorModeToNode: cmpls Array.!! cursorMode.query.completionGroupItem_i `mod` Array.length cmpls"
-                          $ (cmpls Array.!! completionGroupItem_i')
-                    else
-                      -- cmpls should never be empty, because then there
-                      -- wouldn't be a completionGroup for it
-                      completionToNode { isInline: false, completionIndex: { completionGroup_i: completionGroup_j, completionGroupItem_i: 0 } }
-                        $ fromJust' "cursorModeToNode: cmpls Array.!! 0"
-                        $ (cmpls Array.!! 0)
-            )
-            (toNumber completionGroup_i)
-        ] case getCompletion cursorMode.query of
-        Nothing -> cursorModeTermToNode unit
-        Just cmpl ->
-          let
-            completionGroupItem_i' = fromJust' "cursorModeToNode: completionGroupItem_i == Nothing" completionGroupItem_i
-          in
-            completionToNode { isInline: true, completionIndex: { completionGroup_i, completionGroupItem_i: completionGroupItem_i' } } cmpl
-    else
-      -- if the query is empty
-      cursorModeTermToNode unit
+  makeWrapperNode CursorModeWrapperNodeTag
+    $ cursorModePathToNode
+        if not (String.null cursorMode.query.string) then
+          -- if the query has content
+          flip (foldr ($))
+            [ setNodeQueryString cursorMode.query.string
+            , setNodeCompletions
+                ( (Array.range 0 (n_completionGroups - 1) `Array.zip` cursorMode.query.completionGroups)
+                    <#> \(completionGroup_j /\ cmpls) ->
+                        if completionGroup_j == completionGroup_i then
+                          let
+                            completionGroupItem_i' = fromJust' "cursorModeToNode: completionGroupItem_i == Nothing" completionGroupItem_i
+                          in
+                            completionToNode { isInline: false, completionIndex: { completionGroup_i, completionGroupItem_i: completionGroupItem_i' } }
+                              $ fromJust' "cursorModeToNode: cmpls Array.!! cursorMode.query.completionGroupItem_i `mod` Array.length cmpls"
+                              $ (cmpls Array.!! completionGroupItem_i')
+                        else
+                          -- cmpls should never be empty, because then there
+                          -- wouldn't be a completionGroup for it
+                          completionToNode { isInline: false, completionIndex: { completionGroup_i: completionGroup_j, completionGroupItem_i: 0 } }
+                            $ fromJust' "cursorModeToNode: cmpls Array.!! 0"
+                            $ (cmpls Array.!! 0)
+                )
+                (toNumber completionGroup_i)
+            ] case getCompletion cursorMode.query of
+            Nothing -> cursorModeTermToNode unit
+            Just cmpl ->
+              let
+                completionGroupItem_i' = fromJust' "cursorModeToNode: completionGroupItem_i == Nothing" completionGroupItem_i
+              in
+                completionToNode { isInline: true, completionIndex: { completionGroup_i, completionGroupItem_i: completionGroupItem_i' } } cmpl
+        else
+          -- if the query is empty
+          cursorModeTermToNode unit
   where
   n_completionGroups = Array.length cursorMode.query.completionGroups
 

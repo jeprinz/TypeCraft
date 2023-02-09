@@ -328,7 +328,7 @@
 
 /* cursor-hover */
 
-.cursor-hover {
+.cursor-mode-wrapper .cursor-hover {
   cursor: pointer;
   box-shadow:
     -2px 0 0 0 rgb(152, 152, 255),
@@ -338,7 +338,8 @@
 
 /* select-hover */
 
-.select-hover {
+/* select-hover outside of cursor */
+.select-mode-wrapper .select-hover {
   cursor: pointer;
   box-shadow:
     -2px 0 0 0 rgb(152, 152, 255),
@@ -346,10 +347,26 @@
   background-color: rgb(206, 206, 255);
 }
 
-.select-hover .cursor {
+/* cursor outside of select-hover */
+.select-mode-wrapper .cursor {
+  box-shadow:
+    -2px 0 0 0 rgb(152, 152, 255),
+    2px 0 0 0 rgb(152, 152, 255);
+  background-color: rgb(206, 206, 255);
+}
+
+/* cursor is inside of select-hover */
+.select-mode-wrapper .select-hover .cursor {
+  box-shadow:
+    -2px 0 0 0 rgb(152, 152, 255),
+    2px 0 0 0 rgb(152, 152, 255);
   background-color: white;
 }
 
-.cursor .select-hover {
+/* select-hover is inside of cursor */
+.select-mode-wrapper .cursor .select-hover {
+  box-shadow:
+    -2px 0 0 0 rgb(152, 152, 255),
+    2px 0 0 0 rgb(152, 152, 255);
   background-color: white;
 }
