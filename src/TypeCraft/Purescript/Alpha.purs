@@ -57,9 +57,9 @@ polyTypeApply pty args =
     let sub /\ ty = polyTypeImpl pty args in
     applySubType {subTypeVars: sub, subTHoles: Map.empty} ty
 polyTypeImpl :: PolyType -> List.List TypeArg -> Map.Map TypeVarID Type /\ Type
-polyTypeImpl (Forall x pt) ((TypeArg _ ty) List.: args) =
+polyTypeImpl (Forall x pt) ((TypeArg _ arg) List.: args) =
     let sub /\ ty = polyTypeImpl pt args in
-    Map.insert x ty sub /\ ty
+    Map.insert x arg sub /\ ty
 polyTypeImpl (PType ty) List.Nil = Map.empty /\ ty
 polyTypeImpl _ _ = unsafeThrow "in polyTypeApply, wrong number of args"
 

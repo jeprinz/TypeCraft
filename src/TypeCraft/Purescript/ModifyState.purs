@@ -121,24 +121,17 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
     getCompletion cursorMode.query
       >>= case _ of
           CompletionType ty' sub ->
-            let
-              path' = subTypePath sub path
-            in
-              let
-                ctxs' = subAllCtx sub ctxs
-              in
-                --            let path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path in
-                pure
+--            let path' = subTypePath sub path in
+--            let ctxs' = subAllCtx sub ctxs in
+            let (kctx' /\ ctx') /\ path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path in
+            let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
+              pure
                   { cursorLocation: TypeCursor ctxs' path' ty'
                   , query: emptyQuery
                   }
           CompletionTypePath pathNew ch ->
-            let
-              (kctx' /\ ctx') /\ path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
-            in
-              let
-                ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
-              in
+            let (kctx' /\ ctx') /\ path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
+            let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
                 pure
                   { cursorLocation: TypeCursor ctxs' (pathNew <> path') ty
                   , query: emptyQuery

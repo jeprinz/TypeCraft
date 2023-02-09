@@ -19,6 +19,7 @@ import Data.Tuple (fst, snd)
 import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints)
 import TypeCraft.Purescript.Util (lookup')
 import TypeCraft.Purescript.Alpha (polyTypeApply)
+import Debug (trace)
 
 type TermPathRecValue = {ctxs :: AllContext, ty :: Type, term :: Term, termPath :: UpPath}
 type TypePathRecValue = {ctxs :: AllContext, ty :: Type, typePath :: UpPath}
