@@ -72,11 +72,13 @@
   background-color: rgb(100, 100, 255);
 }
 
-.query-completion-active, .query-completion-active:hover {
+.query-completion-active,
+.query-completion-active:hover {
   background-color: blue;
 }
 
-.query-completion-empty, .query-completion-empty:hover  {
+.query-completion-empty,
+.query-completion-empty:hover {
   color: red;
   background-color: white;
   font-style: italic;
@@ -331,12 +333,43 @@
 
 .hover {
   cursor: pointer;
-  box-shadow:
+  /* box-shadow:
     -2px 0 0 0 rgb(152, 152, 255),
-    2px 0 0 0 rgb(152, 152, 255);
-  background-color: rgb(206, 206, 255);
+    2px 0 0 0 rgb(152, 152, 255); */
+  background-color: rgb(208, 236, 255)
 }
 
-/* .hover {
+/* mouseDown hover and cursor */
 
-} */
+/* mouseDown: hover outside of cursor */
+.mouseDown .hover {
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+  background-color: rgb(208, 236, 255);
+}
+
+/* mouseDown: hover inside of cursor */
+.mouseDown .cursor .hover {
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+  background-color: white;
+}
+
+/* mouseDown: cursor outside of hover */
+.mouseDown .cursor {
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+  background-color: rgb(208, 236, 255);
+}
+
+/* mouseDown: cursor inside of hover */
+.mouseDown .hover .cursor {
+  box-shadow:
+    -2px 0 0 0 blue,
+    2px 0 0 0 blue;
+  background-color: white;
+}
+

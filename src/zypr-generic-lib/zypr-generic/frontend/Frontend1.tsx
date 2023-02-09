@@ -5,20 +5,13 @@ import { Node } from "../Node";
 import * as Punc from './Punctuation';
 import assert from 'assert';
 import { fromBackendState, toBackendState } from '../../../TypeCraft/Typescript/State';
-import { Newtype, fromNewtype, overNewtype, toNewtype } from '../../Newtype';
 
-type EIDStep = Newtype<'EIDStep', string>
-type EIDSteps = Newtype<'EIDSteps', EIDStep[]>
+type EIDSteps = { isInsideCursor: boolean, steps: number[] }
 
-const emptyEIDSteps: EIDSteps = toNewtype('EIDSteps', [])
+const emptyEIDSteps: EIDSteps = { isInsideCursor: false, steps: [] }
 
-function parseEIDStep(str: string): EIDStep {
-  return toNewtype('EIDStep', str)
-}
-
-function nextEIDStep(str: string, eidSteps: EIDSteps): EIDSteps {
-  let eidStep: EIDStep = parseEIDStep(str)
-  return overNewtype('EIDSteps', eidSteps, xs => xs.concat(eidStep))
+function nextEIDStep(step: number, isCursor: boolean, eidSteps: EIDSteps): EIDSteps {
+  return { isInsideCursor: isCursor || eidSteps.isInsideCursor, steps: eidSteps.steps.concat(step) }
 }
 
 function hashString(str: string): number {
@@ -35,7 +28,7 @@ function hashString(str: string): number {
 
 function idOfEIDSteps(eidSteps: EIDSteps): string {
   // return hashString(fromNewtype(eidSteps).join("/")).toString()
-  return fromNewtype(eidSteps).map(eidStep => fromNewtype(eidStep)).join("/")
+  return eidSteps.steps.map(step => step.toString()).join("/")
 }
 
 function hoverIdOfEIDSteps(eidSteps: EIDSteps): HoverId {
@@ -52,7 +45,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       indentationLevel: number,
     ): JSX.Element[] {
       const hoverId = hoverIdOfEIDSteps(eidSteps)
-      // const hoverId = freshHoverId()
+      if (eidSteps.isInsideCursor) { classNames.push("insideCursor") }
 
       // Parenthesization
       if (node.isParenthesized)
@@ -106,9 +99,9 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
       function onMouseUp(event: React.MouseEvent) {
         // console.log("node.onMouseUp")
-        
+
         setMouseDown(false)
-        
+
         let getSelect = node.getSelect
         if (getSelect !== undefined) {
           // console.log(`getSelect for this '${node.tag}' node`)
@@ -123,7 +116,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           <div className={
             ([["query-completion"], i == node.activeCompletionGroup ? ["query-completion-active"] : []].flat()).join(" ")
           }>
-            {renderNode(node_, nextEIDStep(`cmpl-${i}`, eidSteps), 0)}
+            {renderNode(node_, nextEIDStep(100 + i, false, eidSteps), 0)}
           </div>
         )
       }
@@ -227,7 +220,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           case 'newline': break
         }
 
-        return renderNode(node.kids[kid_i], nextEIDStep(kid_i.toString(), eidSteps), indentationLevel_kid)
+        return renderNode(node.kids[kid_i], nextEIDStep(kid_i, node.styles.includes('cursor'), eidSteps), indentationLevel_kid)
       }
 
       // const showLabel = (label: string | undefined) => label !== undefined ? (label.length > 0 ? label : "~") : "<undefined>"
