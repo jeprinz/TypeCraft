@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Backend } from '../Backend';
-import Editor, { freshCursorHoverId, popCursorHoverId, popSelectHoverId, pushCursorHoverId, pushSelectHoverId } from "../Editor";
+import Editor, { freshHoverId, popHoverId, pushHoverId } from "../Editor";
 import { Node } from "../Node";
 import * as Punc from './Punctuation';
 import assert from 'assert';
@@ -46,7 +46,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       kids: JSX.Element[],
       indentationLevel: number,
     ): JSX.Element[] {
-      const chId = freshCursorHoverId()
+      const hoverId = freshHoverId()
 
       // Parenthesization
       if (node.isParenthesized)
@@ -67,19 +67,15 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
       function onMouseEnter(event: React.MouseEvent) {
         // console.log("onMouseEnter")
-        if (node.getCursor !== undefined) {
-          pushCursorHoverId(chId)
-        } else if (node.getSelect !== undefined) {
-          pushSelectHoverId(chId)
+        if (node.getCursor !== undefined || node.getSelect !== undefined) {
+          pushHoverId(hoverId)
         }
       }
 
       function onMouseLeave(event: React.MouseEvent) {
         // console.log("onMouseLeave")
-        if (node.getCursor !== undefined) {
-          popCursorHoverId(chId)
-        } else if (node.getSelect !== undefined) {
-          popSelectHoverId(chId)
+        if (node.getCursor !== undefined || node.getSelect !== undefined) {
+          popHoverId(hoverId)
         }
       }
 
@@ -118,7 +114,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         kids = ([] as JSX.Element[]).concat([Punc.angleL], kids)
       }
 
-      const id = chId.id
+      const id = hoverId.id
 
       // if (editor.state.cursorNodeIdStack.at(0) === id) {
       //   classNames.push('cursor-hover')
