@@ -49,14 +49,22 @@ export function freshHoverId(): HoverId {
 }
 
 export function setHoverId(hoverId: HoverId) {
-    // hover the new element
-    const elem = getHoverIdElement(hoverId)
-    elem.classList.add(hover_className)
-    current_hoverId = hoverId
+    if (current_hoverId === undefined || (current_hoverId !== undefined && current_hoverId.id !== hoverId.id)) {
+        if (current_hoverId !== undefined) {
+            // unhover current hover element
+            const current_elem = getHoverIdElement(current_hoverId)
+            current_elem.classList.remove(hover_className)
+        }
+
+        // hover the new hover element
+        const elem = getHoverIdElement(hoverId)
+        elem.classList.add(hover_className)
+        current_hoverId = hoverId
+    }
 }
 
 export function unsetHoverId(hoverId: HoverId) {
-    // unhover element
+    // unhover hover element
     const elem = getHoverIdElement(hoverId)
     elem.classList.remove(hover_className)
 }
