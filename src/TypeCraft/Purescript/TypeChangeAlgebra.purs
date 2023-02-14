@@ -211,6 +211,10 @@ tVarChIsId :: TVarChange -> Boolean
 tVarChIsId (TVarKindChange kch tac) = kChIsId kch && maybe true taChIsId tac
 tVarChIsId _ = false
 
+varChIsId :: VarChange -> Boolean
+varChIsId (VarTypeChange pc) = pChIsId pc
+varChIsId _ = false
+
 taChIsId :: TypeAliasChange -> Boolean
 taChIsId (TAChange c) = chIsId c
 taChIsId (TAForall _ tac) = taChIsId tac
@@ -220,6 +224,12 @@ kChIsId :: KindChange -> Boolean
 kChIsId KCType = true
 kChIsId (KCArrow ch) = kChIsId ch
 kChIsId _ = false
+
+ctxIsId :: ChangeCtx -> Boolean
+ctxIsId = all varChIsId
+
+invertCtx :: ChangeCtx -> ChangeCtx
+invertCtx = map invertVarChange
 
 kCtxIsId :: KindChangeCtx -> Boolean
 kCtxIsId = all tVarChIsId
