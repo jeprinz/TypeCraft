@@ -70,7 +70,7 @@ recTermPath args {ctxs, ty, term, termPath: (Let5 md tBind@(TermBind _ x) tyBind
         {ctxs: ctxs', ty: defTy} -- defTy
         bodyTy -- bodyTy
 recTermPath args {ctxs, ty, term, termPath: (App1 md {-Term-} t2 argTy outTy) : up} =
-    if not (Arrow defaultArrowMD argTy outTy == ty) then unsafeThrow "dynamic type error detected 2" else
+    if not (Arrow defaultArrowMD argTy outTy == ty) then unsafeThrow ("dynamic type error detected 2. ty is: " <> show ty <> "and argTy is: " <> show argTy <> "and outTy is: " <> show outTy) else
     args.app1 {ctxs, ty: outTy, term: App md term t2 argTy outTy, termPath: up} md
         {ctxs, ty: argTy, term: t2}
         argTy outTy

@@ -112,6 +112,11 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
                 { cursorLocation: move $ TermCursor newCtxs ty (pathNew <> path') tm'
                 , query: emptyQuery
                 }
+          CompletionTermPath2 _ newState ->
+              pure
+                { cursorLocation: newState unit
+                , query: emptyQuery
+                }
           _ -> unsafeThrow "tried to submit a non-CompletionTerm* completion at a TermCursor"
   TypeCursor ctxs path ty ->
     getCompletion cursorMode.query

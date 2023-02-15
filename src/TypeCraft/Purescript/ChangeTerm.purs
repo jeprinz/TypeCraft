@@ -7,7 +7,7 @@ import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.TypeChangeAlgebra
 
-import Data.List (List(..), (:), foldr)
+import Data.List (List(..), (:), foldr, null)
 import Data.Map.Internal (empty, lookup, insert)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (fst)
@@ -60,6 +60,7 @@ chTerm kctx ctx c t =
                     let ctx'' /\ ct2 /\ t2' = chTerm kctx ctx' (tyInject argTy) t2 in
                     (composeCtxs ctx' ctx'') /\ c1' /\ Buffer defaultBufferMD t2 (snd (getEndpoints ct2)) t1' (snd (getEndpoints c1))
                 (CArrow c1a c1b) ->
+                    trace ("c1b is " <> show c1b) \_ ->
                     let ctx'' /\ c2 /\ t2' = chTerm kctx ctx' c1a t2 in
                     let t2'' = if chIsId c2
                         then t2'
@@ -94,7 +95,10 @@ chTerm kctx ctx c t =
 --                        else cVar /\ Var md x tArgs
                     VarInsert _ -> unsafeThrow "shouldn't get here"
                     VarTypeChange pch ->
-                        if not (chIsId cin) then getRightCtxInj ctx /\ tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD else
+                        if not (chIsId cin) then
+                              if null tArgs then
+                                  insert x (VarTypeChange (PChange cin)) ctx /\ tyInject (snd (getEndpoints cin)) /\ Var md x tArgs else
+                                  getRightCtxInj ctx /\ tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD else
                         let ch /\ tyArgs' = chTypeArgs2 kctx tArgs pch in
                         getRightCtxInj ctx /\ ch /\ Var md x tyArgs'
             (CArrow c1 c2) /\ (Lambda md tBind@(TermBind _ x) ty t bodyTy) ->
@@ -102,15 +106,18 @@ chTerm kctx ctx c t =
                 if not (bodyTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen 2" else
                 let ctx' /\ c2' /\ t' = chTerm kctx (insert x (VarTypeChange (PChange c1)) ctx) c2 t in
                 let ctx'' = delete' x ctx' in
-                -- TODO: apply change to x to the lambda itself!
-                ctx'' /\ (CArrow (tyInject (snd (getEndpoints c1))) c2') /\ Lambda md tBind (snd (getEndpoints c1)) t' (snd (getEndpoints c2))
+                let xCh = lookup' x ctx' in
+                case xCh of
+                    VarTypeChange (PChange ch) ->
+                        let fullCh = composeChange c1 ch in
+                        ctx'' /\ (CArrow ch c2') /\ Lambda md tBind (snd (getEndpoints fullCh)) t' (snd (getEndpoints c2))
+                    _ -> unsafeThrow "shouldn't happen chTerm 1"
             (Minus ty1 c) /\ (Lambda md tBind@(TermBind _ x) ty2 t bodyTy) ->
                 if not (ty1 == ty2) then unsafeThrow "shouldn't happen 3" else
                 if not (bodyTy == fst (getEndpoints c)) then unsafeThrow "shouldn't happen 4" else
                 let ctx' /\ c2' /\ t' = chTerm kctx (insert x (VarDelete (PType ty2)) ctx) c t in
                 let ctx'' = delete' x ctx' in
-                -- TODO: apply change to x to the lambda itself!
-                ctx'' /\ (CArrow (tyInject ty1) c2') /\ t'
+                ctx'' /\ c2' /\ t'
             (Minus ty c) /\ t ->
                 let ctx' /\ c' /\ t' = chTerm kctx ctx c t in
                 ctx' /\ (CArrow (tyInject ty) c') /\ App defaultAppMD t' (Hole defaultHoleMD) ty (snd (getEndpoints c))

@@ -59,8 +59,9 @@ isEmptyQuery { string } = String.null string
 
 -- TODO: completions for other syntax kinds
 data Completion
-  = CompletionTerm Term {-Type-} Sub -- I don't think we need a Type here? Aren't terms only filled when they are the correct type up to unification? (Or if not, at least make it a typechange?)
+  = CompletionTerm Term Sub
   | CompletionTermPath UpPath Change (CursorLocation -> CursorLocation)
+  | CompletionTermPath2 UpPath (Unit -> CursorLocation) -- A more generic version of a completion
   | CompletionType Type Sub
   | CompletionTypePath UpPath Change
   | CompletionCtrListPath UpPath ListCtrChange

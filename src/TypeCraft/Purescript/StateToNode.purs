@@ -196,6 +196,23 @@ cursorModeToNode cursorMode =
                           makeMetahole unit
                     )
           _ -> hole' "completionToNode CompletionPath non-TermCursor"
+        CompletionTermPath2 termPath newState -> case newState unit of
+          TermCursor ctxs ty _termPath' term ->
+              setNodeGetCursor getCursor
+                $ addNodeStyle (NodeStyle "query-insert-top")
+                $ termPathToNode false Nil BITerm -- ideally we shouldn't have to specify Nil and BITerm here, as they are irrelevant. See refactors.
+                    { ctxs, term, termPath, ty }
+                    ( addNodeStyle (NodeStyle "query-insert-bot")
+                        if opts.isInline then
+                          -- if inline, render with cursor term at head
+                          termToNode false -- TODO: shouldn't this be false? Why should you be able to click on the query?
+                            AINothing -- (AISelect (termPath' <> termPath) ctxs (term /\ ty) Nil)
+                            { ctxs, term, ty }
+                        else
+                          -- if not inline, then render with metahole at head
+                          makeMetahole unit
+                    )
+          _ -> hole' "completionToNode CompletionPath non-TermCursor"
         CompletionType ty _sub -> case cursorMode.cursorLocation of
           TypeCursor ctxs _path _ty ->
             setNodeGetCursor getCursor
