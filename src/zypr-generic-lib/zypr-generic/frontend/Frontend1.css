@@ -16,12 +16,12 @@
   border-radius: 0.2rem;
   padding: 0 0.4rem;
   display: inline-block;
-  background-color: rgb(255, 173, 145);
+  background-color: rgba(255, 173, 145, 0.5);
   box-shadow: 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }
 
 .node.cursorable>.tm_hol-inner:hover {
-  background-color: rgb(255, 204, 187);
+  background-color: rgba(255, 204, 187, 0.5);
 }
 
 .ty_hol-inner {
@@ -31,11 +31,12 @@
   padding: 0 0.2rem;
   display: inline-block;
   background-color: rgb(255, 114, 147);
+  background-color: rgba(255, 114, 147, 0.5);
   box-shadow: 0 0 0 1px rgb(255, 86, 126) inset, 0 0 2px 1px black inset;
 }
 
 .node.cursorable>.ty_hol-inner:hover {
-  background-color: rgb(255, 174, 193);
+  background-color: rgba(255, 174, 193, 0.5);
 }
 
 
@@ -133,6 +134,11 @@
 
 .punctuation.lambda {
   margin: 0 0.5rem 0 0;
+}
+
+.punctuation.keyword {
+  color: purple;
+  font-weight: bold;
 }
 
 .punctuation.colon {
