@@ -229,6 +229,8 @@ freshTypeHoleID _ = unsafePerformEffect genUUID
 freshTypeVarID :: Unit -> TypeVarID
 freshTypeVarID _ = unsafePerformEffect genUUID
 
+-- Note: its important that the automatically derived Eq is not used for Type, since we don't want to compare metadata.
+-- TODO: fix the Eq for PolyType
 instance eqType :: Eq Type where
   eq (Arrow _ t1 t2) (Arrow _ t1' t2') = (t1 == t1') && (t2 == t2')
   eq (THole _ x) (THole _ y) = x == y

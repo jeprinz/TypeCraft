@@ -61,9 +61,18 @@ chTermPath kctx ctx (Minus t c) (App1 md {-here-} arg argTy outTy : up) =
     let ctx' /\ argCh /\ arg' = chTerm kctx ctx chArgTy arg in
     let (kctx' /\ ctx'') /\ up' = chTermPath kctx ctx' c up in
     let arg'' = chTermCtxOnly kctx' (composeCtxs (invertCtx ctx') ctx'') (snd (getEndpoints chArgTy)) arg' in
-    (kctx' /\ ctx'') /\ Buffer3 defaultBufferMD arg'' (snd (getEndpoints argCh)) {-Term-} outTy : up'
+    (kctx' /\ (composeCtxs ctx' ctx'')) /\ Buffer3 defaultBufferMD arg'' (snd (getEndpoints argCh)) {-Term-} outTy : up'
 -- TODO: App2 case, other App1 cases with other TypeChanges
 --    App2 AppMD Term {-Term-} Type Type -- TODO: this case goes along with the polymorphism change stuff
+chTermPath kctx ctx c (App2 md t {-here-} argTy outTy : up) =
+    if not (fst (getEndpoints c) == argTy) then unsafeThrow "shouldn't happen chTermPath App2 case" else
+    let ctx' /\ chtUp /\ t' = chTerm kctx ctx (CArrow c (tyInject outTy)) t in
+    case chtUp of
+        CArrow chArg chOut ->
+            let (kctx' /\ ctx'') /\ up' = chTermPath kctx ctx' chOut up in
+            let t'' = chTermCtxOnly kctx' ctx'' (snd (getEndpoints chtUp)) t' in
+            (kctx' /\ (composeCtxs ctx' ctx'')) /\ App2 md t'' {--} (snd (getEndpoints chArg)) (snd (getEndpoints chOut)) : up'
+        _ -> hole' "chTermPath App2 case, not sure what to do here..."
 chTermPath kctx ctx ch (Let3 md tBind@(TermBind _ x) tyBinds {-Term = here-} ty body bodyTy : termPath) =
     if not (ty == fst (getEndpoints ch)) then unsafeThrow "shouldn't happen chPath 3" else
 --    let ctx' = insert x (VarTypeChange (tyBindsWrapChange tyBinds ch)) ctx in
@@ -86,7 +95,7 @@ chTermPath kctx ctx c (Let5 md tBind@(TermBind _ x) tyBinds def defTy {-body = h
     if not (kCtxIsId kctx'') then unsafeThrow "ktx assumptinon violated" else
     let ctx''' = insert x (VarTypeChange (tyBindsWrapChange tyBinds (tyInject defTy))) ctx'' in
     let kctx''' = addLetToKCCtx kctx'' tyBinds in
-    let def' = chTermCtxOnly kctx'' ctx''' defTy def in -- TODO: why would the def of the let ever change anyway?
+    let def' = chTermCtxOnly kctx'' (composeCtxs ctx ctx''') defTy def in
     (kctx''' /\ ctx''') /\ Let5 md tBind tyBinds def' defTy (snd (getEndpoints c)) : up'
 chTermPath kctx ctx c (Data4 md x tbinds ctrs {-body = here-} bodyTy : up) =
     if not (fst (getEndpoints c) == bodyTy) then unsafeThrow "shouldn't happen chPath 5" else

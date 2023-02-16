@@ -37,7 +37,8 @@ chTermBoundary kctx ctx c t =
 chTermCtxOnly :: KindChangeCtx -> ChangeCtx -> Type -> Term -> Term
 chTermCtxOnly kctx ctx ty t =
     let ctx' /\ c /\ t' = chTerm kctx ctx (tyInject ty) t in
-    if not (ctxIsId ctx' && chIsId c) then unsafeThrow "Assumption violated!" else
+    if not (ctxIsId ctx') then unsafeThrow ("Assumption violated! ctx' is: " <> show ctx') else
+    if not (chIsId c) then unsafeThrow ("Assumption violated! c is: " <> show c) else
     t'
 
 getRightCtxInj :: ChangeCtx -> ChangeCtx
