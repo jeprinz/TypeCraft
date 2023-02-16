@@ -82,7 +82,7 @@ chTermPath kctx ctx ch (Let3 md tBind@(TermBind _ x) tyBinds {-Term = here-} ty 
     if not (kCtxIsId kctx'') then unsafeThrow "ktx assumptinon violated" else
     let ctx''' = insert x (VarTypeChange (tyBindsWrapChange tyBinds ch)) ctx'' in
 --    let bodyTy' /\ bodyCh = chType kctx' bodyTy in
-    let body' = chTermCtxOnly kctx'' ctx''' bodyTy body in -- TODO TODO TODO TODO:::: There are various other design descisions that could be made here. The issue is that we may want to call chTerm on the body first to get a TypeChange, but then we would need to call it again with the context change gotten from the path above.
+    let body' = chTermCtxOnly kctx' (composeCtxs ctx ctx''') bodyTy body in -- TODO TODO TODO TODO:::: There are various other design descisions that could be made here. The issue is that we may want to call chTerm on the body first to get a TypeChange, but then we would need to call it again with the context change gotten from the path above.
     let kctx''' = addLetToKCCtx kctx'' tyBinds in
     (kctx''' /\ ctx''') /\ Let3 md tBind tyBinds {-def-} (snd (getEndpoints ch)) body' bodyTy : termPath'
 chTermPath kctx ctx c (Let5 md tBind@(TermBind _ x) tyBinds def defTy {-body = here-} bodyTy : up) =

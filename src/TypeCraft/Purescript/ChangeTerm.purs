@@ -133,7 +133,7 @@ chTerm kctx ctx c t =
                 let ctx' = addLetToCCtx ctx tBind binds ty in
                 let kctx' = addLetToKCCtx kctx binds in
                 let ctx'' /\ c2 /\ t2' = chTerm kctx' ctx' c t2 in
-                let t1'= chTermCtxOnly kctx' ctx'' ty t1 in
+                let t1'= chTermCtxOnly kctx' (composeCtxs ctx' ctx'') ty t1 in
                 let ctx''' = delete' x ctx'' in
                 -- TODO: apply change to x to the let itself!
                 ctx''' /\ c2 /\ Let md tBind binds t1' ty t2' (snd (getEndpoints c2))
