@@ -24,6 +24,7 @@ import TypeCraft.Purescript.TypeChangeAlgebra
 import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (hole)
+import TypeCraft.Purescript.Alpha
 import Debug (trace)
 import Data.Tuple.Nested
 

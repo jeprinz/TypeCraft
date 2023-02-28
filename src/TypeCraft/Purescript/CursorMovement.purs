@@ -11,10 +11,7 @@ import TypeCraft.Purescript.TermRec
 import Data.Array as Array
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
-import Data.List (List(..), (:), find, last, init)
-import Data.List (head)
-import Data.List (index)
-import Data.List (length)
+import Data.List (List(..), (:), find, last, init, null, head, index, length)
 import Data.Maybe (Maybe(..))
 import Data.Maybe (Maybe)
 import Data.Maybe (maybe)
@@ -103,7 +100,7 @@ getCursorChildren (TypeBindListCursor ctxs up tyBinds) =
 -- the Int is what'th child the input is of the output
 parent :: CursorLocation -> Maybe (CursorLocation /\ Int)
 --parent (TermCursor ctxs ty Nil term) = Nothing
-parent cursor | (maybe false (\(_ /\ up /\ _) -> up == Nil) (getCursorParts cursor)) = Nothing -- if path is empty
+parent cursor | (maybe false (\(_ /\ up /\ _) -> null up) (getCursorParts cursor)) = Nothing -- if path is empty
 parent (TermCursor ctxs ty termPath term) =
     recTermPath
         {
@@ -367,7 +364,7 @@ goLeftUntilSort sort cursor =
     let cursor' = stepCursorBackwards cursor in
     if not (getCursorSort cursor' == sort) then goLeftUntilSort sort cursor'
     else
-        if getPath cursor' == Nil then Nothing else Just cursor'
+        if null (getPath cursor') then Nothing else Just cursor'
 
 {-
 I believe that it should always be the case for each sort of Selection that if you go right far enough, you will find something

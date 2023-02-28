@@ -3,13 +3,14 @@ module TypeCraft.Purescript.Freshen where
 import Prelude
 import Prim hiding (Type)
 import TypeCraft.Purescript.Grammar
-import Data.Map.Internal (Map, insert, empty, lookup)
+import Data.Map.Internal (Map, insert, empty, lookup, member)
 import Data.Tuple.Nested
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
 import Data.Tuple (fst)
 import Data.List (foldr, (:), List(..))
 import TypeCraft.Purescript.Util (lookup')
+import TypeCraft.Purescript.Util (mapKeys)
 
 {-
 This file has functions which traverse over various pieces of the grammar and freshen the variables.
@@ -96,7 +97,18 @@ subTypeArg sub (TypeArg md ty) = TypeArg md (subType sub ty)
 subType :: TyVarSub -> Type -> Type
 subType sub (Arrow md t1 t2) = Arrow md (subType sub t1) (subType sub t2)
 subType sub (THole md x) = THole md x
-subType sub (TNeu md x tys) = TNeu md (lookup' x sub) (map (subTypeArg sub) tys)
+subType sub (TNeu md x tys) = TNeu md (subTypeVar sub x) (map (subTypeArg sub) tys)
+
+subTypeVarID :: TyVarSub -> TypeVarID -> TypeVarID
+subTypeVarID sub x = case lookup x sub of
+    Nothing -> x
+    Just y -> y
+
+subTypeVar :: TyVarSub -> TypeVar -> TypeVar
+subTypeVar sub (TypeVar x) = TypeVar (lookup' x sub)
+subTypeVar sub (CtxBoundaryTypeVar pt mtv name x) =
+    if member x sub then unsafeThrow "I don't think that this should be in scope " else
+    CtxBoundaryTypeVar pt mtv name x
 
 subCtrParam :: TyVarSub -> CtrParam -> CtrParam
 subCtrParam sub (CtrParam md ty) = CtrParam md (subType sub ty)

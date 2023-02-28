@@ -281,7 +281,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
   _ -> [] -- TODO: impl
 
 makeEmptyTNeu :: TypeVarID -> Kind -> Type
-makeEmptyTNeu x k = TNeu defaultTNeuMD x (helper k)
+makeEmptyTNeu x k = TNeu defaultTNeuMD (TypeVar x) (helper k)
   where
   helper :: Kind -> List.List TypeArg
   helper Type = List.Nil

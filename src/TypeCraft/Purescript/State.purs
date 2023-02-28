@@ -15,7 +15,7 @@ import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
 import TypeCraft.Purescript.ShallowEmbed (exampleProg1, exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
-import TypeCraft.Purescript.Unification (Sub)
+import TypeCraft.Purescript.Alpha (Sub)
 import TypeCraft.Purescript.Util (hole, hole')
 
 {-

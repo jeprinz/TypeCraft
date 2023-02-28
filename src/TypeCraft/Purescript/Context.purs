@@ -2,7 +2,6 @@ module TypeCraft.Purescript.Context where
 
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.Freshen
 import TypeCraft.Purescript.Grammar
 
 import Data.List (List(..), (:))
@@ -15,11 +14,12 @@ import Data.Set as Set
 import Data.Tuple (snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Freshen (freshenChange)
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.Util (hole', hole, delete')
 import TypeCraft.Purescript.Util (lookup')
+import Data.Either (Either)
+import TypeCraft.Purescript.Freshen (genFreshener, subCtrParam)
 
 {-
 This file defines term contexts and type contexts!
@@ -87,10 +87,6 @@ tyVarIdsWrapChange :: List TypeVarID -> Change -> PolyChange
 tyVarIdsWrapChange Nil ch = PChange ch
 tyVarIdsWrapChange (x : tyBinds) ch = CForall x (tyVarIdsWrapChange tyBinds ch)
 
-data NameChange = NameChangeInsert String | NameChangeDelete String | NameChangeSame String
-type MDTypeChangeCtx = Map TypeVarID NameChange
-type MDTermChangeCtx = Map TypeVarID NameChange
-
 mdctxInject :: MDTermContext -> MDTermChangeCtx
 mdctxInject m = map NameChangeSame m
 
@@ -132,6 +128,9 @@ emptyAllContext = {
     actx: empty,
     ctx: empty
 }
+
+--------------------------------------------------------------------------------
+
 
 -- TODO: when I properly deal with parameters to types, this will have to be modified!
 tyBindsWrapType :: List TypeBind -> Type -> PolyType
@@ -175,7 +174,7 @@ constructorTypes (TypeBind _ dataType) tyBinds ctrs =
 constructorTypesImpl :: TypeVarID -> List TypeVarID -> List Constructor -> Map TermVarID PolyType
 constructorTypesImpl dataType tyVarIds Nil = empty
 constructorTypesImpl dataType tyVarIds (Constructor _ (TermBind _ x) params : ctrs)
-    = let tyArgs = map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD x Nil)) tyVarIds
+    = let tyArgs = map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD (TypeVar x) Nil)) tyVarIds
     in insert x (ctrParamsToType dataType tyVarIds params) (constructorTypesImpl dataType tyVarIds ctrs)
 
 constructorNames :: List Constructor -> Map TermVarID String
@@ -188,7 +187,7 @@ ctrParamsToType dataType tyVarIds ctrParams =
     let sub = genFreshener tyVarIds in
     let freshTyVarIds = map (\id -> lookup' id sub) tyVarIds in
     let freshCtrParams = map (subCtrParam sub) ctrParams in
-    let ctrOutType = TNeu defaultTNeuMD dataType (map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD x Nil)) freshTyVarIds) in
+    let ctrOutType = TNeu defaultTNeuMD (TypeVar dataType) (map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD (TypeVar x) Nil)) freshTyVarIds) in
     tyVarIdsWrapType freshTyVarIds (ctrParamsToTypeImpl ctrOutType freshCtrParams)
 
 ctrParamsToTypeImpl :: Type -> List CtrParam -> Type
@@ -262,3 +261,21 @@ tyBindsWrapKind :: List TypeBind -> Kind -> Kind
 tyBindsWrapKind Nil k = k
 tyBindsWrapKind (_ : tyBinds) k = KArrow (tyBindsWrapKind tyBinds k)
 
+--------------------------------------------------------------------------------
+---------- TypeVar stuff -------------------------------------------------------
+--------------------------------------------------------------------------------
+
+typeVarGetTypeDefVal :: TypeAliasContext -> TypeVar -> Maybe (List TypeBind /\ Type)
+typeVarGetTypeDefVal actx (TypeVar x) =
+    case lookup x actx of
+        Just stuff -> Just stuff
+        Nothing -> Nothing
+typeVarGetTypeDefVal actx (CtxBoundaryTypeVar pt mtv name x) = mtv
+
+typeVarGetKind :: TypeContext -> TypeVar -> Kind
+typeVarGetKind kctx (TypeVar x) = lookup' x kctx
+typeVarGetKind kctx (CtxBoundaryTypeVar k mtv name x) = k
+
+typeVarGetName :: MDTypeContext -> TypeVar -> String
+typeVarGetName mdkctx (TypeVar x) = lookup' x mdkctx
+typeVarGetName mdkctx (CtxBoundaryTypeVar k mtv name x) = name

@@ -23,6 +23,8 @@ import TypeCraft.Purescript.Freshen
 import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.Util (delete')
+import TypeCraft.Purescript.Alpha (applySubChange)
+
 
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
 -- TODO: Im not sure how I should understand this. I think that this is used for places where we assume that the output change is id, but I'm not sure what the criteria for that is.
@@ -198,21 +200,25 @@ chType kctx (Arrow md t1 t2) =
     let t2' /\ c2 = chType kctx t2 in
     Arrow md t1' t2' /\ CArrow c1 c2
 chType kctx (THole md x) = THole md x /\ CHole x
-chType kctx startType@(TNeu md x args) =
-    case lookup x kctx of
-    Nothing -> unsafeThrow "shouldn't get here! all variables should be bound in the context!"
-    Just (TVarKindChange kindChange taCh) ->
-        case taCh of
-        Nothing ->
-            let args' /\ cargs = chTypeArgs kctx kindChange args in
-            TNeu md x args' /\ CNeu x cargs
-        Just taCh -> hole' "chType" -- if the type variable was that of a type alias, we must deal with the possiblity that the type alias was changed
-    Just (TVarDelete kind maybeValue) ->
-        let x = freshTypeHoleID unit in
-        let newType = THole defaultHoleMD x in
-        newType /\ Replace startType newType
-    Just (TVarInsert kind maybeValue) -> unsafeThrow "I don't think this should happen but I'm not 100% sure"
---    (Just (TVarTypeChange _)) -> unsafeThrow "I need to figure out what is the deal with TVarTypeChange!!!"
+chType kctx startType@(TNeu md tv args) =
+    case tv of
+        TypeVar x ->
+            case lookup x kctx of
+            Nothing -> unsafeThrow "shouldn't get here! all variables should be bound in the context!"
+            Just (TVarKindChange kindChange taCh) ->
+                case taCh of
+                Nothing ->
+                    let args' /\ cargs = chTypeArgs kctx kindChange args in
+                    TNeu md (TypeVar x) args' /\ CNeu (CTypeVar x) cargs
+                Just taCh -> hole' "chType" -- if the type variable was that of a type alias, we must deal with the possiblity that the type alias was changed
+            Just (TVarDelete kind maybeValue) ->
+                let x = freshTypeHoleID unit in
+                let newType = THole defaultHoleMD x in
+                newType /\ Replace startType newType
+            Just (TVarInsert kind maybeValue) -> unsafeThrow "I don't think this should happen but I'm not 100% sure"
+        --    (Just (TVarTypeChange _)) -> unsafeThrow "I need to figure out what is the deal with TVarTypeChange!!!"
+        CtxBoundaryTypeVar k mtv name x -> -- because this represents an Insert boundary, x can't be in kctx. Therefore, we output the identity
+            hole' "chType" -- We still need to change the args though.
 
 
 chTypeArgs :: KindChangeCtx -> KindChange -> List TypeArg -> List TypeArg /\ List ChangeParam
@@ -302,14 +308,14 @@ ctrParamsChangeToChange :: {-datatype-}TypeVarID -> {-datatype params-}List Type
 ctrParamsChangeToChange dataType tyVarIds ctrParamsCh =
     let sub = genFreshener tyVarIds in -- TODO: figure out how to abstract this out and not have repetition with the other instance of these lines below
     let freshTyVarIds = map (\id -> lookup' id sub) tyVarIds in
-    let ctrOutType = TNeu defaultTNeuMD dataType (map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD x Nil)) freshTyVarIds) in
+    let ctrOutType = TNeu defaultTNeuMD (TypeVar dataType) (map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD (TypeVar x) Nil)) freshTyVarIds) in
     tyVarIdsWrapChange freshTyVarIds (ctrParamsChangeToChangeImpl ctrParamsCh sub (tyInject ctrOutType))
 
 ctrParamsChangeToChangeImpl :: ListCtrParamChange -> {-freshen datatype parameters in each type-}TyVarSub -> Change -> Change
 ctrParamsChangeToChangeImpl ctrParamsCh sub outCh = case ctrParamsCh of
     ListCtrParamChangeNil -> outCh
     ListCtrParamChangeCons ch ctrParamsCh' ->
-        let tyVarSub = map (\x -> TNeu defaultTNeuMD x Nil) sub in
+        let tyVarSub = map (\x -> TNeu defaultTNeuMD (TypeVar x) Nil) sub in
         let ch' = applySubChange {subTypeVars: tyVarSub, subTHoles: empty} ch in
         CArrow ch' (ctrParamsChangeToChangeImpl ctrParamsCh' sub outCh)
     ListCtrParamChangePlus (CtrParam _ ty) ctrParamsCh' -> Plus (subType sub ty) (ctrParamsChangeToChangeImpl ctrParamsCh' sub outCh)

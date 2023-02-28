@@ -4,7 +4,7 @@ import Prelude
 import Prim hiding (Type)
 import Data.Map.Internal (insert)
 
-import TypeCraft.Purescript.Grammar (Change, Constructor(..), CtrParam(..), PolyType(..), Term(..), TermBind(..), TermVarID, Tooth(..), Type(..), TypeArg(..), TypeBind(..), TypeVarID, UpPath, VarChange)
+import TypeCraft.Purescript.Grammar
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange, invertVarChange)
 import TypeCraft.Purescript.MD
@@ -273,7 +273,7 @@ recListCtrParamPath args {ctxs, ctrParams, listCtrParamPath : CtrParamListCons2 
 recListCtrParamPath _ _ = unsafeThrow "Either wasn't a ListCtrParamPath or I forgot a case"
 
 type ListTypeArgPathRec a = {
-    tNeu1 :: TypePathRecValue -> TNeuMD -> TypeVarID -> a
+    tNeu1 :: TypePathRecValue -> TNeuMD -> TypeVar -> a
     , typeArgListCons2 :: ListTypeArgPathRecValue -> TypeArgRecValue -> a
     , var1 :: TermPathRecValue -> VarMD -> TermVarID -> a
 }

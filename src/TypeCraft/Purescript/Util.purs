@@ -2,9 +2,10 @@ module TypeCraft.Purescript.Util where
 
 import Prelude
 import Effect.Exception.Unsafe (unsafeThrow)
-import Data.Map (Map, lookup, member, delete)
+import Data.Map (Map, toUnfoldable, fromFoldable, lookup, member, delete)
 import Data.Maybe (Maybe(..))
 import Data.List(List, head)
+import Data.Tuple.Nested
 
 hole :: forall a. a
 hole = unsafeThrow "hole"
@@ -37,3 +38,10 @@ justWhen true k = Just (k unit)
 delete' :: forall v k . Ord k => k -> Map k v -> Map k v
 delete' k m  = if member k m then delete k m else unsafeThrow "Tried to delete an element not present in the map"
 --delete' k m  = delete k m
+
+mapKeys :: forall k v . Ord k => (k -> k) -> Map k v -> Map k v
+mapKeys f m =
+--    let bla = toUnfoldable in
+    let asList :: List (k /\ v)
+        asList = toUnfoldable m in
+    fromFoldable (map (\(k /\ v) -> f k /\ v) asList)

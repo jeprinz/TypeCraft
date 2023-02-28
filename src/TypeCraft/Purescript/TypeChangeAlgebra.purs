@@ -9,6 +9,7 @@ import TypeCraft.Purescript.MD
 import Control.Alt ((<|>))
 import Control.Apply (lift2)
 import Data.List (unzip, (:), List(..), foldl, all)
+import Data.List as List
 import Data.Map (Map, singleton, empty, unionWith, mapMaybe, insert, delete)
 import Data.Map as Map
 import Data.Map.Internal (Map, insert, empty, lookup)
@@ -24,6 +25,16 @@ import TypeCraft.Purescript.Alpha
 import TypeCraft.Purescript.Util (hole)
 import Data.Maybe (maybe)
 import Debug (trace)
+import Data.Either (Either(..))
+
+tyVarGetEndpoints :: CTypeVar -> TypeVar /\ TypeVar
+tyVarGetEndpoints (CTypeVar x)  = TypeVar x /\ TypeVar x
+tyVarGetEndpoints (CCtxBoundaryTypeVar k mtv name x) =
+    CtxBoundaryTypeVar k mtv name x /\ CtxBoundaryTypeVar k mtv name x
+tyVarGetEndpoints (PlusCtxBoundaryTypeVar k mtv name x) =
+    TypeVar x /\ CtxBoundaryTypeVar k mtv name x
+tyVarGetEndpoints (MinusCtxBoundaryTypeVar k mtv name x) =
+    CtxBoundaryTypeVar k mtv name x /\ TypeVar x
 
 getEndpoints :: Change -> Type /\ Type
 getEndpoints (CArrow a b) =
@@ -32,11 +43,12 @@ getEndpoints (CArrow a b) =
     Arrow defaultArrowMD a1 b1 /\ Arrow defaultArrowMD a2 b2
 getEndpoints (CHole x) = THole defaultTHoleMD x /\ THole defaultTHoleMD x
 getEndpoints (CNeu x args) =
-    let start = TNeu defaultTNeuMD x in
+    let start = TNeu defaultTNeuMD in
     let ts1 /\ ts2 = getEndpointss args in
+    let x1 /\ x2 = tyVarGetEndpoints x in
     let args1 = map (TypeArg defaultTypeArgMD) ts1 in
     let args2 = map (TypeArg defaultTypeArgMD) ts2 in
-    start args1 /\ start args2
+    start x1 args1 /\ start x2 args2
 getEndpoints (Replace a b) = a /\ b
 getEndpoints (Plus t c) =
     let c1 /\ c2 = getEndpoints c in
@@ -474,3 +486,20 @@ getAllEndpoints (ctx /\ kctx /\ mdctx /\ mdkctx) =
 composeAllChCtxs :: AllChangeContexts -> AllChangeContexts -> AllChangeContexts
 composeAllChCtxs (ctx1 /\ kctx1 /\ mdctx1 /\ mdkctx1) (ctx2 /\ kctx2 /\ mdctx2 /\ mdkctx2) =
     composeCtxs ctx1 ctx2 /\ composeKCtx kctx1 kctx2 /\ composeMDTermChangeCtx mdctx1 mdctx2 /\ composeMDTypeChangeCtx mdkctx1 mdkctx2
+
+
+--------------------------------------------------------------------------------
+
+normalizeType :: TypeAliasContext -> Type -> Type
+normalizeType actx ty =
+    case ty of
+    Arrow md ty1 ty2 -> Arrow md (normalizeType actx ty1) (normalizeType actx ty2)
+    THole md x -> THole md x
+    TNeu md x args -> case typeVarGetTypeDefVal actx x of
+        Nothing -> TNeu md x (map (\(TypeArg md ty) -> TypeArg md (normalizeType actx ty)) args)
+        Just (tyBinds /\ def) ->
+            let types = map (\(TypeArg _ ty) -> ty) args in
+            let ids = map (\(TypeBind _ id) -> id) tyBinds in
+            let sub = Map.fromFoldable (List.zip ids types) in
+            normalizeType actx (applySubType {subTypeVars: sub, subTHoles: Map.empty} def)
+

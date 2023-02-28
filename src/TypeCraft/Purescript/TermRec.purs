@@ -118,7 +118,7 @@ recTerm _ term = unsafeThrow ("Missed all cases in recTerm. Term is: " <> show t
 type TypeRec a = {
     arrow :: ArrowMD -> TypeRecValue -> TypeRecValue -> a
     , tHole :: THoleMD -> TypeHoleID -> a
-    , tNeu :: TNeuMD -> TypeVarID -> ListTypeArgRecValue -> a
+    , tNeu :: TNeuMD -> TypeVar -> ListTypeArgRecValue -> a
 }
 
 recType :: forall a. TypeRec a -> TypeRecValue -> a

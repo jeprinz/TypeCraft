@@ -13,7 +13,7 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Data.UUID as UUID
 import Debug (trace, traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Context (AllContext)
+import TypeCraft.Purescript.Context (AllContext, typeVarGetName)
 import TypeCraft.Purescript.CursorMovement (getMiddlePath)
 import TypeCraft.Purescript.Grammar (Change(..), Constructor(..), CtrParam(..), Term(..), TermBind(..), Tooth(..), Type(..), TypeArg(..), TypeBind(..), UpPath)
 import TypeCraft.Purescript.Util (justWhen, lookup')
@@ -330,7 +330,7 @@ typeToNode isActive aboveInfo ty =
             ]
     , tNeu:
         \md x tyArgs ->
-          setNodeMetadata (makeTNeuNodeMetadata (x `lookup'` ty.ctxs.mdkctx))
+          setNodeMetadata (makeTNeuNodeMetadata (typeVarGetName ty.ctxs.mdkctx x)) -- TODO: Should display the type variable differently if its wrapped in a boundary!
             $ arrangeType args
                 [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
                 ]

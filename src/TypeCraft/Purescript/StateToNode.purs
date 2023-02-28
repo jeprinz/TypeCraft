@@ -19,8 +19,8 @@ import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrPar
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), State, SelectMode, getCompletion)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode)
 import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
-import TypeCraft.Purescript.Unification (applySubType)
 import TypeCraft.Purescript.Util (fromJust', hole')
+import TypeCraft.Purescript.Alpha (applySubType)
 
 {-
 TODO: Note from Jacob: Counterintuitvely, all cursor modes should use BISelect
