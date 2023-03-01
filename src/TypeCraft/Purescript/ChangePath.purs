@@ -45,10 +45,9 @@ chTermPath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> CAllContext /\ U
 chTermPath kctx ctx _ Nil = getRightCtxInj kctx ctx /\ Nil
 chTermPath kctx ctx (CArrow c1 c2) (App1 md {-here-} t argTy outTy : up) =
     if not (argTy == fst (getEndpoints c1) && outTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen chPath 1" else
-    let ctx' /\ t' = chTermBoundary kctx ctx c1 t in
-    let (kctx' /\ ctx'') /\ up' = chTermPath kctx ctx' c2 up in
-    let t'' = chTermCtxOnly kctx' (composeCtxs (invertCtx ctx') ctx'') (snd (getEndpoints c1)) t' in
-    (kctx' /\ ctx'') /\ App1 md t'' (snd (getEndpoints c1)) (snd (getEndpoints c2)) : up'
+    let (kctx' /\ ctx') /\ up' = chTermPath kctx ctx c2 up in
+    let t' = chTermBoundary kctx' ctx' c1 t in
+    (kctx' /\ ctx') /\ App1 md t' (snd (getEndpoints c1)) (snd (getEndpoints c2)) : up'
 --chTermPath kctx ctx (Minus t1 (Plus t2 c)) (App1 md1 {-here-} arg1 argTy1 outTy1 -- Swap case!
 --        : App1 md2 {-Term-} arg2 argTy2 outTy2 : up)
 --        | t1 == t2 =
@@ -58,20 +57,19 @@ chTermPath kctx ctx (CArrow c1 c2) (App1 md {-here-} t argTy outTy : up) =
 chTermPath kctx ctx (Minus t c) (App1 md {-here-} arg argTy outTy : up) =
     if not (t == argTy && fst (getEndpoints c) == outTy) then unsafeThrow "shouldn't happen chPath 2" else
     let argTy'_ /\ chArgTy = chType kctx argTy in -- This should never really do anything, but it is in theory correct
-    let ctx' /\ argCh /\ arg' = chTerm kctx ctx chArgTy arg in
-    let (kctx' /\ ctx'') /\ up' = chTermPath kctx ctx' c up in
-    let arg'' = chTermCtxOnly kctx' (composeCtxs (invertCtx ctx') ctx'') (snd (getEndpoints chArgTy)) arg' in
-    (kctx' /\ (composeCtxs ctx' ctx'')) /\ Buffer3 defaultBufferMD arg'' (snd (getEndpoints argCh)) {-Term-} outTy : up'
+    let (kctx' /\ ctx') /\ up' = chTermPath kctx ctx c up in
+    let argCh /\ arg' = chTerm kctx ctx chArgTy arg in
+    (kctx' /\ ctx') /\ Buffer3 defaultBufferMD arg' (snd (getEndpoints argCh)) {-Term-} outTy : up'
 -- TODO: App2 case, other App1 cases with other TypeChanges
 --    App2 AppMD Term {-Term-} Type Type -- TODO: this case goes along with the polymorphism change stuff
 chTermPath kctx ctx c (App2 md t {-here-} argTy outTy : up) =
     if not (fst (getEndpoints c) == argTy) then unsafeThrow "shouldn't happen chTermPath App2 case" else
-    let ctx' /\ chtUp /\ t' = chTerm kctx ctx (CArrow c (tyInject outTy)) t in
+    let chtUp /\ t' = chTerm kctx ctx (CArrow c (tyInject outTy)) t in
     case chtUp of
         CArrow chArg chOut ->
-            let (kctx' /\ ctx'') /\ up' = chTermPath kctx ctx' chOut up in
-            let t'' = chTermCtxOnly kctx' ctx'' (snd (getEndpoints chtUp)) t' in
-            (kctx' /\ (composeCtxs ctx' ctx'')) /\ App2 md t'' {--} (snd (getEndpoints chArg)) (snd (getEndpoints chOut)) : up'
+            let (kctx' /\ ctx') /\ up' = chTermPath kctx ctx chOut up in
+            let t'' = chTermBoundary kctx' ctx' (tyInject (snd (getEndpoints chtUp))) t' in
+            (kctx' /\ ctx') /\ App2 md t'' {--} (snd (getEndpoints chArg)) (snd (getEndpoints chOut)) : up'
         _ -> hole' "chTermPath App2 case, not sure what to do here..."
 chTermPath kctx ctx ch (Let3 md tBind@(TermBind _ x) tyBinds {-Term = here-} ty body bodyTy : termPath) =
     if not (ty == fst (getEndpoints ch)) then unsafeThrow "shouldn't happen chPath 3" else
@@ -82,7 +80,7 @@ chTermPath kctx ctx ch (Let3 md tBind@(TermBind _ x) tyBinds {-Term = here-} ty 
     if not (kCtxIsId kctx'') then unsafeThrow "ktx assumptinon violated" else
     let ctx''' = insert x (VarTypeChange (tyBindsWrapChange tyBinds ch)) ctx'' in
 --    let bodyTy' /\ bodyCh = chType kctx' bodyTy in
-    let body' = chTermCtxOnly kctx' (composeCtxs ctx ctx''') bodyTy body in -- TODO TODO TODO TODO:::: There are various other design descisions that could be made here. The issue is that we may want to call chTerm on the body first to get a TypeChange, but then we would need to call it again with the context change gotten from the path above.
+    let body' = chTermBoundary kctx'' ctx''' (tyInject bodyTy) body in -- TODO TODO TODO TODO:::: There are various other design descisions that could be made here. The issue is that we may want to call chTerm on the body first to get a TypeChange, but then we would need to call it again with the context change gotten from the path above.
     let kctx''' = addLetToKCCtx kctx'' tyBinds in
     (kctx''' /\ ctx''') /\ Let3 md tBind tyBinds {-def-} (snd (getEndpoints ch)) body' bodyTy : termPath'
 chTermPath kctx ctx c (Let5 md tBind@(TermBind _ x) tyBinds def defTy {-body = here-} bodyTy : up) =
@@ -95,7 +93,7 @@ chTermPath kctx ctx c (Let5 md tBind@(TermBind _ x) tyBinds def defTy {-body = h
     if not (kCtxIsId kctx'') then unsafeThrow "ktx assumptinon violated" else
     let ctx''' = insert x (VarTypeChange (tyBindsWrapChange tyBinds (tyInject defTy))) ctx'' in
     let kctx''' = addLetToKCCtx kctx'' tyBinds in
-    let def' = chTermCtxOnly kctx'' (composeCtxs ctx ctx''') defTy def in
+    let def' = chTermBoundary kctx'' ctx''' (tyInject defTy) def in -- TODO: why would the def of the let ever change anyway?
     (kctx''' /\ ctx''') /\ Let5 md tBind tyBinds def' defTy (snd (getEndpoints c)) : up'
 chTermPath kctx ctx c (Data4 md x tbinds ctrs {-body = here-} bodyTy : up) =
     if not (fst (getEndpoints c) == bodyTy) then unsafeThrow "shouldn't happen chPath 5" else
@@ -150,17 +148,15 @@ chTypePath kctx ctx ch (Let4 md tBind@(TermBind _ x) tyBinds def {-Type-} body b
 --    let (kctx' /\ ctx') /\ termPath' = chTermPath kctx ctx (tyInject bodyTy) termPath in
     if not (kCtxIsId kctx) then unsafeThrow "ktx assumptinon violated" else
     let ctx' = insert x (VarTypeChange (tyBindsWrapChange tyBinds ch)) ctx in
-    let body' = chTermCtxOnly kctx ctx' bodyTy body in -- TODO TODO TODO TODO:::: There are various other design descisions that could be made here. The issue is that we may want to call chTerm on the body first to get a TypeChange, but then we would need to call it again with the context change gotten from the path above.
-    let ctx'' /\ def' = chTermBoundary kctx ctx' ch def in
-    if not (ctxIsId ctx'') then unsafeThrow "souldn'tg get here chTypePath" else
+    let body' = chTermBoundary kctx ctx' (tyInject bodyTy) body in -- TODO TODO TODO TODO:::: There are various other design descisions that could be made here. The issue is that we may want to call chTerm on the body first to get a TypeChange, but then we would need to call it again with the context change gotten from the path above.
+    let def' = chTermBoundary kctx ctx' ch def in
     (kctx /\ delete' x ctx') /\ Let4 md tBind tyBinds def' body' bodyTy : termPath
 chTypePath kctx ctx ch (Lambda2 md tBind@(TermBind _ x) {-Type-} body bodyTy : termPath) =
     let ctx' = insert x (VarTypeChange (PChange ch)) ctx in
-    let ctx'' /\ c /\ body' = chTerm kctx ctx' (tyInject bodyTy) body in
-    let (kctx' /\ ctx2) /\ termPath' = chTermPath kctx ctx'' (CArrow c (tyInject bodyTy)) termPath in
-    let body'' = chTermCtxOnly kctx' ctx'' (snd (getEndpoints c)) body' in
+    let c /\ body' = chTerm kctx ctx' (tyInject bodyTy) body in
+    let (kctx' /\ ctx2) /\ termPath' = chTermPath kctx ctx' (CArrow c (tyInject bodyTy)) termPath in
     if not (kCtxIsId kctx') then unsafeThrow "ktx assumptinon violated" else
-    (kctx' /\ ctx2) /\ Lambda2 md tBind {-Type-} body'' (snd (getEndpoints c)) : termPath'
+    (kctx' /\ ctx2) /\ Lambda2 md tBind {-Type-} body' (snd (getEndpoints c)) : termPath'
 chTypePath kctx ctx ch (Arrow1 md {-Type-} ty2 : typePath) =
     let (kctx' /\ ctx') /\ typePath' = chTypePath kctx ctx (CArrow ch (tyInject ty2)) typePath in
     (kctx' /\ ctx') /\ Arrow1 md {-Type-} ty2 : typePath'
@@ -209,7 +205,7 @@ chListCtrPath kctx ctx ch (Data3 md tyBind@(TypeBind _ x) tyBinds {-ctrs-} body 
     let ctx' = adjustCtxByCtrChanges x (map (\(TypeBind _ x) -> x) tyBinds) ch ctx in
     -- TODO: here I make an assumption that the context hasn't changed above!
     let _ /\ termPath' = chTermPath kctx ctx' (tyInject bodyTy) termPath in
-    let body' = chTermCtxOnly kctx ctx' bodyTy body in
+    let body' = chTermBoundary kctx ctx' (tyInject bodyTy) body in
     Data3 md tyBind tyBinds {--} body' bodyTy : termPath'
 chListCtrPath kctx ctx ch (CtrListCons2 ctr@(Constructor _ (TermBind _ x) ctrParams) {-ctrs-} : listCtrPath) =
     let listCtrParamCh /\ ctrParams' = chParamList kctx ctrParams in
@@ -246,8 +242,8 @@ chListTypeBindPath kctx ctx ch (Let2 md tBind@(TermBind _ x) {-tyBinds-} def def
     let defTy' /\ defCh = chType kctx' defTy in
     let polyTyCh = listTypeBindChWrapPolyChange ch defCh in
     let ctx' = insert x (VarTypeChange polyTyCh) ctx in
-    let ctx'' /\ def' = chTermBoundary kctx' ctx' defCh def in
-    let body' = chTermCtxOnly kctx' ctx'' bodyTy body in
+    let def' = chTermBoundary kctx' ctx' defCh def in
+    let body' = chTermBoundary kctx' ctx' (tyInject bodyTy) body in
     Let2 md tBind {--} def' defTy' body' bodyTy : termPath'
 chListTypeBindPath kctx ctx ch (TypeBindListCons2 tyBind {-tyBinds-} : listTypeBindPath) =
     let listTypeBindPath' = chListTypeBindPath kctx ctx (ListTypeBindChangeCons tyBind ch) listTypeBindPath in
