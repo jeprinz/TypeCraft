@@ -174,7 +174,7 @@ cursorModeToNode cursorMode =
                     AINothing -- (AISelect termPath ctxs (term /\ ty) Nil)
                     { ctxs, term, ty }
           _ -> hole' "completionToNode CompletionTerm non-TermCursor"
-        CompletionTermPath termPath _ch _ -> case cursorMode.cursorLocation of
+        CompletionTermPath termPath _ch -> case cursorMode.cursorLocation of
           TermCursor ctxs ty _termPath' term ->
             let
               chCtxs = downPathToCtxChange ctxs (reverse termPath)

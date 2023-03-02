@@ -101,7 +101,6 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
                   CompletionTermPath -- lam (~ : alpha) ↦ ({} : ty)
                     (List.singleton $ Lambda3 defaultLambdaMD tmBind alpha ty)
                     (Plus alpha (tyInject ty))
-                    (stepCursor_n (-2)) -- step to bind
               ]
             ]
       -- Let
@@ -110,11 +109,9 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionTermPath -- let ~<∅> : ? = ? in {} : ty
                   (List.singleton $ Let5 defaultLetMD (freshTermBind Nothing) List.Nil (freshHole unit) (freshTHole unit) ty)
                   (tyInject ty)
-                  (stepCursor_n (-4)) -- step to bind
               , CompletionTermPath -- let ~<∅> : ? = {} in ? : ty
                   (List.singleton $ Let3 defaultLetMD (freshTermBind Nothing) List.Nil ty (freshHole unit) ty)
                   (tyInject ty)
-                  (stepCursor_n (-4)) -- step to bind
               ]
             ]
       -- App
@@ -125,7 +122,6 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
                 [ [ CompletionTermPath -- ({} ?)
                       (List.singleton $ App1 defaultAppMD (freshHole unit) ty1 ty2)
                       (Minus ty1 (tyInject ty2))
-                      (stepCursor_n 1) -- step to arg
                   ]
                 ]
             -- for now, just hard coding this to test it out...
@@ -168,7 +164,6 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionTermPath
                   (List.singleton $ TLet4 defaultTLetMD (freshTypeBind Nothing) List.Nil (freshTHole unit) ty)
                   (tyInject ty)
-                  (stepCursor_n (-3)) -- step to bind
               ]
             ]
       -- Data
@@ -177,7 +172,6 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionTermPath
                   (List.singleton $ Data4 defaultGADTMD (freshTypeBind Nothing) List.Nil List.Nil ty)
                   (tyInject ty)
-                  (stepCursor_n (-3)) -- step to bind
               ]
             ]
       -- TypeBoundary
@@ -186,7 +180,6 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionTermPath
                   (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (tyInject ty))
                   (tyInject ty)
-                  identity
               ]
             ]
       -- -- Hole
@@ -203,7 +196,6 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
             [ [ CompletionTermPath
                   (List.singleton $ Buffer3 defaultBufferMD (freshHole unit) (freshTHole unit) ty)
                   (tyInject ty)
-                  (stepCursor_n (-2)) -- step to buffer term
               ]
             ]
   TypeCursor ctxs path ty ->

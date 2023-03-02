@@ -101,7 +101,7 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
                 { cursorLocation: TermCursor ctxs' ty' path' tm'
                 , query: emptyQuery
                 }
-          CompletionTermPath pathNew ch move ->
+          CompletionTermPath pathNew ch ->
             let
               (kctx' /\ ctx') /\ path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
               ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
@@ -110,7 +110,7 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
               newCtxs = snd (getAllEndpoints chCtxs)
             in
               pure
-                { cursorLocation: move $ TermCursor newCtxs ty (pathNew <> path') tm'
+                { cursorLocation: TermCursor newCtxs ty (pathNew <> path') tm'
                 , query: emptyQuery
                 }
           CompletionTermPath2 _ newState ->
