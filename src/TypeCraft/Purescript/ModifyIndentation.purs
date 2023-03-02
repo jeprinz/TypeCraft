@@ -15,16 +15,16 @@ toggleIndentation = case _ of
       setTooth th' = Just $ TermCursor ctxs ty0 (th' List.: path) tm0
     in
       case th of
-        App1 md arg ty1 ty2 -> setTooth (App1 md { argIndented = not md.argIndented } arg ty1 ty2)
-        App2 md apl ty1 ty2 -> Nothing
+        App1 md arg ty1 ty2 -> Nothing -- setTooth (App1 md { argIndented = not md.argIndented } arg ty1 ty2)
+        App2 md apl ty1 ty2 -> setTooth (App2 md { argIndented = not md.argIndented } apl ty1 ty2)
         Lambda1 md sig bod ty -> Nothing
         Lambda3 md bnd sig ty -> setTooth (Lambda3 md { bodyIndented = not md.bodyIndented } bnd sig ty)
         Let1 md tyBnds def sig bod ty -> Nothing
         Let2 md tyBnd def sig bod ty -> Nothing
         Let3 md tyBnd tyBnds sig bod ty -> setTooth (Let3 md { defIndented = not md.defIndented } tyBnd tyBnds sig bod ty)
         Let5 md tyBnd tyBnds def sig ty -> setTooth (Let5 md { bodyIndented = not md.bodyIndented } tyBnd tyBnds def sig ty)
-        Data1 md {-tyBind-} tyBinds ctrs body bodyTy -> setTooth (Data1 md{varIndented = not md.varIndented} {--} tyBinds ctrs body bodyTy )
-        Data4 md tyBind tyBinds ctrs {-body-} bodyTy -> setTooth (Data4 md{bodyIndented = not md.bodyIndented} tyBind tyBinds ctrs {--} bodyTy )
+        Data1 md {-tyBind-} tyBinds ctrs body bodyTy -> setTooth (Data1 md { varIndented = not md.varIndented } {--} tyBinds ctrs body bodyTy)
+        Data4 md tyBind tyBinds ctrs {-body-} bodyTy -> setTooth (Data4 md { bodyIndented = not md.bodyIndented } tyBind tyBinds ctrs {--} bodyTy)
         _ -> unsafeThrow "malformed TermCursor"
   TypeCursor ctxs (th List.: path) ty0 ->
     let
