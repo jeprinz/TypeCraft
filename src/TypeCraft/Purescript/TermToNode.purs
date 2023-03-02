@@ -46,11 +46,11 @@ aIGetPath AINothing = unsafeThrow "aIGetPath AINothing"
 
 -- don't indent inactive things (such as appear in query previews)
 newlineIf :: Boolean -> Boolean -> NodeIndentation
-newlineIf isActive isNewlined = if isNewlined && isActive then makeNewlineNodeIndentation else makeInlineNodeIndentation
+newlineIf _isActive isNewlined = if isNewlined then makeNewlineNodeIndentation else makeInlineNodeIndentation
 
 -- don't indent inactive things (such as appear in query previews)
 indentIf :: Boolean -> Boolean -> NodeIndentation
-indentIf isActive isIndented = if isIndented && isActive then makeIndentNodeIndentation else makeInlineNodeIndentation
+indentIf _isActive isIndented = if isIndented then makeIndentNodeIndentation else makeInlineNodeIndentation
 
 inline :: NodeIndentation
 inline = makeInlineNodeIndentation
