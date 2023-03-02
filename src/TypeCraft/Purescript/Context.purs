@@ -129,6 +129,12 @@ emptyAllContext = {
     ctx: empty
 }
 
+type AllTypingContexts = {
+    kctx :: TypeContext
+    , actx :: TypeAliasContext -- a stands for alias
+    , ctx :: TermContext
+}
+
 --------------------------------------------------------------------------------
 
 
