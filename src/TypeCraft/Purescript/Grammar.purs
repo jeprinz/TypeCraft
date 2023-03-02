@@ -31,10 +31,6 @@ data TypeVar = TypeVar TypeVarID | CtxBoundaryTypeVar Kind (Maybe TypeDefVal) St
 data CTypeVar = CTypeVar TypeVarID | CCtxBoundaryTypeVar Kind (Maybe TypeDefVal) String TypeVarID
     | PlusCtxBoundaryTypeVar Kind (Maybe TypeDefVal) String TypeVarID
     | MinusCtxBoundaryTypeVar Kind (Maybe TypeDefVal) String TypeVarID
---data TypeVar = TypeVar TypeVarID | CtxBoundaryTypeVar (KindChangeCtx /\ MDTermChangeCtx) TypeVar
---data CTypeVar = CTypeVar TypeVarID | CCtxBoundaryTypeVar (KindChangeCtx /\ MDTermChangeCtx) CTypeVar
---    | PlusCtxBoundaryTypeVar (KindChangeCtx /\ MDTermChangeCtx) CTypeVar
---    | MinusCtxBoundaryTypeVar (KindChangeCtx /\ MDTermChangeCtx) CTypeVar
 
 data Type
   = Arrow ArrowMD Type Type

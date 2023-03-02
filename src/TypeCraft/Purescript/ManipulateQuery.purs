@@ -124,39 +124,6 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
                       (Minus ty1 (tyInject ty2))
                   ]
                 ]
-            -- for now, just hard coding this to test it out...
-            h@(THole _ _) ->
-              let
-                newArgTy = freshTHole unit
-              in
-                Writer.tell
-                  [ [ let
-                        newPath = (List.singleton $ App1 defaultAppMD (freshHole unit) newArgTy h)
-                      in
-                        CompletionTermPath2 newPath
-                          ( \_ ->
-                              let
-                                innerNewTy = Arrow defaultArrowMD newArgTy h
-                                ch = Plus newArgTy (tyInject h)
-                                -- ctxs ty path tm
-                                kctx = (kCtxInject ctxs.kctx ctxs.actx)
-
-                                ctx = (ctxInject ctxs.ctx)
-
-                                ctx' /\ tm' = chTermBoundary kctx ctx ch tm
-
-                                (kctx' /\ ctx'') /\ path' = chTermPath kctx ctx' (tyInject h) path
-
-                                ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx''), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
-
-                                _ = trace ("About to get to the place. " <> show ctx'') (\_ -> unit)
-
-                                tm'' = chTermCtxOnly kctx' ctx'' innerNewTy tm'
-                              in
-                                TermCursor ctxs' innerNewTy (newPath <> path') tm''
-                        )
-                    ]
-                  ]
             _ -> pure unit
       -- TLet
       when (str `kindaStartsWith` "tlet")
