@@ -106,7 +106,7 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
               (kctx' /\ ctx') /\ path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
               ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
               chCtxs = downPathToCtxChange ctxs' (List.reverse pathNew)
-              tm' = chTermBoundary kctx' ctx' (tyInject ty) tm
+              tm' = chTermCtxOnly kctx' ctx' ty tm
               newCtxs = snd (getAllEndpoints chCtxs)
             in
               pure

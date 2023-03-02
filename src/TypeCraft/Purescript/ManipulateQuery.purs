@@ -141,28 +141,24 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
                           ( \_ ->
                               let
                                 innerNewTy = Arrow defaultArrowMD newArgTy h
+                                ch = Plus newArgTy (tyInject h)
+                                -- ctxs ty path tm
+                                kctx = (kCtxInject ctxs.kctx ctxs.actx)
+
+                                ctx = (ctxInject ctxs.ctx)
+
+                                ctx' /\ tm' = chTermBoundary kctx ctx ch tm
+
+                                (kctx' /\ ctx'') /\ path' = chTermPath kctx ctx' (tyInject h) path
+
+                                ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx''), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
+
+                                _ = trace ("About to get to the place. " <> show ctx'') (\_ -> unit)
+
+                                tm'' = chTermCtxOnly kctx' ctx'' innerNewTy tm'
                               in
-                                let
-                                  ch = Plus newArgTy (tyInject h)
-                                in
-                                  -- ctxs ty path tm
-                                  let
-                                    kctx = (kCtxInject ctxs.kctx ctxs.actx)
-
-                                    ctx = (ctxInject ctxs.ctx)
-
-                                    ctx' /\ tm' = chTermBoundary kctx ctx ch tm
-
-                                    (kctx' /\ ctx'') /\ path' = chTermPath kctx ctx' (tyInject h) path
-
-                                    ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx''), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
-
-                                    _ = trace ("About to get to the place. " <> show ctx'') (\_ -> unit)
-
-                                    tm'' = chTermCtxOnly kctx' ctx'' innerNewTy tm'
-                                  in
-                                    TermCursor ctxs' innerNewTy (newPath <> path') tm''
-                          )
+                                TermCursor ctxs' innerNewTy (newPath <> path') tm''
+                        )
                     ]
                   ]
             _ -> pure unit
