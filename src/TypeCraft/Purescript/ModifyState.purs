@@ -1,32 +1,33 @@
 module TypeCraft.Purescript.ModifyState where
 
+import Data.Tuple.Nested
 import Prelude
-import Data.Array ((:), uncons)
-import Data.Array as Array
-import Data.List as List
-import Data.Maybe (Maybe(..))
-import Data.Tuple (snd)
-import Debug (traceM)
-import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.Alpha
 import TypeCraft.Purescript.ChangePath
 import TypeCraft.Purescript.ChangeTerm
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.CursorMovement
 import TypeCraft.Purescript.Dentist
 import TypeCraft.Purescript.Grammar
+import TypeCraft.Purescript.State
+import TypeCraft.Purescript.TypeChangeAlgebra
+import TypeCraft.Purescript.Unification
+
+import Data.Array ((:), uncons)
+import Data.Array as Array
+import Data.List as List
+import Data.Maybe (Maybe(..))
+import Data.Tuple (snd)
+import Debug (trace)
+import Debug (traceM)
+import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Key (Key)
 import TypeCraft.Purescript.MD (defaultTypeBoundaryMD)
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
-import TypeCraft.Purescript.State
-import TypeCraft.Purescript.TypeChangeAlgebra
-import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (hole)
-import TypeCraft.Purescript.Alpha
-import Debug (trace)
-import Data.Tuple.Nested
 
 handleKey :: Key -> State -> Maybe State
 handleKey key st = case st.mode of
@@ -259,7 +260,7 @@ modeToClipboard = case _ of
 paste :: State -> Maybe State
 paste st = do
   traceM "paste"
-  case st.clipboard of
+  checkpoint <$> case st.clipboard of
     EmptyClip -> Nothing
     TermClip ctxs' ty' tm' -> case st.mode of
       CursorMode cursorMode -> case cursorMode.cursorLocation of
@@ -300,8 +301,9 @@ paste st = do
     _ -> hole' "TODO: do other syntactic cases for paste"
 
 delete :: State -> Maybe State
-delete st =
-  trace "delete" \_ -> case st.mode of
+delete st = do
+  traceM "delete"
+  checkpoint <$> case st.mode of
     CursorMode cursorMode -> case cursorMode.cursorLocation of
       TermCursor ctxs ty path _tm -> do
         let
