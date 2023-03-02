@@ -508,10 +508,12 @@ export function eqExp(
         exp1.met === exp2.met &&
         exp1.rul === exp2.rul &&
         exp1.val === exp2.val &&
-        exp1.kids.zip(exp2.kids).reduceRight((b, [kid1, kid2]) =>
+        exp1.kids.zip<Exp>(exp2.kids).reduceRight((b, [kid1, kid2]) =>
             b && eqExp(kid1, kid2))
     )
 }
+
+
 
 // zipper step
 export type Zip = {
@@ -610,8 +612,8 @@ export function eqZips(
 ): boolean {
     return (
         zips1.size === zips2.size &&
-        zips1.zip(zips2)
-            .reduce((b, [zip1, zip2]) => b && eqZip(zip1, zip2), true)
+        zips1.zip<Zip>(zips2)
+        .reduce((b, [zip1, zip2]) => b && eqZip(zip1, zip2), true)
     )
 }
 
