@@ -323,9 +323,11 @@ delete st = do
     SelectMode selectMode -> case selectMode.select of
       TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
         let change = termPathToChange ty2 tmPath2 in
-        let (kctx' /\ ctx') /\ tmPath1' = chTermPath (invert change) {term: tm2, ty: ty2, ctxs: ctxs2, termPath: tmPath1} in
-        let ctxs' = ctxs2 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
-        pure $ st {mode = makeCursorMode $ TermCursor ctxs' ty2 tmPath1' tm2}
+        let (kctx' /\ ctx') /\ tmPath1' = chTermPath (invert change) {term: tm1, ty: ty1, ctxs: ctxs1, termPath: tmPath1} in
+        let (ctx /\ kctx /\ mdctx /\ mdkctx) = downPathToCtxChange ctxs1 (List.reverse tmPath2) in
+        let tm2' = chTermBoundary kctx ctx (tyInject ty2) tm2 in
+        let ctxs' = ctxs1 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
+        pure $ st {mode = makeCursorMode $ TermCursor ctxs' ty2 tmPath1' tm2'}
       TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 ori ->
         let change = typePathToChange ty2 middlePath in
 --chTypePath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> CAllContext /\ UpPath
