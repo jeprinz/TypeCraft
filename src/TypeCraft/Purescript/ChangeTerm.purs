@@ -100,8 +100,8 @@ chTerm kctx ctx c t =
                 if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen 1" else
                 if not (bodyTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen 2" else
                 let c2' /\ t' = chTerm kctx (insert x (VarTypeChange (PChange c1)) ctx) c2 t in
-                let ty' = snd (getEndpoints c2') in
-                (CArrow (tyInject ty') c2') /\ Lambda md tBind ty' t' (snd (getEndpoints c2))
+                let ty' = snd (getEndpoints c1) in
+                (CArrow (tyInject ty') c2') /\ Lambda md tBind ty' t' (snd (getEndpoints c2'))
             (Minus ty1 c) /\ (Lambda md tBind@(TermBind _ x) ty2 t bodyTy) ->
                 if not (ty1 == ty2) then unsafeThrow "shouldn't happen 3" else
                 if not (bodyTy == fst (getEndpoints c)) then unsafeThrow "shouldn't happen 4" else
