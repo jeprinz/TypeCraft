@@ -104,7 +104,7 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
                 }
           CompletionTermPath pathNew ch ->
             let
-              (kctx' /\ ctx') /\ path' = chTermPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
+              (kctx' /\ ctx') /\ path' = chTermPath ch {ctxs, ty, termPath: path, term: tm}
               ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
               chCtxs = downPathToCtxChange ctxs' (List.reverse pathNew)
               tm' = chTermBoundary kctx' ctx' (tyInject ty) tm
@@ -126,14 +126,14 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
           CompletionType ty' sub ->
 --            let path' = subTypePath sub path in
 --            let ctxs' = subAllCtx sub ctxs in
-            let (kctx' /\ ctx') /\ path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path in
+            let (kctx' /\ ctx') /\ path' = chTypePath (Replace ty ty') {ctxs, ty, typePath: path} in
             let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
               pure
                   { cursorLocation: TypeCursor ctxs' path' ty'
                   , query: emptyQuery
                   }
           CompletionTypePath pathNew ch ->
-            let (kctx' /\ ctx') /\ path' = chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path in
+            let (kctx' /\ ctx') /\ path' = chTypePath ch {ctxs, ty: ty, typePath: path} in
             let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
                 pure
                   { cursorLocation: TypeCursor ctxs' (pathNew <> path') ty
@@ -145,7 +145,7 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
       >>= case _ of
           CompletionCtrListPath pathNew ch ->
             let
-              path' = chListCtrPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
+              path' = chListCtrPath ch {ctxs, listCtrPath: path, ctrs}
             in
               pure
                 { cursorLocation: CtrListCursor ctxs (pathNew <> path') ctrs
@@ -157,7 +157,7 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
       >>= case _ of
           CompletionCtrParamListPath pathNew ch ->
             let
-              path' = chListCtrParamPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
+              path' = chListCtrParamPath ch {ctxs, ctrParams, listCtrParamPath: path}
             in
               pure
                 { cursorLocation: CtrParamListCursor ctxs (pathNew <> path') ctrParams
@@ -169,7 +169,7 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
       >>= case _ of
           CompletionTypeBindListPath pathNew ch ->
             let
-              path' = chListTypeBindPath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) ch path
+              path' = chListTypeBindPath ch {ctxs, tyBinds, listTypeBindPath: path}
             in
               pure
                 { cursorLocation: TypeBindListCursor ctxs (pathNew <> path') tyBinds
@@ -313,7 +313,7 @@ delete st = do
         let
           ty' = (freshTHole unit)
 
-          (kctx' /\ ctx') /\ path' = (chTypePath (kCtxInject ctxs.kctx ctxs.actx) (ctxInject ctxs.ctx) (Replace ty ty') path)
+          (kctx' /\ ctx') /\ path' = (chTypePath (Replace ty ty') {ctxs, ty, typePath: path})
 
           ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
 
@@ -323,19 +323,19 @@ delete st = do
     SelectMode selectMode -> case selectMode.select of
       TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
         let change = termPathToChange ty2 tmPath2 in
-        let (kctx' /\ ctx') /\ tmPath1' = chTermPath (kCtxInject ctxs2.kctx ctxs2.actx) (ctxInject ctxs2.ctx) (invert change) tmPath1 in
+        let (kctx' /\ ctx') /\ tmPath1' = chTermPath (invert change) {term: tm2, ty: ty2, ctxs: ctxs2, termPath: tmPath1} in
         let ctxs' = ctxs2 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
         pure $ st {mode = makeCursorMode $ TermCursor ctxs' ty2 tmPath1' tm2}
       TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 ori ->
         let change = typePathToChange ty2 middlePath in
 --chTypePath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> CAllContext /\ UpPath
-        let (kctx' /\ ctx') /\ topPath' = chTypePath (kCtxInject ctxs2.kctx ctxs2.actx) (ctxInject ctxs2.ctx) (invert change) topPath in
+        let (kctx' /\ ctx') /\ topPath' = chTypePath (invert change) {ty: ty2, ctxs: ctxs2, typePath: topPath} in
         let ctxs' = ctxs2 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
         pure $ st {mode = makeCursorMode $ TypeCursor ctxs' topPath' ty2}
       TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 ori ->
         let innerCh = chTypeBindList tyBinds2 in
         let change = typeBindPathToChange innerCh middlePath in
-        let topPath' = chListTypeBindPath (kCtxInject ctxs2.kctx ctxs2.actx) (ctxInject ctxs2.ctx) (invertListTypeBindChange change) topPath in
+        let topPath' = chListTypeBindPath (invertListTypeBindChange change) {ctxs: ctxs2, tyBinds: tyBinds2, listTypeBindPath: topPath} in
         pure $ st {mode = makeCursorMode $ TypeBindListCursor ctxs2 topPath' tyBinds2}
       _ -> hole' "delete: other syntactical kinds of selects"
 
