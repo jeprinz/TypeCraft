@@ -5,10 +5,10 @@ import Prim hiding (Type)
 import Data.Tuple.Nested (type (/\), (/\))
 
 import TypeCraft.Purescript.Grammar
-import Data.Map.Internal (empty, lookup, insert, union)
+import Data.Map.Internal (Map, empty, lookup, insert, union)
+import Data.Set (Set)
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Freshen (freshenChange)
 import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints, composeChange)
 import Data.Tuple (snd)
 import TypeCraft.Purescript.MD
@@ -117,7 +117,7 @@ recTerm _ term = unsafeThrow ("Missed all cases in recTerm. Term is: " <> show t
 
 type TypeRec a = {
     arrow :: ArrowMD -> TypeRecValue -> TypeRecValue -> a
-    , tHole :: THoleMD -> TypeHoleID -> a
+    , tHole :: THoleMD -> TypeHoleID -> Set TypeVarID -> Map TypeVarID Type -> a
     , tNeu :: TNeuMD -> TypeVar -> ListTypeArgRecValue -> a
 }
 
@@ -125,7 +125,7 @@ recType :: forall a. TypeRec a -> TypeRecValue -> a
 recType args {ctxs, ty: Arrow md ty1 ty2} =
     args.arrow md {ctxs, ty: ty1}
         {ctxs, ty: ty2}
-recType args {ctxs, ty: THole md id} = args.tHole md id
+recType args {ctxs, ty: THole md id w s} = args.tHole md id w s
 recType args {ctxs, ty: TNeu md x tyArgs} =
     args.tNeu md x {ctxs, tyArgs}
 

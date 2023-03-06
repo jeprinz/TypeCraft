@@ -6,6 +6,7 @@ import Prim hiding (Type)
 import Control.Monad.Except as Except
 import Control.Monad.State as State
 import Data.Map as Map
+import Data.Set as Set
 import TypeCraft.Purescript.Grammar
 import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.List as List
@@ -39,15 +40,13 @@ normThenUnify actx ty1 ty2 = unify (normalizeType actx ty1) (normalizeType actx 
 -- either (const Nothing) pure $ Except.runExcept (State.runStateT m emptySub)
 unify :: Type -> Type -> Unify Type
 unify ty1 ty2 = case ty1 /\ ty2 of
-  THole _ hid1 /\ THole _ hid2 | hid1 == hid2 -> pure ty1 -- need this case, otherwise unifying a hole with itself would fail occurs check!
-  THole _ hid /\ _ -> do
+  THole _ hid1 _ _ /\ THole _ hid2 _ _ | hid1 == hid2 -> pure ty1 -- need this case, otherwise unifying a hole with itself would fail occurs check!
+  THole _ hid w _ /\ _ -> do
+    checkOccursAny w ty2 -- Need to check that nothing in w appears in ty2
     checkOccurs hid ty2
     State.modify_ (\sub -> sub { subTHoles = Map.insert hid ty2 sub.subTHoles })
     pure ty2
-  _ /\ THole _ hid -> do
-    checkOccurs hid ty1
-    State.modify_ (\sub -> sub { subTHoles = Map.insert hid ty2 sub.subTHoles })
-    pure ty2
+  _ /\ THole _ hid _ _ -> unify ty2 ty1
   Arrow md tyA1 tyB1 /\ Arrow _ tyA2 tyB2 -> Arrow md <$> unify tyA1 tyA2 <*> unify tyB1 tyB2
   -- TODO: handle type arguments
   _
@@ -62,7 +61,17 @@ checkOccurs hid ty = go ty
     Arrow _ ty1 ty2 -> do
       checkOccurs hid ty1
       checkOccurs hid ty2
-    THole _ hid' -> when (hid == hid') <<< Except.throwError $ "occurence check fail; the type hole id '" <> show hid <> "' appears in the type '" <> show ty <> "'"
+    THole _ hid' _ _ -> when (hid == hid') <<< Except.throwError $ "occurence check fail; the type hole id '" <> show hid <> "' appears in the type '" <> show ty <> "'"
+    TNeu _ _ args -> traverse_ (go <<< \(TypeArg _ ty) -> ty) args
+
+checkOccursAny :: Set.Set TypeHoleID -> Type -> Unify Unit
+checkOccursAny hids ty = go ty
+  where
+  go = case _ of
+    Arrow _ ty1 ty2 -> do
+      checkOccursAny hids ty1
+      checkOccursAny hids ty2
+    THole _ hid _ _ -> when (Set.member hid hids) <<< Except.throwError $ "occurence ANY check fail; the type hole id '" <> show hid <> "' appears in the type '" <> show ty <> "'"
     TNeu _ _ args -> traverse_ (go <<< \(TypeArg _ ty) -> ty) args
 
 -- create neutral form from variable of first type that can fill the hole of the

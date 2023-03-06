@@ -173,7 +173,7 @@ calculateCompletionsGroups str st cursorMode = case cursorMode.cursorLocation of
           ( \(id /\ tyName) -> case Map.lookup id ctxs.kctx of
               Nothing -> unsafeThrow $ "the entry '" <> show (id /\ tyName) <> "' was found in the ctxs.mdkctx, but not in the ctxs.kctx: '" <> show ctxs.ctx <> "'"
               Just kind -> case ty of
-                THole md x ->
+                THole md x _weakenings _ ->
                   when (str `kindaStartsWith` tyName) do
                     let
                       cTy = (makeEmptyTNeu id kind)

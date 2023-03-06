@@ -7,6 +7,9 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List)
 import Data.Map(Map(..))
+import Data.Map as Map
+import Data.Set(Set(..))
+import Data.Set as Set
 import Data.Maybe (Maybe, maybe)
 import Data.Tuple.Nested
 import Data.Show.Generic (genericShow)
@@ -34,11 +37,14 @@ data CTypeVar = CTypeVar TypeVarID | CCtxBoundaryTypeVar Kind (Maybe TypeDefVal)
 
 data Type
   = Arrow ArrowMD Type Type
-  | THole THoleMD TypeHoleID
+  | THole THoleMD TypeHoleID {-Weakenings-} (Set TypeVarID) {-Substitutions-} (Map TypeVarID Type)
   | TNeu TNeuMD TypeVar (List TypeArg)
 
 freshTHole :: Unit -> Type
-freshTHole _ = THole defaultTHoleMD (freshTypeHoleID unit)
+freshTHole _ = THole defaultTHoleMD (freshTypeHoleID unit) Set.empty Map.empty
+
+makeTHole :: TypeHoleID -> Type
+makeTHole id = THole defaultTHoleMD id Set.empty Map.empty
 
 data PolyType = Forall TypeVarID PolyType | PType Type -- doesn't appear in source code. Instead, source code has lists of type parameters.
 
@@ -90,7 +96,7 @@ data PolyChange
 
 data Change
   = CArrow Change Change
-  | CHole TypeHoleID
+  | CHole TypeHoleID (Set TypeVarID) (Map TypeVarID Type)
   | Replace Type Type
   | Plus Type Change
   | Minus Type Change
@@ -214,7 +220,7 @@ tyVarInject (CtxBoundaryTypeVar pt mtv name x) = CCtxBoundaryTypeVar pt mtv name
 tyInject :: Type -> Change
 tyInject (Arrow _ ty1 ty2) = CArrow (tyInject ty1) (tyInject ty2)
 tyInject (TNeu _ x args) = CNeu (tyVarInject x) (map (case _ of TypeArg _ t -> ChangeParam (tyInject t)) args)
-tyInject (THole _ id) = CHole id
+tyInject (THole _ id w s) = CHole id w s
 
 pTyInject :: PolyType -> PolyChange
 pTyInject (Forall x t) = CForall x (pTyInject t)
@@ -248,7 +254,7 @@ freshTypeVarID _ = unsafePerformEffect genUUID
 -- TODO: fix the Eq for PolyType
 instance eqType :: Eq Type where
   eq (Arrow _ t1 t2) (Arrow _ t1' t2') = (t1 == t1') && (t2 == t2')
-  eq (THole _ x) (THole _ y) = x == y
+  eq (THole _ x _ _) (THole _ y _ _) = x == y -- TODO: I don't think its necessary to compare the weakens and subs?
   eq (TNeu _ x argsx) (TNeu _ y argsy) = x == y && argsx == argsy
   eq _ _ = false
 

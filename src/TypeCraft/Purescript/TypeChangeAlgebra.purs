@@ -41,7 +41,7 @@ getEndpoints (CArrow a b) =
     let a1 /\ a2 = getEndpoints a in
     let b1 /\ b2 = getEndpoints b in
     Arrow defaultArrowMD a1 b1 /\ Arrow defaultArrowMD a2 b2
-getEndpoints (CHole x) = THole defaultTHoleMD x /\ THole defaultTHoleMD x
+getEndpoints (CHole x w s) = THole defaultTHoleMD x w s /\ THole defaultTHoleMD x w s
 getEndpoints (CNeu x args) =
     let start = TNeu defaultTNeuMD in
     let ts1 /\ ts2 = getEndpointss args in
@@ -110,7 +110,7 @@ taChGetEndpoints tac = case tac of
 -- then this function will throw an exception
 composeChange :: Change -> Change -> Change
 composeChange (CArrow a1 b1) (CArrow a2 b2) = CArrow (composeChange a1 a2) (composeChange b1 b2)
-composeChange (CHole x) (CHole y) | x == y = CHole x
+composeChange (CHole x w s) (CHole y _ _) | x == y = CHole x w s
 composeChange (Minus tooth a) b = Minus tooth (composeChange a b)
 composeChange a (Plus tooth b) = Plus tooth (composeChange a b)
 composeChange (Plus t1 a) (Minus t2 b) | t1 == t2 = composeChange a b
@@ -176,7 +176,7 @@ composeKindChange _ _ = unsafeThrow "shouldn't get here in composeKindChange, or
 
 invert :: Change -> Change
 invert (CArrow change1 change2) = CArrow (invert change1) (invert change2)
-invert (CHole holeId) = CHole holeId
+invert (CHole holeId w s) = CHole holeId w s
 invert (Replace t1 t2) = Replace t2 t1
 invert (Plus t change) = Minus t (invert change)
 invert (Minus t change) = Plus t (invert change)
@@ -206,7 +206,7 @@ invertListTypeBindChange ListTypeBindChangeNil = ListTypeBindChangeNil
 
 chIsId :: Change -> Boolean
 chIsId (CArrow c1 c2) = chIsId c1 && chIsId c2
-chIsId (CHole _) = true
+chIsId (CHole _ _ _) = true
 chIsId (Replace t1 t2) = t1 == t2 -- debatable, not sure if this case should always return false?
 chIsId (CNeu varId params) = all (\b -> b) (map (case _ of
     ChangeParam change -> chIsId change
@@ -259,7 +259,7 @@ combine (CArrow c1 c2) (CArrow d1 d2) = do
   c1' <- combine c1 d1
   c2' <- combine c2 d2
   pure $ CArrow c1' c2'
-combine (CHole x) (CHole y) = if x == y then Just (CHole x) else Nothing
+combine (CHole x w s) (CHole y _ _) = if x == y then Just (CHole x w s) else Nothing
 combine (Replace t1 t2) (Replace u1 u2) = if t1 == u1 && t2 == u2 then Just (Replace t1 t2) else Nothing -- TODO: I'm uncertian about this case
 combine (Replace t1 t2) _ = Just (Replace t1 t2)
 combine _ (Replace t1 t2) = Just (Replace t1 t2)
@@ -309,7 +309,7 @@ getSubstitution (CArrow c1a c1b) (Arrow _ c2a c2b) =
     do a1 <- getSubstitution c1a c2a
        a2 <- getSubstitution c1b c2b
        combineSubs a1 a2
-getSubstitution c (THole _ x) = Just (singleton x c)
+getSubstitution c (THole _ x _ _) = Just (singleton x c) -- TODO: I have no idea what this should do with weakening and substitution
 getSubstitution (CNeu x params1) (TNeu _ y params2)
     = do subs <- sequence (getParamSub <$> params1 <*> params2)
          foldl (\s1 s2 -> bind s1 (\s1' -> combineSubs s1' s2)) (Just empty) subs
@@ -494,7 +494,7 @@ normalizeType :: TypeAliasContext -> Type -> Type
 normalizeType actx ty =
     case ty of
     Arrow md ty1 ty2 -> Arrow md (normalizeType actx ty1) (normalizeType actx ty2)
-    THole md x -> THole md x
+    THole md x w s -> THole md x w s
     TNeu md x args -> case typeVarGetTypeDefVal actx x of
         Nothing -> TNeu md x (map (\(TypeArg md ty) -> TypeArg md (normalizeType actx ty)) args)
         Just (tyBinds /\ def) ->

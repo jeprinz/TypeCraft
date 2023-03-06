@@ -65,7 +65,7 @@ getCursorChildren (TypeCursor ctxs up ty) =
       recType
         ( { arrow: \md ty1 ty2 -> TypeCursor ty1.ctxs (Arrow1 md {--} ty2.ty : up) ty1.ty
             : TypeCursor ty2.ctxs (Arrow2 md ty1.ty {--} : up) ty2.ty: Nil
-          , tHole: \md x -> Nil
+          , tHole: \md x _ _ -> Nil
           , tNeu: \md x tyArgs -> Nil -- TODO: each type argument needs to be a child. --  TypeArgListCursor tyArgs.ctxs (TNeu1 md x {--} : up) tyArgs.tyArgs : Nil
           }
         )

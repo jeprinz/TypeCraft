@@ -14,7 +14,6 @@ import Data.Tuple (fst)
 import Data.Tuple (snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Freshen (freshenChange)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
 import Debug (trace)
@@ -184,7 +183,7 @@ chType kctx (Arrow md t1 t2) =
     let t1' /\ c1 = chType kctx t1 in
     let t2' /\ c2 = chType kctx t2 in
     Arrow md t1' t2' /\ CArrow c1 c2
-chType kctx (THole md x) = THole md x /\ CHole x
+chType kctx (THole md x w s) = THole md x w s /\ CHole x w s
 chType kctx startType@(TNeu md tv args) =
     case tv of
         TypeVar x ->
@@ -197,8 +196,7 @@ chType kctx startType@(TNeu md tv args) =
                     TNeu md (TypeVar x) args' /\ CNeu (CTypeVar x) cargs
                 Just taCh -> hole' "chType" -- if the type variable was that of a type alias, we must deal with the possiblity that the type alias was changed
             Just (TVarDelete kind maybeValue) ->
-                let x = freshTypeHoleID unit in
-                let newType = THole defaultHoleMD x in
+                let newType = freshTHole unit in
                 newType /\ Replace startType newType
             Just (TVarInsert kind maybeValue) -> unsafeThrow "I don't think this should happen but I'm not 100% sure"
         --    (Just (TVarTypeChange _)) -> unsafeThrow "I need to figure out what is the deal with TVarTypeChange!!!"
@@ -210,8 +208,7 @@ chTypeArgs :: KindChangeCtx -> KindChange -> List TypeArg -> List TypeArg /\ Lis
 chTypeArgs kctx KCType Nil = Nil /\ Nil
 chTypeArgs kctx (KPlus kc) params =
     let tparams /\ cparams = chTypeArgs kctx kc params in
-    let x = freshTypeHoleID unit in
-    let newType = THole defaultHoleMD x in
+    let newType = freshTHole unit in
     (TypeArg defaultTypeArgMD newType : tparams) /\ (PlusParam newType : cparams)
 chTypeArgs kctx (KCArrow kc) (TypeArg md t : params) =
     let t' /\ c = chType kctx t in

@@ -60,7 +60,7 @@ sBindTHole :: forall a. (TypeHoleID -> a) -> a
 sBindTHole bla = bla (freshTypeHoleID unit)
 
 sTHole :: TypeHoleID -> SType
-sTHole x _ = THole defaultTHoleMD x
+sTHole x _ = makeTHole x
 
 sarrow :: SType -> SType -> SType
 sarrow ty1 ty2 ct = Arrow defaultArrowMD (ty1 ct) (ty2 ct)
@@ -75,7 +75,7 @@ program ty t = let ty' = (ty {kctx: empty, ctx: empty}) in ty' /\ (t {kctx: empt
 --tyProgram ty = ty {kctx: empty, ctx: empty}
 
 exampleType1 :: Type
-exampleType1 = THole defaultHoleMD (unsafePerformEffect genUUID)
+exampleType1 = freshTHole unit
 
 --exampleTerm1 :: Term
 --exampleTerm1 = program (

@@ -253,7 +253,7 @@ tyArgListToNodeTag (_ : _) = TypeArgListConsNodeTag
 typeToNodeTag :: Type -> NodeTag
 typeToNodeTag = case _ of
   Arrow _ _ _ -> ArrowNodeTag
-  THole _ _ -> THoleNodeTag
+  THole _ _ _ _ -> THoleNodeTag
   TNeu _ _ _ -> TNeuNodeTag
 
 -- NodeStyle

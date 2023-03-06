@@ -76,14 +76,13 @@ type Sub
     , subTHoles :: Map.Map TypeHoleID Type
     }
 
+subFromVars :: Map.Map TypeVarID Type -> Sub
+subFromVars m = {subTypeVars: m, subTHoles: Map.empty}
+
 applySubType :: Sub -> Type -> Type
 applySubType sub = case _ of
   Arrow md ty1 ty2 -> Arrow md (applySubType sub ty1) (applySubType sub ty2)
-  -- Note from Jacob: this former version of the line was causing an infinite loop
---  ty@(THole md hid) -> applySubType sub $ maybe ty identity (Map.lookup hid sub.subTHoles)
-  ty@(THole md hid) -> maybe ty identity (Map.lookup hid sub.subTHoles)
-  -- Question from Jacob: Why is there a special case for Nil?
---  ty@(TNeu md id List.Nil) -> applySubType sub $ maybe ty identity (Map.lookup id sub.subTypeVars)
+  ty@(THole md hid w s) -> maybe ty (applySubType (subFromVars s)) (Map.lookup hid sub.subTHoles)
   ty@(TNeu md (TypeVar id) List.Nil) -> maybe ty identity (Map.lookup id sub.subTypeVars)
   TNeu md id args -> TNeu md id ((\(TypeArg md ty) -> TypeArg md (applySubType sub ty)) <$> args)
 
@@ -93,10 +92,7 @@ subTypeArg sub (TypeArg md ty) = TypeArg md (applySubType sub ty)
 applySubChange :: Sub -> Change -> Change
 applySubChange sub = case _ of
   CArrow ty1 ty2 -> CArrow (applySubChange sub ty1) (applySubChange sub ty2)
-  ty@(CHole hid) -> maybe ty tyInject (Map.lookup hid sub.subTHoles)
-  -- Question from Jacob: Why is there a special case for Nil?
-  -- Note from Jacob: this former version of the line was causing an infinite loop
---  ty@(CNeu id List.Nil) -> applySubChange sub $ maybe ty tyInject (Map.lookup id sub.subTypeVars)
+  ty@(CHole hid w s) -> maybe ty (\ t ->  tyInject (applySubType (subFromVars s) t)) (Map.lookup hid sub.subTHoles)
   ty@(CNeu (CTypeVar id) List.Nil) -> maybe ty tyInject (Map.lookup id sub.subTypeVars)
   CNeu id args -> CNeu id (applySubChangeParam sub <$> args)
   Replace ty1 ty2 -> Replace (applySubType sub ty1) (applySubType sub ty2)

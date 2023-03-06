@@ -295,7 +295,7 @@ stepKidsType isActive ty kids = case ty of
       ]
   TNeu md x args
     | [ k_args ] <- kids -> [ addNodeStyle (NodeStyle "list-head-var") $ k_args (TNeu1 md x) ]
-  THole md id
+  THole md id _ _
     | [] <- kids -> []
   _ -> unsafeThrow "stepKidsType: wrong number of kids"
 
@@ -335,7 +335,7 @@ typeToNode isActive aboveInfo ty =
                 [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
                 ]
     , tHole:
-        \md x ->
+        \md x _weakenings _substitutions ->
           setNodeMetadata (makeTHoleNodeMetadata x)
             $ arrangeType args []
     }
@@ -732,7 +732,7 @@ changeToNode val = case val.ch of
           , changeToNode val { ch = ch2 }
           ]
       }
-  CHole _ ->
+  CHole _ _ _ ->
     makeChangeNode
       { tag: THoleNodeTag
       , kids: []

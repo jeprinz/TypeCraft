@@ -2,7 +2,7 @@ module TypeCraft.Purescript.Util where
 
 import Prelude
 import Effect.Exception.Unsafe (unsafeThrow)
-import Data.Map (Map, toUnfoldable, fromFoldable, lookup, member, delete)
+import Data.Map (Map, toUnfoldable, fromFoldable, lookup, member, delete, unionWith)
 import Data.Maybe (Maybe(..))
 import Data.List(List, head)
 import Data.Tuple.Nested
@@ -45,3 +45,6 @@ mapKeys f m =
     let asList :: List (k /\ v)
         asList = toUnfoldable m in
     fromFoldable (map (\(k /\ v) -> f k /\ v) asList)
+
+union' :: forall v k. Ord k => Map k v -> Map k v -> Map k v
+union' m1 m2 = unionWith (\_ _ -> unsafeThrow "duplicate key in union'") m1 m2
