@@ -106,6 +106,7 @@ data NodeTag
   = ArrowNodeTag
   | THoleNodeTag
   | TNeuNodeTag
+  | TContextBoundaryNodeTag 
   -- NodeTag: PolyType
   | ForallNodeTag
   | PTypeNodeTag
@@ -181,6 +182,7 @@ toNodeTag_ = case _ of
   ArrowNodeTag -> makeNodeTag_ "ty arr"
   THoleNodeTag -> makeNodeTag_ "ty hol"
   TNeuNodeTag -> makeNodeTag_ "ty neu"
+  TContextBoundaryNodeTag -> makeNodeTag_ "ty cx-boundary"
   ForallNodeTag -> makeNodeTag_ "poly-ty forall"
   PTypeNodeTag -> makeNodeTag_ "poly-ty ty"
   TypeArgNodeTag -> makeNodeTag_ "ty-arg"
@@ -191,7 +193,7 @@ toNodeTag_ = case _ of
   DataNodeTag -> makeNodeTag_ "tm dat"
   TLetNodeTag -> makeNodeTag_ "tm ty-let"
   TypeBoundaryNodeTag -> makeNodeTag_ "tm ty-boundary"
-  ContextBoundaryNodeTag -> makeNodeTag_ "tm cx-coundary"
+  ContextBoundaryNodeTag -> makeNodeTag_ "tm cx-boundary"
   HoleNodeTag -> makeNodeTag_ "tm hol"
   BufferNodeTag -> makeNodeTag_ "tm buf"
   TypeBindNodeTag -> makeNodeTag_ "ty-bnd"

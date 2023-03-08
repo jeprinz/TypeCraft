@@ -27,6 +27,7 @@ export type NodeTag
     = 'ty arr'
     | 'ty hol'
     | 'ty neu'
+    | 'ty cx-boundary'
     | 'poly-ty forall'
     | 'poly-ty ty'
     | 'ty-arg'
