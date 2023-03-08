@@ -150,6 +150,8 @@ data NodeTag
   -- Wrapper
   | CursorModeWrapperNodeTag
   | SelectModeWrapperNodeTag
+  -- Hole
+  | HoleInnerNodeTag
 
 derive instance eqNodeTag :: Eq NodeTag
 
@@ -213,6 +215,7 @@ toNodeTag_ = case _ of
   MinusNodeTag -> makeNodeTag_ "minus"
   CursorModeWrapperNodeTag -> makeNodeTag_ "cursor-mode-wrapper"
   SelectModeWrapperNodeTag -> makeNodeTag_ "select-mode-wrapper"
+  HoleInnerNodeTag -> makeNodeTag_ "hole-inner"
 
 foreign import getNodeTag_ :: Node -> NodeTag_
 

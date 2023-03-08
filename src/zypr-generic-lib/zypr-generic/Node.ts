@@ -58,6 +58,7 @@ export type NodeTag
     | 'minus'
     | 'cursor-mode-wrapper'
     | 'select-mode-wrapper'
+    | 'hole-inner'
 
 export type NodeStyle =
     'cursor' |
