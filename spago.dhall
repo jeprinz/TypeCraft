@@ -1,6 +1,7 @@
 { name = "zypr"
 , dependencies =
   [ "arrays"
+  , "console"
   , "control"
   , "debug"
   , "effect"
@@ -21,5 +22,5 @@
   , "variant"
   ]
 , packages = ./packages.dhall
-, sources = [ "src/**/*.purs" ]
+, sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }
