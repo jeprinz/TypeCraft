@@ -260,6 +260,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'ty neu':
           assert(node.metadata !== undefined && node.metadata.case === 'ty neu')
           return go(node, rndCtx, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
+        case 'ty cx-boundary': return go(node, rndCtx, ["ty_cx-boundary"], [kid(), kid()].flat(), indentationLevel)
         case 'poly-ty forall': return go(node, rndCtx, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
         case 'poly-ty ty': return go(node, rndCtx, ["poly-ty_ty"], kid(), indentationLevel)
         case 'ty-arg': return go(node, rndCtx, ["ty-arg"], kid(), indentationLevel)
@@ -305,6 +306,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'minus': return go(node, rndCtx, ["minus"], [[Punc.bracketL], kid(), [Punc.bracketR], [Punc.minus], kid()].flat(), indentationLevel)
         case 'cursor-mode-wrapper': return go(node, rndCtx, ["cursor-mode-wrapper"], kid(), indentationLevel)
         case 'select-mode-wrapper': return go(node, rndCtx, ["select-mode-wrapper"], kid(), indentationLevel)
+        // hole
+        case 'hole-inner': return go(node, rndCtx, ["hole-inner"], kid(), indentationLevel)
       }
     }
 
