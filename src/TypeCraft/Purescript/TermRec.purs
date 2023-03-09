@@ -32,6 +32,7 @@ type ListCtrRecValue = {ctxs :: AllContext, ctrs :: List Constructor}
 type ListCtrParamRecValue = {ctxs :: AllContext, ctrParams :: List CtrParam}
 type ListTypeArgRecValue = {ctxs :: AllContext, tyArgs :: List TypeArg}
 type ListTypeBindRecValue = {ctxs :: AllContext, tyBinds :: List TypeBind}
+type InsideHoleRecValue = {ctxs :: AllContext, ty :: Type}
 
 -- TODO: make a RecValue for each grammatical sort. Even if I don't write recursors for all of them, at least those might be useful!
 

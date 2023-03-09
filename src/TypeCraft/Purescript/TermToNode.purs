@@ -140,8 +140,8 @@ stepKidsTerm isActive term kids = case term of
   ContextBoundary md x ch bod
     | [ k_bod ] <- kids -> [ k_bod (ContextBoundary1 md x ch) ]
   Hole md
-    | [] <- kids -> []
-    | [ _ ] <- kids -> []
+    | [] <- kids -> [] -- the old case
+    | [ k_inner ] <- kids -> [ k_inner (Hole1 md) ]
   Buffer md imp sig bod ty
     | [ k_imp, k_sig, k_bod ] <- kids ->
       [ k_imp (Buffer1 md sig bod ty)
@@ -240,26 +240,29 @@ termToNode isActive aboveInfo term =
             ]
     , hole:
         \md ->
-          let
-            getCursor =
-              join
-                $ justWhen args.isActive \_ -> do
-                    cursorLocation <- args.makeCursor unit
-                    Just (_ { mode = makeCursorMode cursorLocation })
-          in
-            makeNode
-              { kids: [ typeToNode false AINothing { ctxs: term.ctxs, ty: term.ty } ]
-              , getCursor: getCursor
-              , getSelect:
-                  join
-                    $ justWhen args.isActive \_ -> do
-                        select <- args.makeSelect unit
-                        if List.null (getMiddlePath select) then
-                          getCursor
-                        else
-                          Just (_ { mode = makeSelectMode select })
-              , tag: termToNodeTag term.term
-              }
+            arrangeTerm args
+                [ arrangeKidAI cursorOnlyInfo (insideHoleToNode isActive) {ctxs: term.ctxs, ty: term.ty}
+                ]
+--          let
+--            getCursor =
+--              join
+--                $ justWhen args.isActive \_ -> do
+--                    cursorLocation <- args.makeCursor unit
+--                    Just (_ { mode = makeCursorMode cursorLocation })
+--          in
+--            makeNode
+--              { kids: [ typeToNode false AINothing { ctxs: term.ctxs, ty: term.ty } ]
+--              , getCursor: getCursor
+--              , getSelect:
+--                  join
+--                    $ justWhen args.isActive \_ -> do
+--                        select <- args.makeSelect unit
+--                        if List.null (getMiddlePath select) then
+--                          getCursor
+--                        else
+--                          Just (_ { mode = makeSelectMode select })
+--              , tag: termToNodeTag term.term
+--              }
     , buffer:
         \md def defTy body _bodyTy ->
           arrangeTerm args
@@ -713,6 +716,34 @@ ctrListToNode isActive aboveInfo ctrs =
           AISelect topPath topCtx topCtrs midPath -> Just $ CtrListSelect topPath topCtx topCtrs midPath ctrs.ctxs ctrs.ctrs topSelectOrientation
           AINothing -> Nothing
     , ctrs
+    }
+
+stepInsideHoleKids :: Array PreNode -> Array Node
+stepInsideHoleKids [] = []
+stepInsideHoleKids _ = unsafeThrow "insideHole doesn't have kids"
+
+type InsideHoleCursorInfo =
+    { isActive :: Boolean
+    , makeCursor :: Unit -> Maybe CursorLocation
+    , makeSelect :: Unit -> Maybe Select
+    }
+
+arrangeInsideHole :: InsideHoleCursorInfo -> Node
+arrangeInsideHole args =
+    arrangeNodeKids {
+        isActive: args.isActive
+        , tag: HoleInnerNodeTag
+        , stepKids: stepInsideHoleKids
+        , makeCursor: args.makeCursor
+        , makeSelect: args.makeSelect
+    } []
+
+insideHoleToNode :: Boolean -> AboveInfo Unit -> InsideHoleRecValue -> Node
+insideHoleToNode isActive aboveInfo inside =
+    arrangeInsideHole {
+        isActive
+        , makeCursor: \_ -> Just $ InsideHoleCursor inside.ctxs inside.ty (aIGetPath aboveInfo)
+        , makeSelect : \_ -> Nothing
     }
 
 -- | Change

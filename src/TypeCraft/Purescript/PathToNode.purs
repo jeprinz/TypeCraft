@@ -14,6 +14,7 @@ import TypeCraft.Purescript.Util (hole', justWhen)
 import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (lookup')
 import Debug (trace)
+import Effect.Exception.Unsafe (unsafeThrow)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
@@ -583,14 +584,21 @@ typeBindListPathToNode isActive abovePath belowInfo typeBindListPath innerNode =
       )
       typeBindListPath
 
-{-
-Problems currently:
-1) *PathToNode are currently not recursive. They should incorporate the teeth rest of the path somehow
-2) something something combining teeth with *s causes typing problems?
-     remember that when we switch to a different sort we always go to BITerm
-3) We need to either 1) draw everything from top down, including paths, or 2) put the MDContext into the State
-    TODO TODO TODO ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    The problem with drawing top down is that when detmining the selection, you can't know where is a valid place to
-    select to until you traverse UPWARDS from the cursor.
-    Another reason to put the metacontext in the state: we actually need it to display queries correctly
--}
+--makeInsideHoleArgs :: Boolean -> UpPath -> InsideHoleRecValue -> InsideHoleCursorInfo
+--makeInsideHoleArgs isActive abovePath upRecVal =
+--    { isActive
+--    , makeCursor: \_ -> Just $ InsideHoleCursor upRecVal.ctxs upRecVal.ty (upRecVal.insideHolePath <> abovePath)
+--    , makeSelect: \_ -> Nothing
+--    }
+
+insideHolePathToNode :: Boolean -> UpPath -> BelowInfo Unit Unit -> InsideHolePathRecValue -> Node -> Node
+insideHolePathToNode _ _ _ {insideHolePath : Nil} _ = unsafeThrow "I don't think this should happen? insideHolePathToNode"
+insideHolePathToNode isActive abovePath belowInfo insideHolePath innerNode =
+    recInsideHolePath {
+        hole1 : \termPath ->
+            let newBI = BITerm in
+            termPathToNode isActive abovePath newBI termPath
+                $ arrangeTerm (makeTermArgs isActive abovePath newBI termPath)
+                    [ arrangeKid termPath.termPath abovePath (\_ _ -> innerNode) unit
+                    ]
+    } insideHolePath

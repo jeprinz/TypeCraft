@@ -53,7 +53,7 @@ getCursorChildren (TermCursor ctxs ty up term) =
                 : Nil
             , typeBoundary: \md c t -> TermCursor t.ctxs t.ty (TypeBoundary1 md c : up) t.term : Nil
             , contextBoundary: \md x c t -> TermCursor t.ctxs t.ty (ContextBoundary1 md x c : up) t.term : Nil
-            , hole: \md -> Nil
+            , hole: \md -> InsideHoleCursor ctxs ty (Hole1 md : up) : Nil
             , buffer: \md def defTy body bodyTy -> TermCursor def.ctxs def.ty (Buffer1 md defTy.ty body.term bodyTy : up) def.term
               : TypeCursor defTy.ctxs (Buffer2 md def.term body.term bodyTy : up) defTy.ty
               : TermCursor body.ctxs body.ty (Buffer3 md def.term defTy.ty bodyTy : up) body.term : Nil
@@ -96,6 +96,7 @@ getCursorChildren (TypeBindListCursor ctxs up tyBinds) =
             : TypeBindListCursor tyBinds.ctxs (TypeBindListCons2 tyBind.tyBind {--} : up) tyBinds.tyBinds : Nil
         , nil: \_ -> Nil
     }) {ctxs, tyBinds}
+getCursorChildren (InsideHoleCursor _ _ _) = Nil
 
 -- the Int is what'th child the input is of the output
 parent :: CursorLocation -> Maybe (CursorLocation /\ Int)
@@ -199,7 +200,11 @@ parent (TypeBindListCursor ctxs listTypeBindPath tyBinds) =
         , typeBindListCons2 : \listTypeBindPath tyBind -> Just $ TypeBindListCursor listTypeBindPath.ctxs listTypeBindPath.listTypeBindPath listTypeBindPath.tyBinds /\ (2 - 1)
         , let2 : \termPath md tBind def defTy body bodyTy -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (2 - 1)
     }) {ctxs, listTypeBindPath, tyBinds}
-parent _ = hole' "given an ill-typed upPath to parent function (or I missed a case)"
+parent (InsideHoleCursor ctxs ty insideHolePath) =
+    recInsideHolePath ({
+        hole1 : \termPath -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (1 - 1)
+    }) {ctxs, ty, insideHolePath}
+--parent _ = hole' "given an ill-typed upPath to parent function (or I missed a case)"
 
 stepCursorForwards :: CursorLocation -> CursorLocation
 stepCursorForwards cursor = case stepCursorForwardsImpl 0 cursor of
@@ -262,8 +267,9 @@ getPath(CtrListCursor _ path _) = path
 getPath(CtrParamListCursor _ path _) = path
 --getPath(TypeArgListCursor _ path _) = path
 getPath(TypeBindListCursor _ path _) = path
+getPath(InsideHoleCursor _ _ path) = path
 
-data GrammaticalSort = GSTerm | GSType | GSTypeBind | GSTermBind | GSCtrList | GSCtrParamList | GSTypeArgList | GSTypeBindList
+data GrammaticalSort = GSTerm | GSType | GSTypeBind | GSTermBind | GSCtrList | GSCtrParamList | GSTypeArgList | GSTypeBindList | GSInnerHole
 derive instance genericGrammaticalSort :: Generic GrammaticalSort _
 instance eqGrammaticalSort :: Eq GrammaticalSort where
   eq x = genericEq x
@@ -357,6 +363,7 @@ getCursorSort(CtrListCursor _ _ _) = GSCtrList
 getCursorSort(CtrParamListCursor _ _ _) = GSCtrParamList
 --getCursorSort(TypeArgListCursor _ _ _) = GSTypeArgList
 getCursorSort(TypeBindListCursor _ _ _) = GSTypeBindList
+getCursorSort(InsideHoleCursor _ _ _) = GSInnerHole
 
 -- If this returns Nothing, then should exit Select mode and go to Cursor mode
 goLeftUntilSort :: GrammaticalSort -> CursorLocation -> Maybe CursorLocation

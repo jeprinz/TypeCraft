@@ -32,6 +32,7 @@ type ListCtrPathRecValue = {ctxs :: AllContext, ctrs :: List Constructor, listCt
 type ListCtrParamPathRecValue = {ctxs :: AllContext, ctrParams :: List CtrParam, listCtrParamPath :: UpPath}
 type ListTypeArgPathRecValue = {ctxs :: AllContext, tyArgs :: List TypeArg, listTypeArgPath :: UpPath}
 type ListTypeBindPathRecValue = {ctxs :: AllContext, tyBinds :: List TypeBind, listTypeBindPath :: UpPath}
+type InsideHolePathRecValue = {ctxs :: AllContext, ty :: Type, insideHolePath :: UpPath}
 -- TypePathRecValue needs ctx and ty so that when it gets up to a TermPath (e.g. in Let4), it knows the context and type
 
 -- TODO: in the future, when I implement editing lists of constructors and stuff, more things will need to be
@@ -320,6 +321,15 @@ recListTypeBindPath args {ctxs, tyBinds, listTypeBindPath: TypeBindListCons2 tyB
     args.typeBindListCons2 {ctxs, tyBinds: tyBind : tyBinds, listTypeBindPath}
         {ctxs, tyBind}
 recListTypeBindPath _ listTypeBindPath = unsafeThrow ("Either wasn't a ListTypeBindPath or I forgot a case. path is: " <> show listTypeBindPath.listTypeBindPath)
+
+type InnerHolePathRec a = {
+    hole1 :: TermPathRecValue -> a
+}
+
+recInsideHolePath :: forall a . InnerHolePathRec a -> InsideHolePathRecValue -> a
+recInsideHolePath args {ctxs, ty, insideHolePath: Hole1 md : termPath} =
+    args.hole1 {ctxs, ty, termPath, term: Hole md}
+recInsideHolePath _ _ = unsafeThrow "Invalid tooth in recInsideHolePath"
 
 -- List TypeBind
 --    Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type

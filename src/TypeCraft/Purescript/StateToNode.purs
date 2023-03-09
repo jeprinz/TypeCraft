@@ -15,9 +15,9 @@ import TypeCraft.Purescript.Dentist (downPathToCtxChange)
 import TypeCraft.Purescript.Grammar (freshHole)
 import TypeCraft.Purescript.ModifyState (modifyQuery, submitQuery)
 import TypeCraft.Purescript.Node (Node, NodeStyle(..), NodeTag(..), addNodeStyle, makeWrapperNode, setNodeCompletions, setNodeGetCursor, setNodeQueryString)
-import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode)
+import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode, insideHolePathToNode)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), State, SelectMode, getCompletion)
-import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode)
+import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode, insideHoleToNode)
 import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 import TypeCraft.Purescript.Util (fromJust', hole')
 import TypeCraft.Purescript.Alpha (applySubType)
@@ -136,6 +136,8 @@ cursorModeToNode cursorMode =
     CtrListCursor ctxs listCtrPath ctrs -> ctrListPathToNode true Nil (BISelect Nil ctrs ctxs unit) { ctxs, ctrs, listCtrPath }
     CtrParamListCursor ctxs listCtrParamPath ctrParams -> ctrParamListPathToNode true Nil (BISelect Nil ctrParams ctxs unit) { ctxs, ctrParams, listCtrParamPath }
     TypeBindListCursor ctxs listTypeBindPath tyBinds -> typeBindListPathToNode true Nil (BISelect Nil tyBinds ctxs unit) { ctxs, tyBinds, listTypeBindPath }
+--insideHolePathToNode :: Boolean -> UpPath -> BelowInfo Unit Unit -> InsideHolePathRecValue -> Node -> Node
+    InsideHoleCursor ctxs ty insideHolePath -> insideHolePathToNode true Nil BITerm {ctxs, ty, insideHolePath}
 
   cursorModeTermToNode :: Unit -> Node
   cursorModeTermToNode _ =
@@ -148,6 +150,7 @@ cursorModeToNode cursorMode =
       CtrListCursor ctxs listCtrPath ctrs -> ctrListToNode true (AISelect listCtrPath ctxs ctrs Nil) { ctxs, ctrs }
       CtrParamListCursor ctxs listCtrParamPath ctrParams -> ctrParamListToNode true (AISelect listCtrParamPath ctxs ctrParams Nil) { ctxs, ctrParams }
       TypeBindListCursor ctxs listTypeBindPath tyBinds -> typeBindListToNode true (AISelect listTypeBindPath ctxs tyBinds Nil) { ctxs, tyBinds }
+      InsideHoleCursor ctxs ty insideHolePath -> insideHoleToNode true (AICursor insideHolePath) {ctxs, ty}
 
   completionToNode ::
     { isInline :: Boolean

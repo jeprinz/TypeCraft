@@ -307,7 +307,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'cursor-mode-wrapper': return go(node, rndCtx, ["cursor-mode-wrapper"], kid(), indentationLevel)
         case 'select-mode-wrapper': return go(node, rndCtx, ["select-mode-wrapper"], kid(), indentationLevel)
         // hole
-        case 'hole-inner': return go(node, rndCtx, ["hole-inner"], kid(), indentationLevel)
+        case 'hole-inner': return go(node, rndCtx, ["hole-inner"], []/*kid()*/, indentationLevel)
       }
     }
 

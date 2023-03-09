@@ -140,6 +140,8 @@ data Tooth
   | Data2 GADTMD TypeBind {-List TypeBind-} (List Constructor) Term Type
   | Data3 GADTMD TypeBind (List TypeBind) {-List Constructor-} Term Type
   | Data4 GADTMD TypeBind (List TypeBind) (List Constructor) {-Term-} Type
+  -- New, for separate cursor position in hole:
+  | Hole1 HoleMD
   -- Type
   | Arrow1 ArrowMD {-Type-} Type
   | Arrow2 ArrowMD Type {-Type-}

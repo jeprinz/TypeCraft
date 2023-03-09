@@ -17,6 +17,7 @@ import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
 import TypeCraft.Purescript.ShallowEmbed (exampleProg1, exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
 import TypeCraft.Purescript.Alpha (Sub)
 import TypeCraft.Purescript.Util (hole, hole')
+import TypeCraft.Purescript.MD (HoleMD)
 
 {-
 This file will contain possible states for the editor
@@ -138,6 +139,7 @@ data CursorLocation
   | CtrParamListCursor AllContext UpPath (List CtrParam)
 --  | TypeArgListCursor AllContext UpPath (List TypeArg)
   | TypeBindListCursor AllContext UpPath (List TypeBind)
+  | InsideHoleCursor AllContext Type UpPath
 
 derive instance genericCursorLocation :: Generic CursorLocation _
 
