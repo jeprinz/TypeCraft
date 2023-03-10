@@ -149,9 +149,9 @@ chTypePath ch typePath =
             (kctx' /\ ctx2) /\ Lambda2 md tBind.tBind {-Type-} body' (snd (getEndpoints c)) : termPath'
         , let4: \termPath md tBind@{tBind: TermBind _ x} tyBinds def {-Type-} body bodyTy ->
         --    let (kctx' /\ ctx') /\ termPath' = chTermPath kctx ctx (tyInject bodyTy) termPath in
-            let bodyCtx = insert x (VarTypeChange (tyBindsWrapChange tyBinds.tyBinds ch)) (ctxInject ctx) in
-            let body' = chTermBoundary (kCtxInject body.ctxs.kctx body.ctxs.actx) bodyCtx (tyInject bodyTy) body.term in -- TODO TODO TODO TODO:::: There are various other design descisions that could be made here. The issue is that we may want to call chTerm on the body first to get a TypeChange, but then we would need to call it again with the context change gotten from the path above.
-            let def' = chTermBoundary (kCtxInject def.ctxs.kctx def.ctxs.actx) (ctxInject def.ctxs.ctx) ch def.term in
+            let innerCtx = insert x (VarTypeChange (tyBindsWrapChange tyBinds.tyBinds ch)) (ctxInject ctx) in
+            let body' = chTermBoundary (kCtxInject body.ctxs.kctx body.ctxs.actx) innerCtx (tyInject bodyTy) body.term in
+            let def' = chTermBoundary (kCtxInject def.ctxs.kctx def.ctxs.actx) innerCtx ch def.term in
             (idChkctx /\ idChCtx) /\ Let4 md tBind.tBind tyBinds.tyBinds def' body' bodyTy : termPath.termPath
         , buffer2: \termPath md def {-Type-} body bodyTy -> hole' "chTypePath"
         , tLet3: \termPath md tyBind tyBinds {-Type-} body bodyTy -> hole' "chTypePath"

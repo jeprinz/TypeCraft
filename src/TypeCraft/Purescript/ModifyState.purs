@@ -16,8 +16,9 @@ import TypeCraft.Purescript.Unification
 import Data.Array ((:), uncons)
 import Data.Array as Array
 import Data.List as List
+import Data.Map as Map
 import Data.Maybe (Maybe(..))
-import Data.Tuple (snd)
+import Data.Tuple (snd, fst)
 import Debug (trace)
 import Debug (traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
@@ -107,8 +108,10 @@ submitQuery' cursorMode = case cursorMode.cursorLocation of
               (kctx' /\ ctx') /\ path' = chTermPath ch {ctxs, ty, termPath: path, term: tm}
               ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
               chCtxs = downPathToCtxChange ctxs' (List.reverse pathNew)
+              _ = trace ("size of chCtxs.kctx is: " <> show (List.length (Map.values (fst (snd chCtxs))))) \_ -> unit
               tm' = chTermBoundary kctx' ctx' (tyInject ty) tm
               newCtxs = snd (getAllEndpoints chCtxs)
+              _ = trace ("size of newCtxs.kctx is: " <> show (List.length (Map.values newCtxs.kctx))) \_ -> unit
             in
               pure
                 { cursorLocation: TermCursor newCtxs ty (pathNew <> path') tm'

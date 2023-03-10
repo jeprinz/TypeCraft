@@ -107,6 +107,7 @@ termToothCtxChange kctx ctx actx mdctx mdkctx tooth =
                let ctrTypeChanges = map (\pt -> VarInsert pt) ctrTypes in
                union startingCtx ctrTypeChanges
                 -- TODO: Also introduce the recursor into the context here
+                -- TODO: This should use some sort of centralized addDataToChCtx, which can also be used in chTerm and chTermPath
             /\
             insert x (TVarInsert (tyBindsWrapKind tyBinds Type) Nothing) (kCtxInject kctx actx)
             /\ let ctrNames = constructorNames ctrs in

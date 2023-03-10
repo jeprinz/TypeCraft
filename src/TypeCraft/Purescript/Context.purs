@@ -5,6 +5,8 @@ import Prim hiding (Type)
 import TypeCraft.Purescript.Grammar
 
 import Data.List (List(..), (:))
+import Data.List as List
+import Data.Map as Map
 import Data.Map.Internal (Map, empty, filterKeys, insert, lookup)
 import Data.Map.Internal (empty, lookup, insert, union, mapMaybeWithKey)
 import Data.Maybe (Maybe(..))
@@ -20,6 +22,7 @@ import TypeCraft.Purescript.Util (hole', hole, delete')
 import TypeCraft.Purescript.Util (lookup')
 import Data.Either (Either)
 import TypeCraft.Purescript.Freshen (genFreshener, subCtrParam)
+import Debug (trace)
 
 {-
 This file defines term contexts and type contexts!
@@ -60,7 +63,10 @@ removeLetFromCCtx :: CAllContext -> TermBind -> CAllContext
 removeLetFromCCtx (kctx /\ ctx) (TermBind _ x) = kctx /\ delete' x ctx
 
 kCtxInject :: TypeContext -> TypeAliasContext -> KindChangeCtx
-kCtxInject kctx actx = mapMaybeWithKey (\x kind
+kCtxInject kctx actx =
+    trace ("Going in: " <> show (List.length (Map.values kctx))) \_ ->
+    trace ("Also going in: " <> show (List.length (Map.values actx))) \_ ->
+    let result = (mapMaybeWithKey (\x kind
         -> Just $ TVarKindChange (kindInject kind)
             (case lookup x actx of
                 Nothing -> Nothing
@@ -69,7 +75,9 @@ kCtxInject kctx actx = mapMaybeWithKey (\x kind
                         bindsToTAC Nil = TAChange (tyInject def)
                         bindsToTAC (tyBind : tyBinds) = TAForall tyBind (bindsToTAC tyBinds)
                     in Just (bindsToTAC tyBinds))
-    ) kctx
+    ) kctx) in
+    trace ("Going out: " <> show (List.length (Map.values result))) \_ ->
+    result
 
 ctxInject :: TermContext -> ChangeCtx
 ctxInject ctx = map (\ty -> VarTypeChange (pTyInject ty)) ctx
