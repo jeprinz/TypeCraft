@@ -1,0 +1,41 @@
+showUUID :: UUID -> String
+showUUID uuid = "(fromJust (UUID.parseUUID " <> show (UUID.toString uuid) <> "))"
+
+newtype TypeHoleID
+  = TypeHoleID UUID
+
+derive instance genericTypeHoleId :: Generic TypeHoleID _
+
+instance eqTypeHoleID :: Eq TypeHoleID where eq x = genericEq x
+
+instance ordTypeHoleID :: Ord TypeHoleID where compare x y = genericCompare x y
+
+instance showTypeHoleID :: Show TypeHoleID where
+  show (TypeHoleID uuid) = "(TypeHoleID " <> showUUID uuid <> ")"
+
+newtype TermVarID
+  = TermVarID UUID
+
+derive instance genericTermVarID :: Generic TermVarID _
+
+instance eqTermVarID :: Eq TermVarID where eq x = genericEq x
+
+instance ordTermVarID :: Ord TermVarID where compare x y = genericCompare x y
+
+instance showTermVarID :: Show TermVarID where
+  show (TermVarID uuid) = "(TermVarID " <> showUUID uuid <> ")"
+
+freshTermVarID :: Unit -> TermVarID
+freshTermVarID _ = TermVarID $ unsafePerformEffect genUUID
+
+newtype TypeVarID
+  = TypeVarID UUID
+
+derive instance genericTypeVarID :: Generic TypeVarID _
+
+instance eqTypeVarID :: Eq TypeVarID where eq x = genericEq x
+
+instance ordTypeVarID :: Ord TypeVarID where compare x y = genericCompare x y
+
+instance showTypeVarID :: Show TypeVarID where
+  show (TypeVarID uuid) = "(TypeVarID " <> showUUID uuid <> ")"
