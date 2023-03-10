@@ -1,33 +1,51 @@
 module TypeCraft.Purescript.Grammar where
 
+import Data.Tuple.Nested
 import Prelude
 import Prim hiding (Type)
 
+import Data.Either (Either(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.List (List)
-import Data.Map(Map(..))
+import Data.Map (Map(..))
 import Data.Map as Map
-import Data.Set(Set(..))
-import Data.Set as Set
 import Data.Maybe (Maybe, maybe)
-import Data.Tuple.Nested
+import Data.Ord.Generic (genericCompare)
+import Data.Set (Set(..))
+import Data.Set as Set
 import Data.Show.Generic (genericShow)
 import Data.UUID (UUID, genUUID)
 import Effect.Ref (Ref, new, read, write)
 import Effect.Unsafe (unsafePerformEffect)
 import TypeCraft.Purescript.MD (AppMD, ArrowMD, BufferMD, ContextBoundaryMD, CtrMD, CtrParamMD, GADTMD, HoleMD, LambdaMD, LetMD, THoleMD, TLetMD, TNeuMD, TermBindMD, TypeArgMD, TypeBindMD, TypeBoundaryMD, VarMD, defaultHoleMD, defaultTHoleMD)
 import TypeCraft.Purescript.Util (hole')
-import Data.Either (Either(..))
 
-type TypeHoleID = UUID
+newtype TypeHoleID = TypeHoleID UUID
 
-type TermVarID = UUID
+derive instance genericTypeHoleID :: Generic TypeHoleID _
+instance showTypeHoleID :: Show TypeHoleID  where show x = genericShow x 
+instance eqTypeHoleID :: Eq TypeHoleID  where eq x y = genericEq x y
+instance ordTypeHoleID :: Ord TypeHoleID  where compare x y = genericCompare x y
+
+newtype TermVarID = TermVarID UUID
+instance showTermVarID :: Show TermVarID  where show x = genericShow x 
+instance eqTermVarID :: Eq TermVarID  where eq x y = genericEq x y
+instance ordTermVarID :: Ord TermVarID  where compare x y = genericCompare x y
+
+derive instance genericTermVarID :: Generic TermVarID _
 
 freshTermVarID :: Unit -> TermVarID
-freshTermVarID _ = unsafePerformEffect genUUID
+freshTermVarID _ = TermVarID $ unsafePerformEffect genUUID
 
-type TypeVarID = UUID
+newtype TypeVarID = TypeVarID UUID
+
+
+derive instance genericTypeVarID :: Generic TypeVarID _
+instance showTypeVarID :: Show TypeVarID  where show x = genericShow x 
+instance eqTypeVarID :: Eq TypeVarID  where eq x y = genericEq x y
+instance ordTypeVarID :: Ord TypeVarID  where compare x y = genericCompare x y
+
 
 type TypeDefVal = (List TypeBind /\ Type)
 data TypeVar = TypeVar TypeVarID | CtxBoundaryTypeVar Kind (Maybe TypeDefVal) String TypeVarID -- TypeVar represents a variable in scope, and CtxBoundaryTypeVar represents a variable inside a context boundary Insert, with the given type.
@@ -72,7 +90,7 @@ freshTypeBind :: Maybe String -> TypeBind
 freshTypeBind mb_varName =
   TypeBind
     { varName: maybe "" identity mb_varName }
-    (unsafePerformEffect genUUID)
+    (TypeVarID $ unsafePerformEffect genUUID)
 
 data TermBind = TermBind TermBindMD TermVarID
 
@@ -80,7 +98,7 @@ freshTermBind :: Maybe String -> TermBind
 freshTermBind mb_varName =
   TermBind
     { varName: maybe "" identity mb_varName }
-    (unsafePerformEffect genUUID)
+    (TermVarID $ unsafePerformEffect genUUID)
 
 data CtrParam = CtrParam CtrParamMD Type
 
@@ -193,7 +211,7 @@ type KindChangeCtx = Map TypeVarID TVarChange
 
 data NameChange = NameChangeInsert String | NameChangeDelete String | NameChangeSame String
 type MDTypeChangeCtx = Map TypeVarID NameChange
-type MDTermChangeCtx = Map TypeVarID NameChange
+type MDTermChangeCtx = Map TermVarID NameChange
 
 data KindChange
   = KCArrow KindChange
@@ -247,10 +265,10 @@ freshInt _ =
   in currentValue
 
 freshTypeHoleID :: Unit -> TypeHoleID
-freshTypeHoleID _ = unsafePerformEffect genUUID
+freshTypeHoleID _ = TypeHoleID $ unsafePerformEffect genUUID
 
 freshTypeVarID :: Unit -> TypeVarID
-freshTypeVarID _ = unsafePerformEffect genUUID
+freshTypeVarID _ = TypeVarID $ unsafePerformEffect genUUID
 
 -- Note: its important that the automatically derived Eq is not used for Type, since we don't want to compare metadata.
 -- TODO: fix the Eq for PolyType
@@ -289,8 +307,7 @@ instance eqCTypeVar :: Eq CTypeVar where
 
 derive instance genericType :: Generic Type _
 
-instance showType :: Show Type where
-  show x = genericShow x
+instance showType :: Show Type where show x = genericShow x
 
 derive instance genericPolyType :: Generic PolyType _
 
@@ -438,3 +455,5 @@ derive instance genericListTypeBindChange :: Generic ListTypeBindChange _
 
 instance showListTypeBindChange :: Show ListTypeBindChange where
     show x = genericShow x
+
+

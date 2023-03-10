@@ -1,17 +1,6 @@
 module TypeCraft.Purescript.ModifyState where
 
-import Data.Tuple.Nested
 import Prelude
-import TypeCraft.Purescript.Alpha
-import TypeCraft.Purescript.ChangePath
-import TypeCraft.Purescript.ChangeTerm
-import TypeCraft.Purescript.Context
-import TypeCraft.Purescript.CursorMovement
-import TypeCraft.Purescript.Dentist
-import TypeCraft.Purescript.Grammar
-import TypeCraft.Purescript.State
-import TypeCraft.Purescript.TypeChangeAlgebra
-import TypeCraft.Purescript.Unification
 
 import Data.Array ((:), uncons)
 import Data.Array as Array
@@ -19,18 +8,32 @@ import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Tuple (snd, fst)
-import Debug (trace)
-import Debug (traceM)
+import Debug (trace, traceM)
+import Data.Tuple.Nested ((/\))
+import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.Alpha (applySubType, subAllCtx, subTermPath)
+import TypeCraft.Purescript.ChangePath (chListCtrParamPath, chListCtrPath, chListTypeBindPath, chTermPath, chTypePath)
+import TypeCraft.Purescript.ChangeTerm (chTermBoundary, chTypeBindList)
+import TypeCraft.Purescript.CursorMovement (cursorLocationToSelect, getCursorChildren, moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
+import TypeCraft.Purescript.Dentist (downPathToCtxChange, termPathToChange, typeBindPathToChange, typePathToChange)
+import TypeCraft.Purescript.Grammar (Change(..), TermBind(..), Tooth(..), TypeBind(..), freshHole, freshTHole, tyInject)
 import TypeCraft.Purescript.Key (Key)
 import TypeCraft.Purescript.MD (defaultTypeBoundaryMD)
 import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
+import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select(..), State, botSelectOrientation, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
+import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints, getCtxEndpoints, getKCtxAliasEndpoints, getKCtxTyEndpoints, invert, invertListTypeBindChange)
 import TypeCraft.Purescript.Util (hole')
-import TypeCraft.Purescript.Util (hole)
 
 handleKey :: Key -> State -> Maybe State
+handleKey key st
+  | key.key == "p" && (key.metaKey || key.ctrlKey) = do 
+    Debug.traceM "==[ current state.mode ]====================================="
+    Debug.traceM $ show st
+    Debug.traceM "============================================================="
+    Just st
 handleKey key st = case st.mode of
   CursorMode cursorMode -> case cursorMode.cursorLocation of
     TypeBindCursor ctxs path (TypeBind md tyVarId)
@@ -59,7 +62,7 @@ handleKey key st = case st.mode of
       | key.key == "x" && (key.ctrlKey || key.metaKey) -> cut st
       | key.key == "v" && (key.ctrlKey || key.metaKey) -> paste st
       | otherwise -> Nothing
-  SelectMode selectMode
+  SelectMode _selectMode
     | key.key == "Escape" -> escape st
     | key.key == "ArrowLeft" && key.shiftKey -> moveSelectPrev st
     | key.key == "ArrowRight" && key.shiftKey -> moveSelectNext st
@@ -74,7 +77,8 @@ handleKey key st = case st.mode of
 submitQuery :: State -> Maybe State
 submitQuery st = case st.mode of
   CursorMode cursorMode -> do
-    cursorMode' <- submitQuery' cursorMode
+    compl <- getCompletion cursorMode.query
+    cursorMode' <- submitCompletion cursorMode compl
     -- checkpoints the pre-submission mode with a cleared query string
     pure
       $ (checkpoint st { mode = CursorMode cursorMode { query { string = "" } } })
@@ -86,99 +90,96 @@ modifyQuery f st = case st.mode of
   CursorMode cursorMode -> pure st { mode = CursorMode cursorMode { query = f cursorMode.query } }
   _ -> Nothing
 
-submitQuery' :: CursorMode -> Maybe CursorMode
-submitQuery' cursorMode = case cursorMode.cursorLocation of
-  TermCursor ctxs ty path tm ->
-    getCompletion cursorMode.query
-      >>= case _ of
-          CompletionTerm tm' {-ty'-} sub ->
-            let
-              ty' = applySubType sub ty
-
-              path' = subTermPath sub path
-
-              ctxs' = subAllCtx sub ctxs
-            in
-              pure
-                { cursorLocation: TermCursor ctxs' ty' path' tm'
-                , query: emptyQuery
-                }
-          CompletionTermPath pathNew ch ->
-            let
-              (kctx' /\ ctx') /\ path' = chTermPath ch {ctxs, ty, termPath: path, term: tm}
-              ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
-              chCtxs = downPathToCtxChange ctxs' (List.reverse pathNew)
-              _ = trace ("size of chCtxs.kctx is: " <> show (List.length (Map.values (fst (snd chCtxs))))) \_ -> unit
-              tm' = chTermBoundary kctx' ctx' (tyInject ty) tm
-              newCtxs = snd (getAllEndpoints chCtxs)
-              _ = trace ("size of newCtxs.kctx is: " <> show (List.length (Map.values newCtxs.kctx))) \_ -> unit
-            in
-              pure
-                { cursorLocation: TermCursor newCtxs ty (pathNew <> path') tm'
-                , query: emptyQuery
-                }
-          CompletionTermPath2 _ newState ->
-              pure
-                { cursorLocation: newState unit
-                , query: emptyQuery
-                }
-          _ -> unsafeThrow "tried to submit a non-CompletionTerm* completion at a TermCursor"
-  TypeCursor ctxs path ty ->
-    getCompletion cursorMode.query
-      >>= case _ of
-          CompletionType ty' sub ->
---            let path' = subTypePath sub path in
---            let ctxs' = subAllCtx sub ctxs in
-            let (kctx' /\ ctx') /\ path' = chTypePath (Replace ty ty') {ctxs, ty, typePath: path} in
-            let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
-              pure
-                  { cursorLocation: TypeCursor ctxs' path' ty'
-                  , query: emptyQuery
-                  }
-          CompletionTypePath pathNew ch ->
-            let (kctx' /\ ctx') /\ path' = chTypePath ch {ctxs, ty: ty, typePath: path} in
-            let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
-                pure
-                  { cursorLocation: TypeCursor ctxs' (pathNew <> path') ty
-                  , query: emptyQuery
-                  }
-          _ -> unsafeThrow "tried to submit a non-CompletionType* completion at a TypeCursor"
-  CtrListCursor ctxs path ctrs ->
-    getCompletion cursorMode.query
-      >>= case _ of
-          CompletionCtrListPath pathNew ch ->
-            let
-              path' = chListCtrPath ch {ctxs, listCtrPath: path, ctrs}
-            in
-              pure
-                { cursorLocation: CtrListCursor ctxs (pathNew <> path') ctrs
-                , query: emptyQuery
-                }
-          _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
-  CtrParamListCursor ctxs path ctrParams ->
-    getCompletion cursorMode.query
-      >>= case _ of
-          CompletionCtrParamListPath pathNew ch ->
-            let
-              path' = chListCtrParamPath ch {ctxs, ctrParams, listCtrParamPath: path}
-            in
-              pure
-                { cursorLocation: CtrParamListCursor ctxs (pathNew <> path') ctrParams
-                , query: emptyQuery
-                }
-          _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
-  TypeBindListCursor ctxs path tyBinds ->
-    getCompletion cursorMode.query
-      >>= case _ of
-          CompletionTypeBindListPath pathNew ch ->
-            let
-              path' = chListTypeBindPath ch {ctxs, tyBinds, listTypeBindPath: path}
-            in
-              pure
-                { cursorLocation: TypeBindListCursor ctxs (pathNew <> path') tyBinds
-                , query: emptyQuery
-                }
-          _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
+submitCompletion :: CursorMode -> Completion -> Maybe CursorMode
+submitCompletion cursorMode compl = case cursorMode.cursorLocation of
+  InsideHoleCursor ctxs ty path -> case compl of
+    CompletionTerm tm' {-ty'-} sub ->
+      let
+        ty' = applySubType sub ty
+        path' = subTermPath sub path
+        ctxs' = subAllCtx sub ctxs
+      in
+        pure
+          { cursorLocation: TermCursor ctxs' ty' path' tm'
+          , query: emptyQuery
+          }
+    _ -> Nothing
+  TermCursor ctxs ty path tm -> case compl of
+    CompletionTerm tm' {-ty'-} sub ->
+      let
+        ty' = applySubType sub ty
+        path' = subTermPath sub path
+        ctxs' = subAllCtx sub ctxs
+      in
+        pure
+          { cursorLocation: TermCursor ctxs' ty' path' tm'
+          , query: emptyQuery
+          }
+    CompletionTermPath pathNew ch sub ->
+      let
+        -- TODO: is this all done in the proper order?
+        path' = subTermPath sub path
+        pathNew' = subTermPath sub pathNew
+        ty' = applySubType sub ty
+        ctxs' = subAllCtx sub ctxs
+        (kctx' /\ ctx') /\ path'' = chTermPath ch { ctxs: ctxs', ty: ty', termPath: path', term: tm }
+        tm' = chTermBoundary kctx' ctx' (tyInject ty') tm
+        ctxs'' = ctxs' { ctx = snd (getCtxEndpoints ctx') , kctx = snd (getKCtxTyEndpoints kctx') , actx = snd (getKCtxAliasEndpoints kctx') }
+        chCtxs = downPathToCtxChange ctxs'' (List.reverse pathNew')
+        newCtxs = snd (getAllEndpoints chCtxs)
+      in
+        pure
+          { cursorLocation: TermCursor newCtxs ty' (pathNew' <> path'') tm'
+          , query: emptyQuery
+          }
+    CompletionTermPath2 _ newState ->
+      pure
+        { cursorLocation: newState unit
+        , query: emptyQuery
+        }
+    _ -> unsafeThrow "tried to submit a non-CompletionTerm* completion at a TermCursor"
+  TypeCursor ctxs path ty -> case compl of
+    CompletionType ty' _sub ->
+      --            let path' = subTypePath sub path in
+      --            let ctxs' = subAllCtx sub ctxs in
+      let (kctx' /\ ctx') /\ path' = chTypePath (Replace ty ty') { ctxs, ty, typePath: path } in
+      let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
+      pure
+        { cursorLocation: TypeCursor ctxs' path' ty'
+        , query: emptyQuery
+        }
+    CompletionTypePath pathNew ch ->
+      let (kctx' /\ ctx') /\ path' = chTypePath ch { ctxs, ty: ty, typePath: path } in
+      let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
+      pure
+        { cursorLocation: TypeCursor ctxs' (pathNew <> path') ty
+        , query: emptyQuery
+        }
+    _ -> unsafeThrow "tried to submit a non-CompletionType* completion at a TypeCursor"
+  CtrListCursor ctxs path ctrs -> case compl of
+    CompletionCtrListPath pathNew ch ->
+      let path' = chListCtrPath ch { ctxs, listCtrPath: path, ctrs } in
+      pure
+        { cursorLocation: CtrListCursor ctxs (pathNew <> path') ctrs
+        , query: emptyQuery
+        }
+    _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
+  CtrParamListCursor ctxs path ctrParams -> case compl of
+    CompletionCtrParamListPath pathNew ch ->
+      let path' = chListCtrParamPath ch { ctxs, ctrParams, listCtrParamPath: path } in
+      pure
+        { cursorLocation: CtrParamListCursor ctxs (pathNew <> path') ctrParams
+        , query: emptyQuery
+        }
+    _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
+  TypeBindListCursor ctxs path tyBinds -> case compl of
+    CompletionTypeBindListPath pathNew ch ->
+      let path' = chListTypeBindPath ch { ctxs, tyBinds, listTypeBindPath: path } in
+      pure
+        { cursorLocation: TypeBindListCursor ctxs (pathNew <> path') tyBinds
+        , query: emptyQuery
+        }
+    _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
   _ -> Nothing -- TODO: submit queries at other kinds of cursors?
 
 checkpoint :: State -> State
@@ -253,96 +254,120 @@ copy st = do
 modeToClipboard :: Mode -> Maybe Clipboard
 modeToClipboard = case _ of
   CursorMode cursorMode -> case cursorMode.cursorLocation of
-    TermCursor ctxs ty tmPath tm -> pure $ TermClip ctxs ty tm
+    TermCursor ctxs ty _tmPath tm -> pure $ TermClip ctxs ty tm
     _ -> hole' "modeToClipboard"
   SelectMode selectMode -> case selectMode.select of
-    TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori -> Just $ TermPathClip ctxs1 ty1 tmPath2 ctxs2 ty2
+    TermSelect _tmPath1 ctxs1 ty1 _tm1 tmPath2 ctxs2 ty2 _tm2 _ori -> Just $ TermPathClip ctxs1 ty1 tmPath2 ctxs2 ty2
     _ -> hole' "modeToClipboard"
 
 -- TODO: properly use contexts and freshen variables
 paste :: State -> Maybe State
 paste st = do
   traceM "paste"
-  checkpoint <$> case st.clipboard of
-    EmptyClip -> Nothing
-    TermClip ctxs' ty' tm' -> case st.mode of
-      CursorMode cursorMode -> case cursorMode.cursorLocation of
-        TermCursor ctxs ty tmPath tm -> pure $ st { mode = makeCursorMode $ TermCursor ctxs ty (TypeBoundary1 defaultTypeBoundaryMD (Replace ty' ty) List.: tmPath) tm' }
-        _ -> Nothing
-      SelectMode selectMode -> Nothing
-    TermPathClip ctxs1' ty1' tmPath' ctxs2' ty2' -> case st.mode of
-      CursorMode cursorMode -> case cursorMode.cursorLocation of
-        TermCursor ctxs ty tmPath tm ->
-          pure
-            $ st
-                { mode =
-                  makeCursorMode
-                    $ TermCursor ctxs ty
-                        ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty ty2'))
-                            <> tmPath'
-                            <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty))
-                            <> tmPath
-                        )
-                        tm
-                }
-        _ -> Nothing
-      SelectMode selectMode -> case selectMode.select of
-        TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
-          pure
-            $ st
-                { mode =
-                  makeCursorMode
-                    $ TermCursor ctxs1 ty1
-                        ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty2 ty2'))
-                            <> tmPath2
-                            <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty1))
-                            <> tmPath1
-                        )
-                        tm2
-                }
-        _ -> Nothing
-    _ -> hole' "TODO: do other syntactic cases for paste"
+  checkpoint
+    <$> case st.clipboard of
+        EmptyClip -> Nothing
+        TermClip _ctxs' ty' tm' -> case st.mode of
+          CursorMode cursorMode -> case cursorMode.cursorLocation of
+            TermCursor ctxs ty tmPath _tm -> pure $ st { mode = makeCursorMode $ TermCursor ctxs ty (TypeBoundary1 defaultTypeBoundaryMD (Replace ty' ty) List.: tmPath) tm' }
+            _ -> Nothing
+          SelectMode _selectMode -> Nothing
+        TermPathClip _ctxs1' ty1' tmPath' _ctxs2' ty2' -> case st.mode of
+          CursorMode cursorMode -> case cursorMode.cursorLocation of
+            TermCursor ctxs ty tmPath tm ->
+              pure
+                $ st
+                    { mode =
+                      makeCursorMode
+                        $ TermCursor ctxs ty
+                            ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty ty2'))
+                                <> tmPath'
+                                <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty))
+                                <> tmPath
+                            )
+                            tm
+                    }
+            _ -> Nothing
+          SelectMode selectMode -> case selectMode.select of
+            TermSelect tmPath1 ctxs1 ty1 _tm1 tmPath2 _ctxs2 ty2 tm2 _ori ->
+              pure
+                $ st
+                    { mode =
+                      makeCursorMode
+                        $ TermCursor ctxs1 ty1
+                            ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty2 ty2'))
+                                <> tmPath2
+                                <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty1))
+                                <> tmPath1
+                            )
+                            tm2
+                    }
+            _ -> Nothing
+        _ -> hole' "TODO: do other syntactic cases for paste"
 
 delete :: State -> Maybe State
 delete st = do
   traceM "delete"
-  checkpoint <$> case st.mode of
-    CursorMode cursorMode -> case cursorMode.cursorLocation of
-      TermCursor ctxs ty path _tm -> do
-        let
-          cursorLocation' = TermCursor ctxs ty path (freshHole unit)
-        pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
-      TypeCursor ctxs path ty -> do
-        let
-          ty' = (freshTHole unit)
+  checkpoint
+    <$> case st.mode of
+        CursorMode cursorMode -> case cursorMode.cursorLocation of
+          TermCursor ctxs ty path _tm -> do
+            let
+              cursorLocation' = TermCursor ctxs ty path (freshHole unit)
+            pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
+          TypeCursor ctxs path ty -> do
+            let
+              ty' = (freshTHole unit)
 
-          (kctx' /\ ctx') /\ path' = (chTypePath (Replace ty ty') {ctxs, ty, typePath: path})
+              (kctx' /\ ctx') /\ path' = (chTypePath (Replace ty ty') { ctxs, ty, typePath: path })
 
-          ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
+              ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
 
-          cursorLocation' = TypeCursor ctxs' path' ty'
-        pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
-      _ -> hole' "delete: other syntactical kids of cursors"
-    SelectMode selectMode -> case selectMode.select of
-      TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
-        let change = termPathToChange ty2 tmPath2 in
-        let (kctx' /\ ctx') /\ tmPath1' = chTermPath (invert change) {term: tm1, ty: ty1, ctxs: ctxs1, termPath: tmPath1} in
-        let (ctx /\ kctx /\ mdctx /\ mdkctx) = downPathToCtxChange ctxs1 (List.reverse tmPath2) in
-        let tm2' = chTermBoundary kctx ctx (tyInject ty2) tm2 in
-        let ctxs' = ctxs1 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
-        pure $ st {mode = makeCursorMode $ TermCursor ctxs' ty2 tmPath1' tm2'}
-      TypeSelect topPath ctxs1 ty1 middlePath ctxs2 ty2 ori ->
-        let change = typePathToChange ty2 middlePath in
---chTypePath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> CAllContext /\ UpPath
-        let (kctx' /\ ctx') /\ topPath' = chTypePath (invert change) {ty: ty2, ctxs: ctxs2, typePath: topPath} in
-        let ctxs' = ctxs2 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
-        pure $ st {mode = makeCursorMode $ TypeCursor ctxs' topPath' ty2}
-      TypeBindListSelect topPath ctxs1 tyBinds1 middlePath ctxs2 tyBinds2 ori ->
-        let innerCh = chTypeBindList tyBinds2 in
-        let change = typeBindPathToChange innerCh middlePath in
-        let topPath' = chListTypeBindPath (invertListTypeBindChange change) {ctxs: ctxs2, tyBinds: tyBinds2, listTypeBindPath: topPath} in
-        pure $ st {mode = makeCursorMode $ TypeBindListCursor ctxs2 topPath' tyBinds2}
-      _ -> hole' "delete: other syntactical kinds of selects"
+              cursorLocation' = TypeCursor ctxs' path' ty'
+            pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
+          _ -> hole' "delete: other syntactical kids of cursors"
+        SelectMode selectMode -> case selectMode.select of
+          TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 _ctxs2 ty2 tm2 _ori ->
+            let
+              change = termPathToChange ty2 tmPath2
+            in
+              let
+                (kctx' /\ ctx') /\ tmPath1' = chTermPath (invert change) { term: tm1, ty: ty1, ctxs: ctxs1, termPath: tmPath1 }
+              in
+                let
+                  (ctx /\ kctx /\ _mdctx /\ _mdkctx) = downPathToCtxChange ctxs1 (List.reverse tmPath2)
+                in
+                  let
+                    tm2' = chTermBoundary kctx ctx (tyInject ty2) tm2
+                  in
+                    let
+                      ctxs' = ctxs1 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
+                    in
+                      pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty2 tmPath1' tm2' }
+          TypeSelect topPath _ctxs1 _ty1 middlePath ctxs2 ty2 _ori ->
+            let
+              change = typePathToChange ty2 middlePath
+            in
+              --chTypePath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> CAllContext /\ UpPath
+              let
+                (kctx' /\ ctx') /\ topPath' = chTypePath (invert change) { ty: ty2, ctxs: ctxs2, typePath: topPath }
+              in
+                let
+                  ctxs' = ctxs2 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
+                in
+                  pure $ st { mode = makeCursorMode $ TypeCursor ctxs' topPath' ty2 }
+          TypeBindListSelect topPath _ctxs1 _tyBinds1 middlePath ctxs2 tyBinds2 _ori ->
+            let
+              innerCh = chTypeBindList tyBinds2
+            in
+              let
+                change = typeBindPathToChange innerCh middlePath
+              in
+                let
+                  topPath' = chListTypeBindPath (invertListTypeBindChange change) { ctxs: ctxs2, tyBinds: tyBinds2, listTypeBindPath: topPath }
+                in
+                  pure $ st { mode = makeCursorMode $ TypeBindListCursor ctxs2 topPath' tyBinds2 }
+          _ -> hole' "delete: other syntactical kinds of selects"
 
 escape :: State -> Maybe State
 escape st = case st.mode of

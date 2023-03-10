@@ -10,7 +10,7 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.TypeChangeAlgebra (alterCCtxVarChange)
 import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)
-import TypeCraft.Purescript.Util (hole, hole')
+import TypeCraft.Purescript.Util (hole')
 import Data.Maybe (Maybe(..))
 import Data.Map(Map(..))
 import Data.List(List(..), (:))
@@ -76,14 +76,14 @@ termPathToChange ty (tooth : up) =
 downPathToCtxChange :: AllContext -> DownPath -> AllChangeContexts
 downPathToCtxChange {ctx, kctx, actx, mdctx, mdkctx} Nil = ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
 downPathToCtxChange {ctx, kctx, actx, mdctx, mdkctx} (tooth : down) =
-    let all1 = termToothCtxChange kctx ctx actx mdctx mdkctx tooth in
+    let all1 = termToothCtxChange kctx ctx actx mdkctx mdctx tooth in
     let all2 = downPathToCtxChange (snd (getAllEndpoints all1)) down in
     composeAllChCtxs all1 all2
 
 -- The input contexts come from the top, and the output context changes go from the top to bottom.
 termToothCtxChange :: TypeContext -> TermContext -> TypeAliasContext -> MDTypeContext -> MDTermContext
     -> Tooth -> AllChangeContexts
-termToothCtxChange kctx ctx actx mdctx mdkctx tooth =
+termToothCtxChange kctx ctx actx mdkctx mdctx tooth =
     case tooth of
         App1 md {-Term-} t2 argTy outTy ->
             ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx

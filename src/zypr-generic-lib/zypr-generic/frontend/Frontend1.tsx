@@ -275,7 +275,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm ty-let': return go(node, rndCtx, ["tm_ty-let"], [[Punc.let_], kid(), kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat(), indentationLevel) // TODO: render typechange
         case 'tm cx-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
-        case 'tm hol': return go(node, rndCtx, ["tm_hol"], [<div className="tm_hol-inner">?{Punc.colonHole}{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
+        case 'tm hol': return go(node, rndCtx, ["tm_hol"], [<div className="tm_hol-inner">{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
         case 'tm buf': return go(node, rndCtx, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'ty-bnd':
           assert(node.metadata !== undefined && node.metadata.case === 'ty-bnd')
@@ -307,7 +307,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'cursor-mode-wrapper': return go(node, rndCtx, ["cursor-mode-wrapper"], kid(), indentationLevel)
         case 'select-mode-wrapper': return go(node, rndCtx, ["select-mode-wrapper"], kid(), indentationLevel)
         // hole
-        case 'hole-inner': return go(node, rndCtx, ["hole-inner"], []/*kid()*/, indentationLevel)
+        case 'hole-inner': return go(node, rndCtx, ["hole-inner"], [<span>?</span>], indentationLevel)
       }
     }
 
@@ -316,8 +316,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
     // always capture these events:
-    if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter"].includes(event.key) && !(event.metaKey || event.ctrlKey))
-      event.preventDefault()
+    if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter"].includes(event.key) && !(event.metaKey || event.ctrlKey)) event.preventDefault()
+    if (event.key == "p" && (event.ctrlKey || event.metaKey)) event.preventDefault()
 
     const backendState = editor.props.backend.handleKeyboardEvent(event)(editor.state.backendState)
     if (backendState === undefined) {

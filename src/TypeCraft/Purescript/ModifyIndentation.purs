@@ -6,7 +6,6 @@ import TypeCraft.Purescript.State
 import Data.List as List
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Util (hole)
 
 toggleIndentation :: CursorLocation -> Maybe CursorLocation
 toggleIndentation = case _ of

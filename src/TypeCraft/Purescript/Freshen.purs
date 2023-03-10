@@ -1,14 +1,16 @@
 module TypeCraft.Purescript.Freshen where
 
+import Data.Tuple.Nested
 import Prelude
 import Prim hiding (Type)
 import TypeCraft.Purescript.Grammar
+
+import Data.List (List(..), foldr, (:))
 import Data.Map.Internal (Map, insert, empty, lookup, member)
-import Data.Tuple.Nested
 import Data.Maybe (Maybe(..))
-import Effect.Exception.Unsafe (unsafeThrow)
 import Data.Tuple (fst)
-import Data.List (foldr, (:), List(..))
+import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.MD (defaultTNeuMD)
 import TypeCraft.Purescript.Util (lookup', mapKeys, union')
 
 {-
@@ -95,7 +97,8 @@ subTypeArg sub (TypeArg md ty) = TypeArg md (subType sub ty)
 
 subType :: TyVarSub -> Type -> Type
 subType sub (Arrow md t1 t2) = Arrow md (subType sub t1) (subType sub t2)
-subType sub (THole md x w s) = THole md x w (union' s (map makeTHole sub)) -- TODO: is there an issue with the THoles made from sub not themselves having subs on them???
+-- subType sub (THole md x w s) = THole md x w (union' s (map makeTHole ?sub)) -- TODO: is there an issue with the THoles made from sub not themselves having subs on them???
+subType sub (THole md x w s) = THole md x w (union' s ((\typeVarId -> TNeu defaultTNeuMD (TypeVar typeVarId) Nil) <$> sub)) -- TODO: is there an issue with the THoles made from sub not themselves having subs on them???
 subType sub (TNeu md x tys) = TNeu md (subTypeVar sub x) (map (subTypeArg sub) tys)
 
 subTypeVarID :: TyVarSub -> TypeVarID -> TypeVarID

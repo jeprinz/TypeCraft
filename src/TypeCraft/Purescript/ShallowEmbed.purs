@@ -13,7 +13,7 @@ import Data.Map.Internal (Map, insert, empty, lookup)
 import Data.UUID (genUUID)
 import Effect.Exception.Unsafe (unsafeThrow)
 import Effect.Unsafe (unsafePerformEffect)
-import TypeCraft.Purescript.Util (hole, hole')
+import TypeCraft.Purescript.Util (hole')
 
 {-
 This file defines a shallow embedding to make it easier to write terms for testing purposes
@@ -26,14 +26,14 @@ type SType = {kctx :: TypeContext, ctx :: TermContext} -> Type
 
 slambda :: String -> (TermVarID -> STerm) -> STerm
 slambda name body {kctx, ctx, ty: Arrow _ ty1 ty2} =
-    let x = unsafePerformEffect genUUID in
+    let x = TermVarID $ unsafePerformEffect genUUID in
     let t = body x {kctx, ctx: insert x (PType ty1) ctx, ty: ty2} in
     Lambda defaultLambdaMD (TermBind {varName: name} x) ty1 t ty2
 slambda _ _ _ = unsafeThrow "shouldn't happen slambda"
 
 slet :: String -> Array TypeBind -> (TermVarID -> STerm) -> SType -> (TermVarID -> STerm) -> STerm
 slet name tyPrms def defTy body {kctx, ctx, ty} =
-    let x = unsafePerformEffect genUUID in
+    let x = TermVarID $ unsafePerformEffect genUUID in
     let defTy' = (defTy {kctx, ctx}) in
     let ctx' = insert x (List.foldr (\(TypeBind _ y) -> Forall y) (PType defTy') tyPrms) ctx in
     let def' = def x {kctx, ctx: ctx', ty: defTy'} in
@@ -42,7 +42,7 @@ slet name tyPrms def defTy body {kctx, ctx, ty} =
 
 slet' :: String -> (TermVarID -> STerm) -> SType -> (TermVarID -> STerm) -> STerm
 slet' name def defTy body {kctx, ctx, ty} =
-    let x = unsafePerformEffect genUUID in
+    let x = TermVarID $ unsafePerformEffect genUUID in
     let defTy' = (defTy {kctx, ctx}) in
     let ctx' = insert x (PType defTy') ctx in
     let def' = def x {kctx, ctx: ctx', ty: defTy'} in
@@ -121,6 +121,6 @@ exampleProg6 :: Type /\ Term
 exampleProg6 =
     sBindTHole \hole1 -> sBindTHole \hole2 -> sBindTHole \hole3 ->
         program (sarrow (sTHole hole1) (sarrow (sTHole hole2) (sTHole hole3)))
-            (slet "f" [ TypeBind {varName: "A"} (unsafePerformEffect genUUID) ] (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
+            (slet "f" [ TypeBind {varName: "A"} (TypeVarID $ unsafePerformEffect genUUID) ] (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
                 (sarrow (sTHole hole1) (sarrow (sTHole hole2) (sTHole hole3)))
                 (\f -> (sapp (sapp (svar f) (sTHole hole1) sHole) (sTHole hole2) sHole)))

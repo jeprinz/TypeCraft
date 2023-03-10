@@ -19,7 +19,7 @@ import Data.Ord (abs)
 import Data.Tuple.Nested (type (/\), (/\))
 import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Util (fromJust, hole, hole')
+import TypeCraft.Purescript.Util (fromJust, hole')
 import TypeCraft.Purescript.Util (head')
 
 getCursorChildren :: CursorLocation -> List CursorLocation

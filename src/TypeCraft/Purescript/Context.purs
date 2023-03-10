@@ -18,7 +18,7 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.MD
-import TypeCraft.Purescript.Util (hole', hole, delete')
+import TypeCraft.Purescript.Util (hole', delete')
 import TypeCraft.Purescript.Util (lookup')
 import Data.Either (Either)
 import TypeCraft.Purescript.Freshen (genFreshener, subCtrParam)

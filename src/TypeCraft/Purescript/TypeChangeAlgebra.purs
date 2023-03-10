@@ -22,7 +22,6 @@ import TypeCraft.Purescript.Substitution (Sub)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
 import TypeCraft.Purescript.Alpha
-import TypeCraft.Purescript.Util (hole)
 import Data.Maybe (maybe)
 import Debug (trace)
 import Data.Either (Either(..))

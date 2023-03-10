@@ -2,6 +2,7 @@ module TypeCraft.Purescript.Node where
 
 import Prelude
 import Prim hiding (Type)
+
 import Data.Array (find)
 import Data.Bounded.Generic (genericBottom, genericTop)
 import Data.Enum (class BoundedEnum, class Enum, enumFromTo)
@@ -11,7 +12,7 @@ import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.UUID as UUID
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), Type(..), TypeArg, TypeBind, TypeHoleID)
+import TypeCraft.Purescript.Grammar (Constructor, CtrParam, Term(..), Type(..), TypeArg, TypeBind, TypeHoleID(..))
 import TypeCraft.Purescript.Nullable (Nullable)
 import TypeCraft.Purescript.Nullable as Nullable
 import TypeCraft.Purescript.State (State)
@@ -272,7 +273,7 @@ foreign import setNodeMetadata :: NodeMetadata -> Node -> Node
 foreign import makeTHoleNodeMetadata_ :: String -> NodeMetadata
 
 makeTHoleNodeMetadata :: TypeHoleID -> NodeMetadata
-makeTHoleNodeMetadata = makeTHoleNodeMetadata_ <<< UUID.toString
+makeTHoleNodeMetadata = makeTHoleNodeMetadata_ <<< UUID.toString <<< \(TypeHoleID uuid) -> uuid
 
 foreign import makeTNeuNodeMetadata :: String -> NodeMetadata
 

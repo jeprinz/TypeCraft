@@ -1,25 +1,26 @@
 module TypeCraft.Purescript.Unification where
 
 import Prelude
-import Data.Tuple.Nested (type (/\), (/\))
 import Prim hiding (Type)
+import TypeCraft.Purescript.Alpha
+import TypeCraft.Purescript.Context
+import TypeCraft.Purescript.Grammar
+import TypeCraft.Purescript.MD
+
 import Control.Monad.Except as Except
 import Control.Monad.State as State
-import Data.Map as Map
-import Data.Set as Set
-import TypeCraft.Purescript.Grammar
-import Data.Maybe (Maybe(..), isJust, maybe)
-import Data.List as List
-import Data.List ((:))
 import Data.Either (Either(..))
 import Data.Foldable (and, traverse_)
-import TypeCraft.Purescript.MD
-import TypeCraft.Purescript.Util (hole)
-import TypeCraft.Purescript.Util (hole')
+import Data.List ((:))
+import Data.List as List
+import Data.Map as Map
+import Data.Maybe (Maybe(..), isJust, maybe)
+import Data.Set as Set
+import Data.Tuple.Nested (type (/\), (/\))
+import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.TypeChangeAlgebra (normalizeType)
-import TypeCraft.Purescript.Alpha
+import TypeCraft.Purescript.Util (hole')
 
 -- * unification
 type Unify a
@@ -42,7 +43,8 @@ unify :: Type -> Type -> Unify Type
 unify ty1 ty2 = case ty1 /\ ty2 of
   THole _ hid1 _ _ /\ THole _ hid2 _ _ | hid1 == hid2 -> pure ty1 -- need this case, otherwise unifying a hole with itself would fail occurs check!
   THole _ hid w _ /\ _ -> do
-    checkOccursAny w ty2 -- Need to check that nothing in w appears in ty2
+    Debug.traceM "[!] don't forget to do this"
+    -- TODO: checkOccursTypeVarAny w ty2 -- Need to check that nothing in w appears in ty2
     checkOccurs hid ty2
     State.modify_ (\sub -> sub { subTHoles = Map.insert hid ty2 sub.subTHoles })
     pure ty2
@@ -73,6 +75,9 @@ checkOccursAny hids ty = go ty
       checkOccursAny hids ty2
     THole _ hid _ _ -> when (Set.member hid hids) <<< Except.throwError $ "occurence ANY check fail; the type hole id '" <> show hid <> "' appears in the type '" <> show ty <> "'"
     TNeu _ _ args -> traverse_ (go <<< \(TypeArg _ ty) -> ty) args
+
+checkOccursTypeVarAny :: Set.Set TypeVarID -> Type -> Unify Unit
+checkOccursTypeVarAny = unsafeThrow "TODO: impl checkOccursTypeVarAny"
 
 -- create neutral form from variable of first type that can fill the hole of the
 -- second type

@@ -2,6 +2,7 @@ module TypeCraft.Purescript.StateToNode where
 
 import Prelude
 import Prim hiding (Type)
+
 import Data.Array (foldr)
 import Data.Array as Array
 import Data.Int (toNumber)
@@ -11,16 +12,16 @@ import Data.String as String
 import Data.Tuple (snd)
 import Data.Tuple.Nested ((/\))
 import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.Alpha (applySubType)
 import TypeCraft.Purescript.Dentist (downPathToCtxChange)
 import TypeCraft.Purescript.Grammar (freshHole)
 import TypeCraft.Purescript.ModifyState (modifyQuery, submitQuery)
 import TypeCraft.Purescript.Node (Node, NodeStyle(..), NodeTag(..), addNodeStyle, makeWrapperNode, setNodeCompletions, setNodeGetCursor, setNodeQueryString)
 import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode, insideHolePathToNode)
-import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), State, SelectMode, getCompletion)
+import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), SelectMode, State, getCompletion)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode, insideHoleToNode)
 import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 import TypeCraft.Purescript.Util (fromJust', hole')
-import TypeCraft.Purescript.Alpha (applySubType)
 
 {-
 TODO: Note from Jacob: Counterintuitvely, all cursor modes should use BISelect
@@ -166,8 +167,9 @@ cursorModeToNode cursorMode =
             submitQuery st'
     in
       case cmpl of
+        -- a CompletionTerm can be filled in only at InsideHoleCursor
         CompletionTerm term {-ty-} sub -> case cursorMode.cursorLocation of
-          TermCursor ctxs ty' _termPath _ ->
+          InsideHoleCursor ctxs ty' _path -> 
             let
               ty = applySubType sub ty'
             in
@@ -176,8 +178,18 @@ cursorModeToNode cursorMode =
                 $ termToNode false
                     AINothing -- (AISelect termPath ctxs (term /\ ty) Nil)
                     { ctxs, term, ty }
+          -- TODO: old, since now you can only do this at InsideHoleCursor
+          -- TermCursor ctxs ty' _termPath _ ->
+          --   let
+          --     ty = applySubType sub ty'
+          --   in
+          --     setNodeGetCursor getCursor
+          --       $ addNodeStyle (NodeStyle "query-replace-new")
+          --       $ termToNode false
+          --           AINothing -- (AISelect termPath ctxs (term /\ ty) Nil)
+          --           { ctxs, term, ty }
           _ -> hole' "completionToNode CompletionTerm non-TermCursor"
-        CompletionTermPath termPath _ch -> case cursorMode.cursorLocation of
+        CompletionTermPath termPath _ch _sub -> case cursorMode.cursorLocation of
           TermCursor ctxs ty _termPath' term ->
             let
               chCtxs = downPathToCtxChange ctxs (reverse termPath)
