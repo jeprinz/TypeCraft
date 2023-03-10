@@ -10,11 +10,14 @@
   border-radius: 0.2rem;
 }
 
+/* tm_hol */
+
 .tm_hol-inner {
   display: inline-block;
   white-space: pre;
   border-radius: 0.2rem;
-  padding: 0 0.4rem;
+  /* padding: 0.6rem 0.6rem; */
+  padding: 0 0.6rem;
   display: inline-block;
   background-color: rgba(255, 173, 145, 0.5);
   box-shadow: 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
@@ -23,6 +26,14 @@
 .node.cursorable>.tm_hol-inner:hover {
   background-color: rgba(255, 204, 187, 0.5);
 }
+
+
+.node.hole-inner {
+  /* padding: 0.2rem; */
+  padding: 0 0.2rem;
+}
+
+/* ty_hol */
 
 .ty_hol-inner {
   display: inline-block;
@@ -39,6 +50,7 @@
   background-color: rgba(255, 174, 193, 0.5);
 }
 
+/* tm_ty-boundary */
 
 .node.tm_ty-boundary-change {}
 
