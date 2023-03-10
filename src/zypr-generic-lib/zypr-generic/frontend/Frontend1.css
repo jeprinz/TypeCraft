@@ -17,7 +17,7 @@
   white-space: pre;
   border-radius: 0.2rem;
   /* padding: 0.6rem 0.6rem; */
-  padding: 0 0.6rem;
+  padding: 0 0.2rem;
   display: inline-block;
   background-color: rgba(255, 173, 145, 0.5);
   box-shadow: 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
@@ -30,7 +30,20 @@
 
 .node.hole-inner {
   /* padding: 0.2rem; */
-  padding: 0 0.2rem;
+  /* padding: 0 0.2rem; */
+  margin: 0 0;
+
+  transition-property: margin;
+  transition-duration: 0.2s;
+  transition-timing-function: linear;
+}
+
+.node.hole-inner.cursor {
+  margin: 0 0.4rem;
+
+  transition-property: margin;
+  transition-duration: 0.2s;
+  transition-timing-function: linear;
 }
 
 /* ty_hol */
@@ -475,3 +488,16 @@
   box-shadow: none;
   background-color: white;
 }
+
+/* fancy .node.cursor */
+
+/* .node {
+  transition-property: margin-left, margin-right;
+}
+
+.node.cursor {
+  transition-duration: 0.2s;
+  transition-timing-function: linear;
+  margin-left: 1rem;
+  margin-right: 1rem;
+} */
