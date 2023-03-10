@@ -289,8 +289,7 @@ instance eqCTypeVar :: Eq CTypeVar where
 
 derive instance genericType :: Generic Type _
 
-instance showType :: Show Type where
-  show x = genericShow x
+instance showType :: Show Type where show x = genericShow x
 
 derive instance genericPolyType :: Generic PolyType _
 
@@ -438,3 +437,5 @@ derive instance genericListTypeBindChange :: Generic ListTypeBindChange _
 
 instance showListTypeBindChange :: Show ListTypeBindChange where
     show x = genericShow x
+
+

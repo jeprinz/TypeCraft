@@ -1,6 +1,7 @@
 module TypeCraft.Purescript.ModifyState where
 
 import Prelude
+
 import Data.Array ((:), uncons)
 import Data.Array as Array
 import Data.List as List
@@ -8,6 +9,7 @@ import Data.Maybe (Maybe(..))
 import Data.Tuple (snd)
 import Data.Tuple.Nested ((/\))
 import Debug (traceM)
+import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Alpha (applySubType, subAllCtx, subTermPath)
 import TypeCraft.Purescript.ChangePath (chListCtrParamPath, chListCtrPath, chListTypeBindPath, chTermPath, chTypePath)
@@ -25,6 +27,12 @@ import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints, getCtxEndpoints,
 import TypeCraft.Purescript.Util (hole')
 
 handleKey :: Key -> State -> Maybe State
+handleKey key st
+  | key.key == "p" && (key.metaKey || key.ctrlKey) = do 
+    Debug.traceM "==[ current state.mode ]====================================="
+    Debug.traceM $ show st
+    Debug.traceM "============================================================="
+    Just st
 handleKey key st = case st.mode of
   CursorMode cursorMode -> case cursorMode.cursorLocation of
     TypeBindCursor ctxs path (TypeBind md tyVarId)

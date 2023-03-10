@@ -1,9 +1,16 @@
 module Test.Example.State1 where
 
-import Prelude
-import TypeCraft.Purescript.State
+import Prim hiding (Type)
+import Data.UUID as UUID
+import Data.Map as Map
+import Data.Set as Set
+import Data.Tuple.Nested (type (/\), (/\))
+import TypeCraft.Purescript.Grammar (Term(..), Type(..))
+import TypeCraft.Purescript.Util (fromJust)
 
-import Effect.Exception.Unsafe (unsafeThrow)
+example1 :: Term /\ Type
+example1 =
+  (Hole {})
+    /\ (THole {} (fromJust (UUID.parseUUID "9c8e3cf3-7186-4bee-aecd-ca354343f0ea")) (Set.fromFoldable []) (Map.fromFoldable []))
 
-example1 :: State
-example1 = unsafeThrow "TODO"
+-- example2 :: Term /\ Type

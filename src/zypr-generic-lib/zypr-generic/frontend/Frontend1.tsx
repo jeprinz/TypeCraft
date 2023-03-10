@@ -316,8 +316,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
     // always capture these events:
-    if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter"].includes(event.key) && !(event.metaKey || event.ctrlKey))
-      event.preventDefault()
+    if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter"].includes(event.key) && !(event.metaKey || event.ctrlKey)) event.preventDefault()
+    if (event.key == "p" && (event.ctrlKey || event.metaKey)) event.preventDefault()
 
     const backendState = editor.props.backend.handleKeyboardEvent(event)(editor.state.backendState)
     if (backendState === undefined) {

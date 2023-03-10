@@ -4,6 +4,8 @@ import Data.Tuple.Nested
 import Data.Variant
 import Prelude
 import Prim hiding (Type)
+import TypeCraft.Purescript.Grammar
+
 import Data.Array as Array
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..))
@@ -11,13 +13,12 @@ import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import Data.String as String
 import Type.Proxy (Proxy(..))
+import TypeCraft.Purescript.Alpha (Sub)
 import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
-import TypeCraft.Purescript.Grammar
+import TypeCraft.Purescript.MD (HoleMD)
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
 import TypeCraft.Purescript.ShallowEmbed (exampleProg1, exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
-import TypeCraft.Purescript.Alpha (Sub)
 import TypeCraft.Purescript.Util (hole, hole')
-import TypeCraft.Purescript.MD (HoleMD)
 
 {-
 This file will contain possible states for the editor
@@ -126,6 +127,9 @@ data Clipboard
   | CtrParamList AllContext UpPath -- technically doesn't need term contexts but whatever
 --  | TypeArgList AllContext UpPath -- technically doesn't need term contexts but whatever
   | VarNameList AllContext UpPath -- for TypeBind Lists
+
+derive instance genericClipboard :: Generic Clipboard _
+instance showClipboard :: Show Clipboard where show x = genericShow x
 
 data CursorLocation
   = TermCursor AllContext Type UpPath Term

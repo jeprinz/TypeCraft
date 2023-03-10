@@ -1,5 +1,6 @@
 module Test.TestCompletion where
 
+import Data.Tuple.Nested (type (/\), (/\))
 import Prelude
 import Prim hiding (Type)
 import Data.Foldable (traverse_)
@@ -12,13 +13,13 @@ import Effect.Class.Console as Console
 import TypeCraft.Purescript.Completions (calculateCompletionGroups)
 import TypeCraft.Purescript.Context (emptyAllContext)
 import TypeCraft.Purescript.CursorMovement (getCursorChildren)
-import TypeCraft.Purescript.Grammar (Kind(..), Term, Type)
+import TypeCraft.Purescript.Grammar (Term, Type)
 import TypeCraft.Purescript.ModifyState (submitCompletion)
 import TypeCraft.Purescript.State (Clipboard(..), Completion, CursorLocation(..), CursorMode, Mode(..), State, emptyQuery)
 
 -- Tests all possible completions at every cursor location in the program.
-testAllCompletions :: Term -> Type -> Effect Unit
-testAllCompletions tm ty = do
+testAllCompletions :: Term /\ Type -> Effect Unit
+testAllCompletions (tm /\ ty) = do
   let
     toState :: CursorLocation -> State
     toState loc =
