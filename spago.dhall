@@ -1,4 +1,4 @@
-{ name = "zypr"
+{ name = "pantograph"
 , dependencies =
   [ "arrays"
   , "console"
