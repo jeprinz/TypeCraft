@@ -145,9 +145,10 @@ chTerm kctx ctx c t =
                 let chBackUp /\ body' = chTerm kctx ctx tyChInside body in
                 tyChInside /\ TypeBoundary md (composeChange (invert chBackUp) ch') body'
             c /\ ContextBoundary md x vCh body ->
-                case lookup x kctx of
-                    Just xChInCtx -> hole' "chTerm"
-                    Nothing -> hole' "chTerm"
+                -- case lookup x ?kctx of
+                --     Just xChInCtx -> hole' "chTerm"
+                --     Nothing -> hole' "chTerm"
+                hole' "chTerm" -- TODO: jacob
             cin /\ t -> hole' "chTerm" -- tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
         )
     in

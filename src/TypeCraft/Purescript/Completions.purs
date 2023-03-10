@@ -50,7 +50,7 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
                       }
                     ]
         )
-        (Map.toUnfoldable ctxs.mdctx :: Array (UUID /\ String)) 
+        (Map.toUnfoldable ctxs.mdctx :: Array (_ /\ _)) 
   TermCursor _ctxs ty _path _tm ->
     Writer.execWriter do
       -- en-lambda
@@ -172,7 +172,7 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
                   ]
               _ -> pure unit
         )
-        (Map.toUnfoldable ctxs.mdkctx :: Array (UUID /\ String))
+        (Map.toUnfoldable ctxs.mdkctx :: Array (_ /\ _))
       Writer.tell <<< List.fromFoldable $
         [ { filterLabel: (_ `kindaStartsWithAny` [ "->" ])
           , completions:
