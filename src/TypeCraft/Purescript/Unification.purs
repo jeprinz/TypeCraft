@@ -39,6 +39,7 @@ normThenUnify actx ty1 ty2 = unify (normalizeType actx ty1) (normalizeType actx 
 
 -- NOTE: output substitution substitutes holes in ty2 for things in ty1
 -- either (const Nothing) pure $ Except.runExcept (State.runStateT m emptySub)
+-- when it unifies two holes, it subs the one on the left for the one on the right (Note that this specification matters, and if unify is ever rewritten it needs to respect this spec).
 unify :: Type -> Type -> Unify Type
 unify ty1 ty2 = case ty1 /\ ty2 of
   THole _ hid1 _ _ /\ THole _ hid2 _ _ | hid1 == hid2 -> pure ty1 -- need this case, otherwise unifying a hole with itself would fail occurs check!
