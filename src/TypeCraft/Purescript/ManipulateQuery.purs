@@ -55,7 +55,7 @@ kindaStartsWith :: String -> String -> Boolean
 kindaStartsWith str pat =
   and
     [ len_str > 0 -- string can't be empty
-    , len_pat > 0 -- patfix can't be empty
+    , len_pat > 0 -- prefix can't be empty
     , len_pat >= len_str
     , isJust $ String.stripPrefix (String.Pattern str) pat
     ]
