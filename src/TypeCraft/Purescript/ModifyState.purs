@@ -122,7 +122,10 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
         pathNew' = subTermPath sub pathNew
         ty' = applySubType sub ty
         ctxs' = subAllCtx sub ctxs
+        _ = trace ("Beforehand, ctxs'.kctx has length" <> show (List.length (Map.values ctxs'.kctx))) \_ -> unit
+        _ = trace ("Beforehand, the path to be operated upon is: " <> show path') \_ -> unit
         (kctx' /\ ctx') /\ path'' = chTermPath ch { ctxs: ctxs', ty: ty', termPath: path', term: tm }
+        _ = trace ("Afterwards, kctx' has length " <> show (List.length (Map.values kctx'))) \_ -> unit
         tm' = chTermBoundary kctx' ctx' (tyInject ty') tm
         ctxs'' = ctxs' { ctx = snd (getCtxEndpoints ctx') , kctx = snd (getKCtxTyEndpoints kctx') , actx = snd (getKCtxAliasEndpoints kctx') }
         chCtxs = downPathToCtxChange ctxs'' (List.reverse pathNew')

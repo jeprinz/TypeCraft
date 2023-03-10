@@ -107,7 +107,8 @@ termToothCtxChange kctx ctx actx mdkctx mdctx tooth =
                let ctrTypeChanges = map (\pt -> VarInsert pt) ctrTypes in
                union startingCtx ctrTypeChanges
                 -- TODO: Also introduce the recursor into the context here
-                -- TODO: This should use some sort of centralized addDataToChCtx, which can also be used in chTerm and chTermPath
+                -- TODO: If I forget this, it will create bugs where the recursor doesn't go in scope after you make a data!!!!
+                -- TODO: Is there a way to express this so its not as repetitive with the functions in Context.purs which add data to context? They are different because this uses Insert, while that yields an identity change!
             /\
             insert x (TVarInsert (tyBindsWrapKind tyBinds Type) Nothing) (kCtxInject kctx actx)
             /\ let ctrNames = constructorNames ctrs in

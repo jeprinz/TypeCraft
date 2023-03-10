@@ -23,7 +23,6 @@ import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.Util (delete')
 import TypeCraft.Purescript.Alpha (applySubChange)
 
-
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
 -- TODO: Im not sure how I should understand this. I think that this is used for places where we assume that the output change is id, but I'm not sure what the criteria for that is.
 chTermBoundary :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Term

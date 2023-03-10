@@ -7,7 +7,7 @@ import TypeCraft.Purescript.Grammar
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Map as Map
-import Data.Map.Internal (Map, empty, filterKeys, insert, lookup)
+import Data.Map.Internal (Map, empty, filterKeys, insert, lookup, filter)
 import Data.Map.Internal (empty, lookup, insert, union, mapMaybeWithKey)
 import Data.Maybe (Maybe(..))
 import Data.Set (Set)
@@ -62,10 +62,31 @@ removeLetFromKCCtx kctx (TypeBind _ x : tyBinds) = removeLetFromKCCtx (delete' x
 removeLetFromCCtx :: CAllContext -> TermBind -> CAllContext
 removeLetFromCCtx (kctx /\ ctx) (TermBind _ x) = kctx /\ delete' x ctx
 
+addDataToKCCtx :: KindChangeCtx -> TypeBind -> List TypeBind -> KindChangeCtx
+addDataToKCCtx kctx (TypeBind _ x) tyBinds =
+    insert x (TVarKindChange (kindInject (tyBindsWrapKind tyBinds Type)) Nothing) kctx
+
+removeDataFromKCCtx :: KindChangeCtx -> TypeBind -> KindChangeCtx
+removeDataFromKCCtx kctx (TypeBind _ x) = delete' x kctx
+
+
+addDataToCCtx :: ChangeCtx -> TypeBind -> List TypeBind -> List Constructor -> ChangeCtx
+addDataToCCtx ctx tyBind tyBinds ctrs =
+    let ctrTypes = constructorTypes tyBind tyBinds ctrs in
+    let ctrTypeChanges = map (\pt -> VarTypeChange (pTyInject pt)) ctrTypes in
+    union ctx ctrTypeChanges
+    -- TODO: Also introduce the recursor into the context here
+
+removeDataFromCCtx :: ChangeCtx -> List Constructor -> ChangeCtx
+removeDataFromCCtx ctx ctrs =
+    let ids = constructorIds ctrs in
+    filterKeys (\x -> Set.member x ids) ctx
+
+
 kCtxInject :: TypeContext -> TypeAliasContext -> KindChangeCtx
 kCtxInject kctx actx =
-    trace ("Going in: " <> show (List.length (Map.values kctx))) \_ ->
-    trace ("Also going in: " <> show (List.length (Map.values actx))) \_ ->
+--    trace ("Going in: " <> show (List.length (Map.values kctx))) \_ ->
+--    trace ("Also going in: " <> show (List.length (Map.values actx))) \_ ->
     let result = (mapMaybeWithKey (\x kind
         -> Just $ TVarKindChange (kindInject kind)
             (case lookup x actx of
@@ -76,7 +97,7 @@ kCtxInject kctx actx =
                         bindsToTAC (tyBind : tyBinds) = TAForall tyBind (bindsToTAC tyBinds)
                     in Just (bindsToTAC tyBinds))
     ) kctx) in
-    trace ("Going out: " <> show (List.length (Map.values result))) \_ ->
+--    trace ("Going out: " <> show (List.length (Map.values result))) \_ ->
     result
 
 ctxInject :: TermContext -> ChangeCtx

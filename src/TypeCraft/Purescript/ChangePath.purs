@@ -9,6 +9,8 @@ import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.TypeChangeAlgebra
 
 import Data.List (List(..), (:))
+import Data.List as List
+import Data.Map as Map
 import Data.Maybe (Maybe (..))
 import Data.Map.Internal (empty, lookup, insert, delete)
 import Data.Tuple (fst)
@@ -42,10 +44,10 @@ getRightCtxInj kctx ctx =
 chTermPath inputs D1, C, path1 and outputs path2 and D2 such that
 D1 o D2 |- path1 --[C] --> path2
 -}
+-- TODO: why does chTermPath even output a KindChangeContext at all!?!??
 chTermPath :: Change -> TermPathRecValue -> CAllContext /\ UpPath
 chTermPath _ {ctxs, termPath: Nil} = (kCtxInject ctxs.kctx ctxs.actx /\ ctxInject ctxs.ctx) /\ Nil
 chTermPath ch termPath =
-    trace ("in chTermPath, ch is: " <> show ch) \_ ->
     let kctx = termPath.ctxs.kctx in
     let actx = termPath.ctxs.actx in
     let ctx = termPath.ctxs.ctx in
@@ -71,10 +73,10 @@ chTermPath ch termPath =
             (kctx''' /\ ctx''') /\ Let5 md tBind.tBind tyBinds def' defTy.ty (snd (getEndpoints ch)) : up'
         , data4: \up md tyBind tyBinds ctrs bodyTy ->
             if not (fst (getEndpoints ch) == bodyTy) then unsafeThrow "shouldn't happen chPath 5" else
-            -- TODO: update ctrs using kctx and chCtrList
-            -- TODO: THIS is wrong, should remove and then add constructors to and from context here!
             let (kctx' /\ ctx') /\ up' = chTermPath ch up in
-            (kctx' /\ ctx') /\ Data4 md tyBind.tyBind tyBinds.tyBinds ctrs.ctrs (snd (getEndpoints ch)) : up'
+            let kctx'' = addDataToKCCtx kctx' tyBind.tyBind tyBinds.tyBinds in
+            let ctx'' = addDataToCCtx ctx' tyBind.tyBind tyBinds.tyBinds ctrs.ctrs in
+            (kctx'' /\ ctx'') /\ Data4 md tyBind.tyBind tyBinds.tyBinds ctrs.ctrs (snd (getEndpoints ch)) : up'
         , app1 : \up md {-Term-} t2 argTy outTy ->
             case ch of
                 (CArrow c1 c2) ->
