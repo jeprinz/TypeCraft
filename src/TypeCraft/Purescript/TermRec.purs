@@ -15,7 +15,6 @@ import TypeCraft.Purescript.MD
 import Data.List (List(..), (:))
 import Data.Tuple (fst)
 import TypeCraft.Purescript.Context
-import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.TypeChangeAlgebra (pGetEndpoints)
 import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)

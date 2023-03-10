@@ -14,7 +14,6 @@ import Data.List ((:))
 import Data.Either (Either(..))
 import Data.Foldable (and, traverse_)
 import TypeCraft.Purescript.MD
-import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (hole')
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context

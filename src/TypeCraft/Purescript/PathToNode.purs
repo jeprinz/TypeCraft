@@ -11,7 +11,6 @@ import TypeCraft.Purescript.Grammar (Constructor, CtrParam, DownPath, Term, Toot
 import TypeCraft.Purescript.Node
 import TypeCraft.Purescript.State
 import TypeCraft.Purescript.Util (hole', justWhen)
-import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (lookup')
 import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)

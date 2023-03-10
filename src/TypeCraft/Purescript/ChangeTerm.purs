@@ -17,7 +17,6 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
 import Debug (trace)
-import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Freshen
 import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Kinds (bindsToKind)
@@ -248,7 +247,7 @@ chTypeBindList Nil = ListTypeBindChangeNil
 chTypeBindList (tyBind : tyBinds) = ListTypeBindChangePlus tyBind (chTypeBindList tyBinds)
 
 chTypeParamList :: KindChangeCtx -> List TypeArg -> List Change /\ List TypeArg
-chTypeParamList = hole' "chTypeParamList"
+chTypeParamList kctx tyArgs = (tyArgs <#> \(TypeArg _ ty) -> tyInject ty) /\ tyArgs -- TODO: impl 
 
 ---- inputs PolyChange by which var type changed, outputs new args and TypeChange by which the whole neutral form changes
 chTypeArgsNeu :: PolyChange -> List TypeArg -> Change /\ List TypeArg

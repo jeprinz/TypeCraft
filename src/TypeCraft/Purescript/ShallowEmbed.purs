@@ -13,7 +13,7 @@ import Data.Map.Internal (Map, insert, empty, lookup)
 import Data.UUID (genUUID)
 import Effect.Exception.Unsafe (unsafeThrow)
 import Effect.Unsafe (unsafePerformEffect)
-import TypeCraft.Purescript.Util (hole, hole')
+import TypeCraft.Purescript.Util (hole')
 
 {-
 This file defines a shallow embedding to make it easier to write terms for testing purposes

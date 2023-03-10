@@ -18,7 +18,7 @@ import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
 import TypeCraft.Purescript.MD (HoleMD)
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
 import TypeCraft.Purescript.ShallowEmbed (exampleProg1, exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
-import TypeCraft.Purescript.Util (hole, hole')
+import TypeCraft.Purescript.Util (hole')
 
 {-
 This file will contain possible states for the editor

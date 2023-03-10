@@ -7,8 +7,8 @@ import Data.Maybe (Maybe(..))
 import Data.List(List, head)
 import Data.Tuple.Nested
 
-hole :: forall a. a
-hole = unsafeThrow "hole"
+-- hole :: forall a. a
+-- hole = unsafeThrow "hole"
 
 hole' :: forall a. String -> a
 hole' label = unsafeThrow $ "hole: " <> label

@@ -1,15 +1,16 @@
 module Test.TestCompletion where
 
-import Data.Tuple.Nested (type (/\), (/\))
 import Prelude
 import Prim hiding (Type)
 import Data.Foldable (traverse_)
 import Data.List (List(..))
 import Data.List as List
 import Data.Maybe (Maybe(..))
+import Data.Tuple.Nested (type (/\), (/\))
 import Debug as Debug
 import Effect (Effect)
 import Effect.Class.Console as Console
+import Test.Example.State1 (example1, example2)
 import TypeCraft.Purescript.Completions (calculateCompletionGroups)
 import TypeCraft.Purescript.Context (emptyAllContext)
 import TypeCraft.Purescript.CursorMovement (getCursorChildren)
@@ -17,6 +18,11 @@ import TypeCraft.Purescript.Grammar (Term, Type)
 import TypeCraft.Purescript.ModifyState (submitCompletion)
 import TypeCraft.Purescript.State (Clipboard(..), Completion, CursorLocation(..), CursorMode, Mode(..), State, emptyQuery)
 
+main :: Effect Unit
+main = do
+  testAllCompletions example1
+
+-- testAllCompletions example2
 -- Tests all possible completions at every cursor location in the program.
 testAllCompletions :: Term /\ Type -> Effect Unit
 testAllCompletions (tm /\ ty) = do
@@ -62,9 +68,9 @@ testCompletion st compl = do
       Nothing -> do
         Console.log "[✗] failure: `submitCompletion cursorMode compl ==> Nothing`"
         Console.log "cursorMode:"
-        Debug.traceM cursorMode
+        Console.log (show cursorMode)
         Console.log "compl:"
-        Debug.traceM compl
+        Console.log (show compl)
       Just _ -> do
         Console.log "[✓] success"
     _ -> do
