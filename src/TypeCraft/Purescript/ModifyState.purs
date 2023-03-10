@@ -12,7 +12,7 @@ import Debug (trace, traceM)
 import Data.Tuple.Nested ((/\))
 import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Alpha (applySubType, subAllCtx, subTermPath)
+import TypeCraft.Purescript.Alpha (applySubType, subAllCtx, subTermPath, subInsideHolePath)
 import TypeCraft.Purescript.ChangePath (chListCtrParamPath, chListCtrPath, chListTypeBindPath, chTermPath, chTypePath)
 import TypeCraft.Purescript.ChangeTerm (chTermBoundary, chTypeBindList)
 import TypeCraft.Purescript.CursorMovement (cursorLocationToSelect, getCursorChildren, moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
@@ -96,11 +96,15 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
     CompletionTerm tm' {-ty'-} sub ->
       let
         ty' = applySubType sub ty
-        path' = subTermPath sub path
+        -- TODO: needs to be subInsideHolePath
+        path' = subInsideHolePath sub path
         ctxs' = subAllCtx sub ctxs
+        termPath = case path' of
+            (Hole1 _) List.: termPath -> termPath
+            _ -> unsafeThrow "Shouldn't happen"
       in
         pure
-          { cursorLocation: TermCursor ctxs' ty' path' tm'
+          { cursorLocation: TermCursor ctxs' ty' termPath tm'
           , query: emptyQuery
           }
     _ -> Nothing

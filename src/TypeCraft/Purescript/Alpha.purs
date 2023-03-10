@@ -149,6 +149,10 @@ subTermTooth sub tooth =
         Data4 md tyBind tyBinds ctrs {-Term-} bodyTy -> Data4 md tyBind tyBinds (map (subConstructor sub) ctrs) (st bodyTy)
         _ -> unsafeThrow "Either wasn't a term tooth, or I forgot a case in subTermTooth"
 
+subInsideHolePath :: Sub -> UpPath -> UpPath
+subInsideHolePath sub ((Hole1 md) List.: rest) = Hole1 md List.: (subTermPath sub rest)
+subInsideHolePath _ _ = unsafeThrow "in subInsideHolePath, wasn't a valid InsideHolePath"
+
 --Need subTypeTooth as well...
 --
 --
