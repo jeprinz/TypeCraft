@@ -16,6 +16,7 @@ import Data.Set (Set(..))
 import Data.Set as Set
 import Data.Show.Generic (genericShow)
 import Data.UUID (UUID, genUUID)
+import Data.UUID as UUID
 import Effect.Ref (Ref, new, read, write)
 import Effect.Unsafe (unsafePerformEffect)
 import TypeCraft.Purescript.MD (AppMD, ArrowMD, BufferMD, ContextBoundaryMD, CtrMD, CtrParamMD, GADTMD, HoleMD, LambdaMD, LetMD, THoleMD, TLetMD, TNeuMD, TermBindMD, TypeArgMD, TypeBindMD, TypeBoundaryMD, VarMD, defaultHoleMD, defaultTHoleMD)
@@ -24,12 +25,12 @@ import TypeCraft.Purescript.Util (hole')
 newtype TypeHoleID = TypeHoleID UUID
 
 derive instance genericTypeHoleID :: Generic TypeHoleID _
-instance showTypeHoleID :: Show TypeHoleID  where show x = genericShow x 
+instance showTypeHoleID :: Show TypeHoleID  where show (TypeHoleID uuid) = "(TypeHoleID (parseUUID \"" <> UUID.toString uuid <> "\"))"
 instance eqTypeHoleID :: Eq TypeHoleID  where eq x y = genericEq x y
 instance ordTypeHoleID :: Ord TypeHoleID  where compare x y = genericCompare x y
 
 newtype TermVarID = TermVarID UUID
-instance showTermVarID :: Show TermVarID  where show x = genericShow x 
+instance showTermVarID :: Show TermVarID  where show (TermVarID uuid) = "(TermVarID (parseUUID \"" <> UUID.toString uuid <> "\"))"
 instance eqTermVarID :: Eq TermVarID  where eq x y = genericEq x y
 instance ordTermVarID :: Ord TermVarID  where compare x y = genericCompare x y
 
@@ -42,7 +43,7 @@ newtype TypeVarID = TypeVarID UUID
 
 
 derive instance genericTypeVarID :: Generic TypeVarID _
-instance showTypeVarID :: Show TypeVarID  where show x = genericShow x 
+instance showTypeVarID :: Show TypeVarID  where show (TypeVarID uuid) = "(TypeVarID (parseUUID \"" <> UUID.toString uuid <> "\"))"
 instance eqTypeVarID :: Eq TypeVarID  where eq x y = genericEq x y
 instance ordTypeVarID :: Ord TypeVarID  where compare x y = genericCompare x y
 

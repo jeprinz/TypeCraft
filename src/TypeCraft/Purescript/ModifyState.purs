@@ -1,7 +1,6 @@
 module TypeCraft.Purescript.ModifyState where
 
 import Prelude
-
 import Data.Array ((:), uncons)
 import Data.Array as Array
 import Data.List as List
@@ -29,11 +28,21 @@ import TypeCraft.Purescript.Util (hole')
 
 handleKey :: Key -> State -> Maybe State
 handleKey key st
-  | key.key == "p" && (key.metaKey || key.ctrlKey) = do 
-    Debug.traceM "==[ current state.mode ]====================================="
-    Debug.traceM $ show st
-    Debug.traceM "============================================================="
+  | key.key == "p" && (key.metaKey || key.ctrlKey) = do
+    -- Debug.traceM "==[ current state.mode ]====================================="
+    -- Debug.traceM $ show st
+    -- Debug.traceM "============================================================="
+    case st.mode of
+      CursorMode { cursorLocation: TermCursor _ctxs ty path tm  } -> do
+        Debug.traceM "==[ path ]====================================="
+        Debug.traceM $ show path
+        Debug.traceM "==[ term ]====================================="
+        Debug.traceM $ show tm
+        Debug.traceM "==[ type ]====================================="
+        Debug.traceM $ show ty
+      _ -> Nothing
     Just st
+
 handleKey key st = case st.mode of
   CursorMode cursorMode -> case cursorMode.cursorLocation of
     TypeBindCursor ctxs path (TypeBind md tyVarId)
@@ -96,12 +105,15 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
     CompletionTerm tm' {-ty'-} sub ->
       let
         ty' = applySubType sub ty
+
         -- TODO: needs to be subInsideHolePath
         path' = subInsideHolePath sub path
+
         ctxs' = subAllCtx sub ctxs
+
         termPath = case path' of
-            (Hole1 _) List.: termPath -> termPath
-            _ -> unsafeThrow "Shouldn't happen"
+          (Hole1 _) List.: termPath -> termPath
+          _ -> unsafeThrow "Shouldn't happen"
       in
         pure
           { cursorLocation: TermCursor ctxs' ty' termPath tm'
@@ -112,7 +124,9 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
     CompletionTerm tm' {-ty'-} sub ->
       let
         ty' = applySubType sub ty
+
         path' = subTermPath sub path
+
         ctxs' = subAllCtx sub ctxs
       in
         pure
@@ -123,69 +137,94 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
       let
         -- TODO: is this all done in the proper order?
         path' = subTermPath sub path
+
         pathNew' = subTermPath sub pathNew
+
         ty' = applySubType sub ty
+
         ctxs' = subAllCtx sub ctxs
+
         _ = trace ("Beforehand, ctxs'.kctx has length" <> show (List.length (Map.values ctxs'.kctx))) \_ -> unit
+
         _ = trace ("Beforehand, the path to be operated upon is: " <> show path') \_ -> unit
+
         (kctx' /\ ctx') /\ path'' = chTermPath ch { ctxs: ctxs', ty: ty', termPath: path', term: tm }
+
         _ = trace ("Afterwards, kctx' has length " <> show (List.length (Map.values kctx'))) \_ -> unit
+
         tm' = chTermBoundary kctx' ctx' (tyInject ty') tm
-        ctxs'' = ctxs' { ctx = snd (getCtxEndpoints ctx') , kctx = snd (getKCtxTyEndpoints kctx') , actx = snd (getKCtxAliasEndpoints kctx') }
+
+        ctxs'' = ctxs' { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
+
         chCtxs = downPathToCtxChange ctxs'' (List.reverse pathNew')
+
         newCtxs = snd (getAllEndpoints chCtxs)
       in
         pure
           { cursorLocation: TermCursor newCtxs ty' (pathNew' <> path'') tm'
           , query: emptyQuery
           }
-    CompletionTermPath2 _ newState ->
-      pure
-        { cursorLocation: newState unit
-        , query: emptyQuery
-        }
+    -- CompletionTermPath2 _ newState ->
+    --   pure
+    --     { cursorLocation: newState unit
+    --     , query: emptyQuery
+    --     }
     _ -> unsafeThrow "tried to submit a non-CompletionTerm* completion at a TermCursor"
   TypeCursor ctxs path ty -> case compl of
     CompletionType ty' _sub ->
       --            let path' = subTypePath sub path in
       --            let ctxs' = subAllCtx sub ctxs in
-      let (kctx' /\ ctx') /\ path' = chTypePath (Replace ty ty') { ctxs, ty, typePath: path } in
-      let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
-      pure
-        { cursorLocation: TypeCursor ctxs' path' ty'
-        , query: emptyQuery
-        }
+      let
+        (kctx' /\ ctx') /\ path' = chTypePath (Replace ty ty') { ctxs, ty, typePath: path }
+      in
+        let
+          ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
+        in
+          pure
+            { cursorLocation: TypeCursor ctxs' path' ty'
+            , query: emptyQuery
+            }
     CompletionTypePath pathNew ch ->
-      let (kctx' /\ ctx') /\ path' = chTypePath ch { ctxs, ty: ty, typePath: path } in
-      let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
-      pure
-        { cursorLocation: TypeCursor ctxs' (pathNew <> path') ty
-        , query: emptyQuery
-        }
+      let
+        (kctx' /\ ctx') /\ path' = chTypePath ch { ctxs, ty: ty, typePath: path }
+      in
+        let
+          ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
+        in
+          pure
+            { cursorLocation: TypeCursor ctxs' (pathNew <> path') ty
+            , query: emptyQuery
+            }
     _ -> unsafeThrow "tried to submit a non-CompletionType* completion at a TypeCursor"
   CtrListCursor ctxs path ctrs -> case compl of
     CompletionCtrListPath pathNew ch ->
-      let path' = chListCtrPath ch { ctxs, listCtrPath: path, ctrs } in
-      pure
-        { cursorLocation: CtrListCursor ctxs (pathNew <> path') ctrs
-        , query: emptyQuery
-        }
+      let
+        path' = chListCtrPath ch { ctxs, listCtrPath: path, ctrs }
+      in
+        pure
+          { cursorLocation: CtrListCursor ctxs (pathNew <> path') ctrs
+          , query: emptyQuery
+          }
     _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
   CtrParamListCursor ctxs path ctrParams -> case compl of
     CompletionCtrParamListPath pathNew ch ->
-      let path' = chListCtrParamPath ch { ctxs, ctrParams, listCtrParamPath: path } in
-      pure
-        { cursorLocation: CtrParamListCursor ctxs (pathNew <> path') ctrParams
-        , query: emptyQuery
-        }
+      let
+        path' = chListCtrParamPath ch { ctxs, ctrParams, listCtrParamPath: path }
+      in
+        pure
+          { cursorLocation: CtrParamListCursor ctxs (pathNew <> path') ctrParams
+          , query: emptyQuery
+          }
     _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
   TypeBindListCursor ctxs path tyBinds -> case compl of
     CompletionTypeBindListPath pathNew ch ->
-      let path' = chListTypeBindPath ch { ctxs, tyBinds, listTypeBindPath: path } in
-      pure
-        { cursorLocation: TypeBindListCursor ctxs (pathNew <> path') tyBinds
-        , query: emptyQuery
-        }
+      let
+        path' = chListTypeBindPath ch { ctxs, tyBinds, listTypeBindPath: path }
+      in
+        pure
+          { cursorLocation: TypeBindListCursor ctxs (pathNew <> path') tyBinds
+          , query: emptyQuery
+          }
     _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
   _ -> Nothing -- TODO: submit queries at other kinds of cursors?
 

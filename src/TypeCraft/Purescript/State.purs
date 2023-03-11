@@ -1,24 +1,18 @@
 module TypeCraft.Purescript.State where
 
-import Data.Tuple.Nested
-import Data.Variant
+import Data.Tuple.Nested ((/\))
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.Grammar
-
+import TypeCraft.Purescript.Grammar (Change, Constructor, CtrParam, ListCtrChange, ListCtrParamChange, ListTypeBindChange, Term, TermBind, Type, TypeBind, UpPath)
 import Data.Array as Array
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..))
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import Data.String as String
-import Type.Proxy (Proxy(..))
 import TypeCraft.Purescript.Alpha (Sub)
 import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
-import TypeCraft.Purescript.MD (HoleMD)
-import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultLambdaMD)
-import TypeCraft.Purescript.ShallowEmbed (exampleProg1, exampleProg2, exampleProg3, exampleProg4, exampleProg5, exampleProg6)
-import TypeCraft.Purescript.Util (hole')
+import TypeCraft.Purescript.ShallowEmbed (exampleProg1)
 
 {-
 This file will contain possible states for the editor
@@ -63,7 +57,7 @@ isEmptyQuery { string } = String.null string
 data Completion
   = CompletionTerm Term Sub
   | CompletionTermPath UpPath Change Sub
-  | CompletionTermPath2 UpPath (Unit -> CursorLocation) -- A more generic version of a completion
+  -- | CompletionTermPath2 UpPath (Unit -> CursorLocation) -- A more generic version of a completion
   | CompletionType Type Sub
   | CompletionTypePath UpPath Change
   | CompletionCtrListPath UpPath ListCtrChange
@@ -73,7 +67,7 @@ data Completion
 derive instance genericCompletion :: Generic Completion _
 
 instance showCompletion :: Show Completion where
-  show x = "TODO: Show Completion" -- genericShow x
+  show x = genericShow x
 
 emptyQuery :: Query
 emptyQuery =
@@ -125,11 +119,13 @@ data Clipboard
   | TypePathClip AllContext UpPath
   | CtrListClip AllContext UpPath -- technically doesn't need term contexts but whatever
   | CtrParamList AllContext UpPath -- technically doesn't need term contexts but whatever
---  | TypeArgList AllContext UpPath -- technically doesn't need term contexts but whatever
+  --  | TypeArgList AllContext UpPath -- technically doesn't need term contexts but whatever
   | VarNameList AllContext UpPath -- for TypeBind Lists
 
 derive instance genericClipboard :: Generic Clipboard _
-instance showClipboard :: Show Clipboard where show x = genericShow x
+
+instance showClipboard :: Show Clipboard where
+  show x = genericShow x
 
 data CursorLocation
   = TermCursor AllContext Type UpPath Term
@@ -141,7 +137,7 @@ data CursorLocation
   | TermBindCursor AllContext UpPath TermBind
   | CtrListCursor AllContext UpPath (List Constructor)
   | CtrParamListCursor AllContext UpPath (List CtrParam)
---  | TypeArgListCursor AllContext UpPath (List TypeArg)
+  --  | TypeArgListCursor AllContext UpPath (List TypeArg)
   | TypeBindListCursor AllContext UpPath (List TypeBind)
   | InsideHoleCursor AllContext Type UpPath
 
@@ -171,12 +167,15 @@ data Select
   | TypeSelect UpPath AllContext Type UpPath AllContext Type SelectOrientation
   | CtrListSelect UpPath AllContext (List Constructor) UpPath AllContext (List Constructor) SelectOrientation
   | CtrParamListSelect UpPath AllContext (List CtrParam) UpPath AllContext (List CtrParam) SelectOrientation
---  | TypeArgListSelect UpPath AllContext (List TypeArg) UpPath AllContext (List TypeArg) SelectOrientation
+  --  | TypeArgListSelect UpPath AllContext (List TypeArg) UpPath AllContext (List TypeArg) SelectOrientation
   | TypeBindListSelect UpPath AllContext (List TypeBind) UpPath AllContext (List TypeBind) SelectOrientation
 
-type SelectOrientation = Boolean -- I didn't know how to match on a Variant, so I changed it back to a boolean. That way I can use an if expression like a normal person
+type SelectOrientation
+  = Boolean -- I didn't know how to match on a Variant, so I changed it back to a boolean. That way I can use an if expression like a normal person
+
 topSelectOrientation :: Boolean -- the root of the seledction is at the top, so the bottom moves with shift-arrow keys
 topSelectOrientation = true
+
 botSelectOrientation :: Boolean -- the root of the selection is at the bottom, so the top moves with shift-arrow keys
 botSelectOrientation = false
 
@@ -188,17 +187,27 @@ instance showSelect :: Show Select where
 selectToCursorLocation :: Select -> CursorLocation
 selectToCursorLocation = case _ of
   TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 ctxs2 ty2 tm2 ori ->
-    if ori then TermCursor ctxs2 ty2 (tmPath2 <> tmPath1) tm2
-           else TermCursor ctxs1 ty1 tmPath1 tm1
+    if ori then
+      TermCursor ctxs2 ty2 (tmPath2 <> tmPath1) tm2
+    else
+      TermCursor ctxs1 ty1 tmPath1 tm1
   TypeSelect path1 ctxs1 ty1 path2 ctxs2 ty2 ori ->
-    if ori then TypeCursor ctxs2 (path2 <> path1) ty2
-           else TypeCursor ctxs1 path1 ty1
+    if ori then
+      TypeCursor ctxs2 (path2 <> path1) ty2
+    else
+      TypeCursor ctxs1 path1 ty1
   CtrListSelect path1 ctxs1 ctrs1 path2 ctxs2 ctrs2 ori ->
-    if ori then CtrListCursor ctxs2 (path2 <> path1) ctrs2
-           else CtrListCursor ctxs1 path1 ctrs1
+    if ori then
+      CtrListCursor ctxs2 (path2 <> path1) ctrs2
+    else
+      CtrListCursor ctxs1 path1 ctrs1
   CtrParamListSelect path1 ctxs1 ctrParams1 path2 ctxs2 ctrParams2 ori ->
-    if ori then CtrParamListCursor ctxs2 (path2 <> path1) ctrParams2
-           else CtrParamListCursor ctxs1 path1 ctrParams1
+    if ori then
+      CtrParamListCursor ctxs2 (path2 <> path1) ctrParams2
+    else
+      CtrParamListCursor ctxs1 path1 ctrParams1
   TypeBindListSelect path1 ctxs1 tyBinds1 path2 ctxs2 tyBinds2 ori ->
-    if ori then TypeBindListCursor ctxs2 (path2 <> path1) tyBinds2
-           else TypeBindListCursor ctxs1 path1 tyBinds1
+    if ori then
+      TypeBindListCursor ctxs2 (path2 <> path1) tyBinds2
+    else
+      TypeBindListCursor ctxs1 path1 tyBinds1

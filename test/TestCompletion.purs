@@ -7,10 +7,10 @@ import Data.List (List(..))
 import Data.List as List
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
-import Debug as Debug
 import Effect (Effect)
 import Effect.Class.Console as Console
-import Test.Example.State1 (example1, example2)
+import Test.Example.State1 (example1)
+import Test.Logging (logBlock, logSectionEnd, logSectionStart)
 import TypeCraft.Purescript.Completions (calculateCompletionGroups)
 import TypeCraft.Purescript.Context (emptyAllContext)
 import TypeCraft.Purescript.CursorMovement (getCursorChildren)
@@ -26,6 +26,9 @@ main = do
 -- Tests all possible completions at every cursor location in the program.
 testAllCompletions :: Term /\ Type -> Effect Unit
 testAllCompletions (tm /\ ty) = do
+  logSectionStart "testAllCompletions"
+  logBlock "term" (show tm)
+  logBlock "type" (show ty)
   let
     toState :: CursorLocation -> State
     toState loc =
@@ -63,15 +66,16 @@ testAllCompletions (tm /\ ty) = do
 
 testCompletion :: State -> Completion -> Effect Unit
 testCompletion st compl = do
+  logSectionStart "testCompletion"
+  -- logBlock "state" (show st)
+  logBlock "completion" (show compl)
   case st.mode of
     CursorMode cursorMode -> case submitCompletion cursorMode compl of
       Nothing -> do
         Console.log "[✗] failure: `submitCompletion cursorMode compl ==> Nothing`"
-        Console.log "cursorMode:"
-        Console.log (show cursorMode)
-        Console.log "compl:"
-        Console.log (show compl)
+        logBlock "cursorMode" (show cursorMode)
       Just _ -> do
         Console.log "[✓] success"
     _ -> do
       Console.log "[✗] failure: `testCompletion st compl` expects that `st` has `CursorMode"
+  logSectionEnd "testCompletion"

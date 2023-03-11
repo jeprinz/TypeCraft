@@ -1,11 +1,14 @@
 module TypeCraft.Purescript.Util where
 
+import Data.Tuple.Nested
 import Prelude
-import Effect.Exception.Unsafe (unsafeThrow)
+
+import Data.List (List, head)
 import Data.Map (Map, toUnfoldable, fromFoldable, lookup, member, delete, unionWith)
 import Data.Maybe (Maybe(..))
-import Data.List(List, head)
-import Data.Tuple.Nested
+import Data.UUID (UUID)
+import Data.UUID as UUID
+import Effect.Exception.Unsafe (unsafeThrow)
 
 -- hole :: forall a. a
 -- hole = unsafeThrow "hole"
@@ -48,3 +51,6 @@ mapKeys f m =
 
 union' :: forall v k. Ord k => Map k v -> Map k v -> Map k v
 union' m1 m2 = unionWith (\_ _ -> unsafeThrow "duplicate key in union'") m1 m2
+
+readUUID :: String -> UUID
+readUUID str = fromJust' ("failed to parse UUID: " <> str) <<< UUID.parseUUID $ str
