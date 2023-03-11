@@ -25,12 +25,12 @@ import TypeCraft.Purescript.Util (hole')
 newtype TypeHoleID = TypeHoleID UUID
 
 derive instance genericTypeHoleID :: Generic TypeHoleID _
-instance showTypeHoleID :: Show TypeHoleID  where show (TypeHoleID uuid) = "(TypeHoleID (parseUUID \"" <> UUID.toString uuid <> "\"))"
+instance showTypeHoleID :: Show TypeHoleID  where show (TypeHoleID uuid) = "(TypeHoleID (readUUID \"" <> UUID.toString uuid <> "\"))"
 instance eqTypeHoleID :: Eq TypeHoleID  where eq x y = genericEq x y
 instance ordTypeHoleID :: Ord TypeHoleID  where compare x y = genericCompare x y
 
 newtype TermVarID = TermVarID UUID
-instance showTermVarID :: Show TermVarID  where show (TermVarID uuid) = "(TermVarID (parseUUID \"" <> UUID.toString uuid <> "\"))"
+instance showTermVarID :: Show TermVarID  where show (TermVarID uuid) = "(TermVarID (readUUID \"" <> UUID.toString uuid <> "\"))"
 instance eqTermVarID :: Eq TermVarID  where eq x y = genericEq x y
 instance ordTermVarID :: Ord TermVarID  where compare x y = genericCompare x y
 
@@ -43,7 +43,7 @@ newtype TypeVarID = TypeVarID UUID
 
 
 derive instance genericTypeVarID :: Generic TypeVarID _
-instance showTypeVarID :: Show TypeVarID  where show (TypeVarID uuid) = "(TypeVarID (parseUUID \"" <> UUID.toString uuid <> "\"))"
+instance showTypeVarID :: Show TypeVarID  where show (TypeVarID uuid) = "(TypeVarID (readUUID \"" <> UUID.toString uuid <> "\"))"
 instance eqTypeVarID :: Eq TypeVarID  where eq x y = genericEq x y
 instance ordTypeVarID :: Ord TypeVarID  where compare x y = genericCompare x y
 
@@ -308,7 +308,12 @@ instance eqCTypeVar :: Eq CTypeVar where
 
 derive instance genericType :: Generic Type _
 
-instance showType :: Show Type where show x = genericShow x
+-- instance showType :: Show Type where show x = genericShow x
+instance showType :: Show Type where
+  show = case _ of 
+    THole md typeHoleId wkn sub -> "(THole (" <> show md <> ") (" <> show typeHoleId <> ") (Set.fromFoldable " <> show (Set.toUnfoldable wkn :: Array _) <> ") (Map.fromFoldable " <> show (Map.toUnfoldable sub :: Array _) <> "))"
+    Arrow md ty1 ty2 -> "(Arrow " <> "(" <> show md <> ") ("<> show ty1 <>") ("<> show ty2 <> "))"
+    TNeu md x tys -> "(TNeu (" <> show md <> ") (" <> show x <> ") (" <> show tys <> "))"
 
 derive instance genericPolyType :: Generic PolyType _
 

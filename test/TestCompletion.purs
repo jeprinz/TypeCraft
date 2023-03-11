@@ -11,7 +11,7 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect (Effect)
 import Effect.Class.Console as Console
 import Effect.Exception.Unsafe (unsafeThrow)
-import Test.Example.State1 (example1, example2)
+import Test.Example.Example1 as Examples
 import Test.Logging (logBlock, logSectionEnd, logSectionStart)
 import TypeCraft.Purescript.Completions (calculateCompletionGroups)
 import TypeCraft.Purescript.Context (emptyAllContext)
@@ -23,8 +23,9 @@ import TypeCraft.Purescript.State (Clipboard(..), Completion, CursorLocation(..)
 main :: Effect Unit
 main =
   traverse_ testAllCompletions
-    [ example1
-    , example2
+    [ Examples.example1
+    {- , Examples.example2 -}
+    , Examples.example3
     ]
 
 -- testAllCompletions example2
