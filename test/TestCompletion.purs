@@ -9,7 +9,7 @@ import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect (Effect)
 import Effect.Class.Console as Console
-import Test.Example.State1 (example1)
+import Test.Example.State1 (example1, example2)
 import Test.Logging (logBlock, logSectionEnd, logSectionStart)
 import TypeCraft.Purescript.Completions (calculateCompletionGroups)
 import TypeCraft.Purescript.Context (emptyAllContext)
@@ -19,8 +19,11 @@ import TypeCraft.Purescript.ModifyState (submitCompletion)
 import TypeCraft.Purescript.State (Clipboard(..), Completion, CursorLocation(..), CursorMode, Mode(..), State, emptyQuery)
 
 main :: Effect Unit
-main = do
-  testAllCompletions example1
+main =
+  traverse_ testAllCompletions
+    [ example1
+    , example2
+    ]
 
 -- testAllCompletions example2
 -- Tests all possible completions at every cursor location in the program.
