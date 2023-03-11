@@ -78,7 +78,7 @@ checkOccursAny hids ty = go ty
     TNeu _ _ args -> traverse_ (go <<< \(TypeArg _ ty) -> ty) args
 
 checkOccursTypeVarAny :: Set.Set TypeVarID -> Type -> Unify Unit
-checkOccursTypeVarAny = unsafeThrow "TODO: impl checkOccursTypeVarAny"
+checkOccursTypeVarAny _ _ = unsafeThrow "TODO: impl checkOccursTypeVarAny"
 
 -- create neutral form from variable of first type that can fill the hole of the
 -- second type
