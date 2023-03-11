@@ -109,18 +109,19 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
                 }
               ]
           Right _ -> unsafeThrow "impossible; type must be an arrow after unifying with arrow"
-      -- en-alias
-      Writer.tell <<< List.fromFoldable $
-        [ { filterLabel: (_ `kindaStartsWithAny` [ "alias", "tlet", "tdef" ])
-          , completions:
-              [ const
-                  $ CompletionTermPath
-                      (List.singleton $ TLet4 defaultTLetMD (freshTypeBind Nothing) List.Nil (freshTHole unit) ty)
-                      (tyInject ty)
-                      emptySub
-              ]
-          }
-        ]
+      -- TODO: re-enable when jacob implements `termToothCtxChange TLet4`
+      -- -- en-alias
+      -- Writer.tell <<< List.fromFoldable $
+      --   [ { filterLabel: (_ `kindaStartsWithAny` [ "alias", "tlet", "tdef" ])
+      --     , completions:
+      --         [ const
+      --             $ CompletionTermPath
+      --                 (List.singleton $ TLet4 defaultTLetMD (freshTypeBind Nothing) List.Nil (freshTHole unit) ty)
+      --                 (tyInject ty)
+      --                 emptySub
+      --         ]
+      --     }
+      --   ]
       -- en-data
       Writer.tell <<< List.fromFoldable $
         [ { filterLabel: (_ `kindaStartsWithAny` [ "data" ])
