@@ -22,6 +22,8 @@ import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMod
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode, insideHoleToNode)
 import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
 import TypeCraft.Purescript.Util (fromJust', hole')
+import Debug (trace)
+import TypeCraft.Purescript.Alpha (subTerm)
 
 {-
 TODO: Note from Jacob: Counterintuitvely, all cursor modes should use BISelect
@@ -129,7 +131,8 @@ cursorModeToNode cursorMode =
 
   cursorModePathToNode :: Node -> Node
   cursorModePathToNode = case cursorMode.cursorLocation of
-    TermCursor ctxs ty termPath term -> termPathToNode true Nil (BISelect Nil term ctxs ty) { ctxs, term, termPath, ty }
+    TermCursor ctxs ty termPath term -> trace ("Rendering cursor mode. termPath is: \n" <> show termPath <> "\n and term is: \n" <> show term) \_ ->
+        termPathToNode true Nil (BISelect Nil term ctxs ty) { ctxs, term, termPath, ty }
     TypeCursor ctxs typePath ty -> typePathToNode true Nil (BISelect Nil ty ctxs unit) { ctxs, ty, typePath }
     TypeBindCursor ctxs typeBindPath tyBind -> typeBindPathToNode true Nil { ctxs, typeBindPath, tyBind }
     TermBindCursor ctxs termBindPath tBind -> termBindPathToNode true Nil { ctxs, tBind, termBindPath }
@@ -189,11 +192,12 @@ cursorModeToNode cursorMode =
           --           AINothing -- (AISelect termPath ctxs (term /\ ty) Nil)
           --           { ctxs, term, ty }
           _ -> hole' "completionToNode CompletionTerm non-TermCursor"
-        CompletionTermPath termPath _ch _sub -> case cursorMode.cursorLocation of
-          TermCursor ctxs ty _termPath' term ->
+        CompletionTermPath termPath _ch sub -> case cursorMode.cursorLocation of
+          TermCursor ctxs tyPreSub _termPath' termPreSub ->
             let
+              term = subTerm sub termPreSub -- we need to do this sub or else the types might be wrong when we try to render the path!
+              ty = applySubType sub tyPreSub
               chCtxs = downPathToCtxChange ctxs (reverse termPath)
-
               newCtxs = snd (getAllEndpoints chCtxs)
             in
               setNodeGetCursor getCursor

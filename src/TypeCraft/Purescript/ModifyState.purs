@@ -11,7 +11,7 @@ import Debug (trace, traceM)
 import Data.Tuple.Nested ((/\))
 import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Alpha (applySubType, subAllCtx, subTermPath, subInsideHolePath)
+import TypeCraft.Purescript.Alpha (applySubType, subAllCtx, subTermPath, subInsideHolePath, subTerm)
 import TypeCraft.Purescript.ChangePath (chListCtrParamPath, chListCtrPath, chListTypeBindPath, chTermPath, chTypePath)
 import TypeCraft.Purescript.ChangeTerm (chTermBoundary, chTypeBindList)
 import TypeCraft.Purescript.CursorMovement (cursorLocationToSelect, getCursorChildren, moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
@@ -135,33 +135,19 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
           }
     CompletionTermPath pathNew ch sub ->
       let
-        -- TODO: is this all done in the proper order?
         path' = subTermPath sub path
-
         pathNew' = subTermPath sub pathNew
-
         ty' = applySubType sub ty
-
         ctxs' = subAllCtx sub ctxs
-
-        _ = trace ("Beforehand, ctxs'.kctx has length" <> show (List.length (Map.values ctxs'.kctx))) \_ -> unit
-
-        _ = trace ("Beforehand, the path to be operated upon is: " <> show path') \_ -> unit
-
+        tm' = subTerm sub tm
         (kctx' /\ ctx') /\ path'' = chTermPath ch { ctxs: ctxs', ty: ty', termPath: path', term: tm }
-
-        _ = trace ("Afterwards, kctx' has length " <> show (List.length (Map.values kctx'))) \_ -> unit
-
-        tm' = chTermBoundary kctx' ctx' (tyInject ty') tm
-
+        tm'' = chTermBoundary kctx' ctx' (tyInject ty') tm'
         ctxs'' = ctxs' { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
-
         chCtxs = downPathToCtxChange ctxs'' (List.reverse pathNew')
-
         newCtxs = snd (getAllEndpoints chCtxs)
       in
         pure
-          { cursorLocation: TermCursor newCtxs ty' (pathNew' <> path'') tm'
+          { cursorLocation: TermCursor newCtxs ty' (pathNew' <> path'') tm''
           , query: emptyQuery
           }
     -- CompletionTermPath2 _ newState ->

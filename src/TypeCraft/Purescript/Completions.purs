@@ -93,7 +93,7 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
         let
           alpha = freshTHole unit
           beta = freshTHole unit
-        case runUnify (unify (Arrow defaultArrowMD alpha beta) ty) of
+        case runUnify (unify ty (Arrow defaultArrowMD alpha beta)) of
           Left _ -> pure unit
           Right (Arrow _md ty1 ty2 /\ sub) ->
 --            trace ("Here we are. ty is: " <> show ty <> " and ty1 is " <> show ty1 <> " and ty2 is " <> show ty2) \_ ->
@@ -104,7 +104,7 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
                         $ CompletionTermPath -- ({} ?)
                             (List.singleton $ App1 defaultAppMD (freshHole unit) ty1 ty2)
                             (Minus ty1 (tyInject ty2))
-                            emptySub {-sub-}
+                            sub
                     ]
                 }
               ]
