@@ -92,6 +92,7 @@ chTermPath ch termPath =
                     (kctx' /\ ctx') /\ Buffer3 defaultBufferMD t2' (snd (getEndpoints argCh)) {-Term-} outTy : up'
                 _ -> unsafeThrow "shouldn't get herer app1 case of chTermPath'"
         , app2 : \up md t {-Term-} argTy outTy ->
+            trace ("App2 case of chTermPath triggered. ch is: " <> show ch) \_ ->
             if not (fst (getEndpoints ch) == argTy) then unsafeThrow "shouldn't happen chTermPath App2 case" else
             let chtUp /\ t' = chTerm idChkctx idChCtx (CArrow ch (tyInject outTy)) t.term in
             case chtUp of

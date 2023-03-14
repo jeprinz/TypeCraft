@@ -49,6 +49,7 @@ mapKeys f m =
         asList = toUnfoldable m in
     fromFoldable (map (\(k /\ v) -> f k /\ v) asList)
 
+-- disjoint union
 union' :: forall v k. Ord k => Map k v -> Map k v -> Map k v
 union' m1 m2 = unionWith (\_ _ -> unsafeThrow "duplicate key in union'") m1 m2
 
