@@ -16,16 +16,14 @@ So this generic approach might work in DTT with a carefully generic view of thin
 Here, it would REALLY need to be instead of Change, (Change + TyArgsChange + CtrParamsChange + .........)
 -}
 
-{-
-downChange :: Label -> Change -> Array Change
-downChange (LApp md {-Term-} {-Term-} Type Type) = ?h
-downChange (LLambda md TermBind Type {-Term-} Type) = ?h
-downChange (LVar md TermVarID (List TypeArg)) = ?h
-downChange (LLet md TermBind (List TypeBind) {-Term-} Type {-Term-} Typ) = ?h
-downChange (LData md TypeBind (List TypeBind) (List Constructor) {-Term-} Typ) = ?h
-downChange (LTLet md TypeBind (List TypeBind) Type {-Term-} Type) = ?h
-downChange (LTypeBoundary md Change {-Term-}) = ?h
-downChange (LContextBoundary md TermVarID VarChange {-Term-}) = ?h
-downChange (LHole md {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}) = ?h
-downChange (LBuffer md {-Term-} Type {-Term-} Type) = ?h
--}
+--downChange :: Label -> Change -> Array Change
+--downChange (LApp md {-Term-} {-Term-} Type Type) = ?h
+--downChange (LLambda md TermBind Type {-Term-} Type) = ?h
+--downChange (LVar md TermVarID (List TypeArg)) = ?h
+--downChange (LLet md TermBind (List TypeBind) {-Term-} Type {-Term-} Typ) = ?h
+--downChange (LData md TypeBind (List TypeBind) (List Constructor) {-Term-} Typ) = ?h
+--downChange (LTLet md TypeBind (List TypeBind) Type {-Term-} Type) = ?h
+--downChange (LTypeBoundary md Change {-Term-}) = ?h
+--downChange (LContextBoundary md TermVarID VarChange {-Term-}) = ?h
+--downChange (LHole md {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}) = ?h
+--downChange (LBuffer md {-Term-} Type {-Term-} Type) = ?h
