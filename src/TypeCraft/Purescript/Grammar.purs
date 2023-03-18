@@ -210,6 +210,8 @@ data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange)
     | TVarInsert Kind (Maybe (List TypeBind /\ Type))
 type KindChangeCtx = Map TypeVarID TVarChange
 
+data ListTypeArgChange = ListTypeArgChangeNil | ListTypeArgChangeCons Change ListTypeArgChange
+
 data NameChange = NameChangeInsert String | NameChangeDelete String | NameChangeSame String
 type MDTypeChangeCtx = Map TypeVarID NameChange
 type MDTermChangeCtx = Map TermVarID NameChange
@@ -409,6 +411,14 @@ instance eqTVarChange :: Eq TVarChange where
   eq x = genericEq x
 
 instance showTVarChange :: Show TVarChange where
+  show x = genericShow x
+
+derive instance genericListTypeArgChange :: Generic ListTypeArgChange _
+
+instance eqListTypeArgChange :: Eq ListTypeArgChange where
+  eq x = genericEq x
+
+instance showListTypeArgChange :: Show ListTypeArgChange where
   show x = genericShow x
 
 derive instance genericTypeAliasChange :: Generic TypeAliasChange _

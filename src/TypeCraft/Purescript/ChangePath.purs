@@ -159,7 +159,10 @@ chTypePath ch typePath =
         , buffer2: \termPath md def {-Type-} body bodyTy -> hole' "chTypePath"
         , tLet3: \termPath md tyBind tyBinds {-Type-} body bodyTy -> hole' "chTypePath"
         , ctrParam1: \ctrParamPath md {-Type-} -> hole' "chTypePath"
-        , typeArg1: \tyArgPath md {-Type-} ->  hole' "chTypePath"
+        , typeArg1: \tyArgPath md {-Type-} ->
+            trace ("the change I got here was: " <> show ch) \_ ->
+            let ctxs' /\ typeArgPath' = chTypeArgPath ch tyArgPath in
+            ctxs' /\ (TypeArg1 md) : typeArgPath'
         , arrow1: \typePath md {-Type-} ty2 ->
             let (kctx' /\ ctx') /\ typePath' = chTypePath (CArrow ch (tyInject ty2.ty)) typePath in
             (kctx' /\ ctx') /\ Arrow1 md {-Type-} ty2.ty : typePath'
@@ -236,15 +239,28 @@ chListCtrParamPath ch ctrParamPath =
     } ctrParamPath
 
 
-data ListTypeArgChange = ListTypeArgChangeNil | ListTypeArgChangeCons Change ListTypeArgChange
-
-chListTypeArgPath :: ListTypeArgChange -> ListTypeArgPathRecValue -> UpPath
-chListTypeArgPath ch listTyArgPath =
+chListTypeArgPath :: ListTypeArgChange -> ListTypeArgPathRecValue -> CAllContext /\ UpPath
+chListTypeArgPath tyArgsCh listTyArgPath =
     recListTypeArgPath {
         tNeu1: \typePath md x -> hole' "chListTypeArgPath"
-        , typeArgListCons2: \listTypeArgPath tyArg -> hole' "chListTypeArgPath"
-        , var1 : \termPath md x -> hole' "chListTypeArgPath"
+        , typeArgListCons2: \listTypeArgPath tyArg@{tyArg: TypeArg _ ty} ->
+            let ctxs' /\ listTypeArgPath' = chListTypeArgPath (ListTypeArgChangeCons (tyInject ty) tyArgsCh) listTypeArgPath in
+            ctxs' /\ (TypeArgListCons2 tyArg.tyArg {--}) : listTypeArgPath'
+        , var1 : \termPath md x ->
+--polyTypeApplyArgsImpl :: PolyType -> ListTypeArgChange -> Map.Map TypeVarID Change -> Change
+            let ch = polyTypeApplyArgs (lookup' x termPath.ctxs.ctx) tyArgsCh in
+            let ctxs' /\ termPath' = chTermPath ch termPath in
+            ctxs' /\ (Var1 md x) : termPath'
     } listTyArgPath
+
+chTypeArgPath :: Change -> TypeArgPathRecValue -> CAllContext /\ UpPath
+chTypeArgPath ch tyArgPath =
+    recTypeArgPath {
+        typeArgListCons1 : \listTypeArgPath tyArgs ->
+            let listTypeArgsCh /\ tyArgs' = chTypeParamList (kCtxInject tyArgPath.ctxs.kctx tyArgPath.ctxs.actx) tyArgs.tyArgs in
+            let ctxs' /\ listTypeArgPath' = chListTypeArgPath (ListTypeArgChangeCons ch listTypeArgsCh) listTypeArgPath in
+            ctxs' /\ (TypeArgListCons1 {--} tyArgs') : listTypeArgPath'
+    } tyArgPath
 
 chListTypeBindPath :: ListTypeBindChange -> ListTypeBindPathRecValue -> UpPath
 chListTypeBindPath ch listTypeBindPath =

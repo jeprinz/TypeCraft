@@ -77,6 +77,21 @@ pGetEndpoints (PMinus tBind pc) =
     Forall tBind pt1 /\ pt2
 pGetEndpoints (PChange c) = let t1 /\ t2 = getEndpoints c in PType t1 /\ PType t2
 
+polyTypeApplyArgs :: PolyType -> ListTypeArgChange -> Change
+polyTypeApplyArgs pty ch =
+    polyTypeApplyArgsImpl pty ch Map.empty
+polyTypeApplyArgsImpl :: PolyType -> ListTypeArgChange -> Map.Map TypeVarID Change -> Change
+polyTypeApplyArgsImpl (Forall x pt) (ListTypeArgChangeCons ch chs) sub =
+    polyTypeApplyArgsImpl pt chs (Map.insert x ch sub)
+polyTypeApplyArgsImpl (PType ty) ListTypeArgChangeNil sub = (tyInjectWithSub ty sub)
+polyTypeApplyArgsImpl _ _ _ = unsafeThrow "in polyTypeApplyArgs, wrong number of args"
+
+tyInjectWithSub :: Type -> Map TypeVarID Change -> Change
+tyInjectWithSub (Arrow _ ty1 ty2) sub = CArrow (tyInjectWithSub ty1 sub) (tyInjectWithSub ty2 sub)
+tyInjectWithSub (TNeu _ (TypeVar x) Nil) sub | Map.member x sub = lookup' x sub -- TODO: do I need to do something with TVarContextBoundary here?
+tyInjectWithSub (TNeu _ x args) sub = CNeu (tyVarInject x) (map (case _ of TypeArg _ t -> ChangeParam (tyInjectWithSub t sub)) args)
+tyInjectWithSub (THole _ id w s) sub = CHole id w s
+
 kChGetEndpoints :: KindChange -> Kind /\ Kind
 kChGetEndpoints kc = case kc of
     KCType -> Type /\ Type

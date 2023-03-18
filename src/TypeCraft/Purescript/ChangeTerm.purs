@@ -246,8 +246,13 @@ chTypeBindList :: List TypeBind -> ListTypeBindChange
 chTypeBindList Nil = ListTypeBindChangeNil
 chTypeBindList (tyBind : tyBinds) = ListTypeBindChangePlus tyBind (chTypeBindList tyBinds)
 
-chTypeParamList :: KindChangeCtx -> List TypeArg -> List Change /\ List TypeArg
-chTypeParamList kctx tyArgs = (tyArgs <#> \(TypeArg _ ty) -> tyInject ty) /\ tyArgs -- TODO: impl 
+chTypeParamList :: KindChangeCtx -> List TypeArg -> ListTypeArgChange /\ List TypeArg
+--chTypeParamList kctx tyArgs = (tyArgs <#> \(TypeArg _ ty) -> tyInject ty) /\ tyArgs -- TODO: impl
+chTypeParamList kctx Nil = ListTypeArgChangeNil /\ Nil
+chTypeParamList kctx ((TypeArg md ty) : tyArgs) =
+    let ty' /\ ch = chType kctx ty in
+    let chs /\ tyArgs' = chTypeParamList kctx tyArgs in
+    ListTypeArgChangeCons ch chs /\ (TypeArg md ty') : tyArgs'
 
 ---- inputs PolyChange by which var type changed, outputs new args and TypeChange by which the whole neutral form changes
 chTypeArgsNeu :: PolyChange -> List TypeArg -> Change /\ List TypeArg
