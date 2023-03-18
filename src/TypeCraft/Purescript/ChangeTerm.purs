@@ -38,8 +38,8 @@ getRightCtxInj ctx =
     ctxInject ctx2
 
 {-
-chTerm inputs D1, C1, t1 and outputs D2, t2, and C2 such that
-D1 o D2 |- t1 --[C1 o c2] --> t2
+chTerm inputs D, C1, t1 and outputs t2, and C2 such that
+D |- t1 --[C1 o C2] --> t2
 -}
 chTerm :: KindChangeCtx -> ChangeCtx -> Change -> Term -> Change  /\ Term
 chTerm kctx ctx c t =
