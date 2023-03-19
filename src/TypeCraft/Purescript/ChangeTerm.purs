@@ -69,6 +69,7 @@ chTerm kctx ctx c t =
                 -- try the polymorphism case
 --                case getSubstitution cin (lookup x ctx)
                 let xVarCh = lookup' x ctx in
+                trace ("In var case here: cin is" <> show cin <> " and xVarCh is: " <> show xVarCh) \_ ->
                 case xVarCh of
                     VarDelete _ -> tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD -- later use context boundary
 --                    VarTypeChange xChange ->
@@ -88,9 +89,12 @@ chTerm kctx ctx c t =
                     VarInsert _ -> unsafeThrow "shouldn't get here"
                     VarTypeChange pch ->
                         if not (chIsId cin) then
-                              if null tArgs then
-                                  tyInject (snd (getEndpoints cin)) /\ Var md x tArgs else
-                                  tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD else
+                              if not (pChIsId pch) then unsafeThrow "I didn't think it was possible to have a non-id typechange both from ctx and term in var case!" else
+--                              if null tArgs then
+--                                  tyInject (snd (getEndpoints cin)) /\ Var md x tArgs else
+--                                  tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD else
+                                tyInject (snd (getEndpoints cin)) /\ Buffer defaultBufferMD (Var md x tArgs) (fst (getEndpoints cin)) (Hole defaultHoleMD) (snd (getEndpoints cin))
+                        else
                         let ch /\ tyArgs' = chTypeArgs2 kctx tArgs pch in
                         ch /\ Var md x tyArgs'
             (CArrow c1 c2) /\ (Lambda md tBind@(TermBind _ x) ty t bodyTy) ->
