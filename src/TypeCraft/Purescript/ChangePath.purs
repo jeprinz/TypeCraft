@@ -146,8 +146,9 @@ chTypePath ch typePath =
     recTypePath {
       lambda2:
         \termPath md tBind@{tBind: TermBind _ x} {-Type-} body bodyTy ->
-            let c /\ body' = chTerm (kCtxInject body.ctxs.kctx body.ctxs.actx) (ctxInject body.ctxs.ctx) (tyInject bodyTy) body.term in
-            let (kctx' /\ ctx2) /\ termPath' = chTermPath (CArrow c (tyInject bodyTy)) termPath in
+            let c /\ body' = chTerm (kCtxInject body.ctxs.kctx body.ctxs.actx) (insert x (VarTypeChange (PChange ch)) (ctxInject body.ctxs.ctx))
+                                        (tyInject bodyTy) body.term in
+            let (kctx' /\ ctx2) /\ termPath' = chTermPath (CArrow ch c) termPath in
             if not (kCtxIsId kctx') then unsafeThrow "ktx assumptinon violated" else
             (kctx' /\ ctx2) /\ Lambda2 md tBind.tBind {-Type-} body' (snd (getEndpoints c)) : termPath'
         , let4: \termPath md tBind@{tBind: TermBind _ x} tyBinds def {-Type-} body bodyTy ->
