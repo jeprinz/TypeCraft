@@ -96,14 +96,35 @@ fillNeutralImpl actx pty id ty sub tyArgs = case pty of
 NOTE: when creating a variable to place into a new neutral form, if the type is a hole, you can prioritize as many or as few
 arguments. fillNeutral'' prioritizes many arguments, and fillNeutral' prioritizes few.
 -}
+--fillNeutral'' :: TypeAliasContext -> Type -> TermVarID -> Type -> List.List TypeArg -> Unify Term
+--fillNeutral'' actx varTy id locTy tyArgs = case varTy of
+--  Arrow _ ty1 ty2 ->
+--    (\tm -> App defaultAppMD tm (freshHole unit) ty1 ty2)
+--      <$> fillNeutral'' actx ty2 id locTy tyArgs
+--  _ -> do
+--    void $ normThenUnify actx locTy varTy
+--    pure $ Var defaultVarMD id tyArgs
+
 fillNeutral'' :: TypeAliasContext -> Type -> TermVarID -> Type -> List.List TypeArg -> Unify Term
-fillNeutral'' actx ty id ty' tyArgs = case ty of
-  Arrow _ ty1 ty2 ->
-    (\tm -> App defaultAppMD tm (freshHole unit) ty1 ty2)
-      <$> fillNeutral'' actx ty2 id ty' tyArgs
-  _ -> do
-    void $ normThenUnify actx ty' ty
-    pure $ Var defaultVarMD id tyArgs
+fillNeutral'' actx varTy id locTy tyArgs = do
+    res <- fillNeutral''Impl actx varTy id locTy tyArgs (\t -> t)
+    case res of
+        Just t -> pure $ t
+        Nothing -> Except.throwError "didn't work"
+
+fillNeutral''Impl :: TypeAliasContext -> Type -> TermVarID -> Type -> List.List TypeArg -> (Term -> Term) -> Unify (Maybe Term)
+fillNeutral''Impl actx varTy id locTy tyArgs wrapInApps =
+    let ifNoMoreVars = do
+            void $ normThenUnify actx locTy varTy
+            pure $ Just $ wrapInApps (Var defaultVarMD id tyArgs)
+    in
+    case varTy of
+        Arrow _ ty1 ty2 -> do
+            withOneMoreArg <- fillNeutral''Impl actx ty2 id locTy tyArgs (\t -> (App defaultAppMD (wrapInApps t) (freshHole unit) ty1 ty2))
+            case withOneMoreArg of
+                Just t -> pure $ Just t
+                Nothing -> ifNoMoreVars
+        _ -> ifNoMoreVars
 
 -- first type is that of variable, second type is that of location that variable will fill
 fillNeutral' :: TypeAliasContext -> Type -> TermVarID -> Type -> List.List TypeArg -> Unify Term
