@@ -3,6 +3,7 @@ import * as Backend from './Backend'
 import { BackendState } from "../../TypeCraft/Typescript/State"
 import { v4 as uuid } from 'uuid'
 import assert from "assert"
+import * as ModifyState from '../../TypeCraft/Typescript/ModifyState'
 
 export type Props = {
     backend: Backend.Props,
@@ -121,5 +122,13 @@ export default class Editor
                 {[this.props.render(this)]}
             </div>
         )
+    }
+
+    // returns success
+    undo() {
+        let st = ModifyState.undo(this.state.backendState)
+        if (st === undefined) return false
+        this.setBackendState(st)
+        return true
     }
 }

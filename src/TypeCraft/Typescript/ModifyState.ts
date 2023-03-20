@@ -30,9 +30,9 @@ export function handleKey(key: Key, st: BackendState): BackendState | undefined 
 //   return toBackendStateNullable(Nullable.fromMaybe(ModifyState.moveSelectNext(fromBackendState(st))))
 // }
 
-// export function undo(st: BackendState): BackendState | undefined {
-//   return toBackendStateNullable(Nullable.fromMaybe(ModifyState.undo(fromBackendState(st))))
-// }
+export function undo(st: BackendState): BackendState | undefined {
+  return toBackendStateNullable(Nullable.fromMaybe(ModifyState.undo(fromBackendState(st))))
+}
 
 // export function redo(st: BackendState): BackendState | undefined {
 //   return toBackendStateNullable(Nullable.fromMaybe(ModifyState.redo(fromBackendState(st))))

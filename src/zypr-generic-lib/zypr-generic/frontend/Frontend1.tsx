@@ -36,6 +36,32 @@ function hoverIdOfRenderContext(rndCtx: RenderContext): HoverId {
 }
 
 export default function makeFrontend(backend: Backend): JSX.Element {
+  // if catches any exceptions in render, then renders the last undo state
+  // instead (if there is one, otherwise renders as a debug elements)
+  function safe_render(editor: Editor): JSX.Element[] {
+    try {
+      return render(editor)
+    } catch (err) {
+      console.log("==[ caught render-time bug ]===============================")
+      console.log(err)
+      console.log("===========================================================")
+      return [
+        <button className="apologize" onClick={e => {
+          e.stopPropagation()
+          console.log("attempting to apologize...")
+          if (editor.undo()) {
+            console.log("apology accepted")
+          } else {
+            console.log("apology NOT accepted")
+          }
+        }}>apologize</button>,
+        <button className="not-apologize" >
+          never give in
+        </button>
+      ]
+    }
+  }
+
   function render(editor: Editor): JSX.Element[] {
     function go(
       node: Node,
@@ -331,7 +357,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
   return (
     <Editor
       backend={backend.props}
-      render={render}
+      render={safe_render}
       handleKeyboardEvent={handleKeyboardEvent}
       initBackendState={initState}
     />)
