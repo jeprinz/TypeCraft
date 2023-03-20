@@ -391,8 +391,17 @@ instance showPolyChange :: Show PolyChange where
 
 derive instance genericChange :: Generic Change _
 
-instance eqChange :: Eq Change where
-  eq x = genericEq x
+--instance eqChange :: Eq Change where
+--  eq x = genericEq x
+
+instance eqChange :: Eq Change where -- This has to be manually defined for the CHole case to not compare sets and maps? Maybe it would be fine derived generically?
+  eq (CArrow t1 t2) (CArrow t1' t2') = (t1 == t1') && (t2 == t2')
+  eq (CHole x _ _) (CHole y _ _) = x == y -- TODO: I don't think its necessary to compare the weakens and subs?
+  eq (CNeu x argsx) (CNeu y argsy) = x == y && argsx == argsy
+  eq (Replace a1 b1) (Replace a2 b2) = a1 == a2 && b1 == b2
+  eq (Plus t1 c1) (Plus t2 c2) = t1 == t2 && c1 == c2
+  eq (Minus t1 c1) (Minus t2 c2) = t1 == t2 && c1 == c2
+  eq _ _ = false
 
 instance showChange :: Show Change where
   show x = genericShow x

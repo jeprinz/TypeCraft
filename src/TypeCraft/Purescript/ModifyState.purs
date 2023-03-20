@@ -347,11 +347,8 @@ delete st = do
           TypeCursor ctxs path ty -> do
             let
               ty' = (freshTHole unit)
-
               (kctx' /\ ctx') /\ path' = (chTypePath (Replace ty ty') { ctxs, ty, typePath: path })
-
               ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
-
               cursorLocation' = TypeCursor ctxs' path' ty'
             pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
           _ -> hole' "delete: other syntactical kids of cursors"
@@ -359,20 +356,12 @@ delete st = do
           TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 _ctxs2 ty2 tm2 _ori ->
             let
               change = termPathToChange ty2 tmPath2
+              (kctx' /\ ctx') /\ tmPath1' = chTermPath (invert change) { term: tm1, ty: ty1, ctxs: ctxs1, termPath: tmPath1 }
+              (ctx /\ kctx /\ _mdctx /\ _mdkctx) = downPathToCtxChange ctxs1 (List.reverse tmPath2)
+              tm2' = chTermBoundary kctx ctx (tyInject ty2) tm2
+              ctxs' = ctxs1 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
             in
-              let
-                (kctx' /\ ctx') /\ tmPath1' = chTermPath (invert change) { term: tm1, ty: ty1, ctxs: ctxs1, termPath: tmPath1 }
-              in
-                let
-                  (ctx /\ kctx /\ _mdctx /\ _mdkctx) = downPathToCtxChange ctxs1 (List.reverse tmPath2)
-                in
-                  let
-                    tm2' = chTermBoundary kctx ctx (tyInject ty2) tm2
-                  in
-                    let
-                      ctxs' = ctxs1 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
-                    in
-                      pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty2 tmPath1' tm2' }
+              pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty2 tmPath1' tm2' }
           TypeSelect topPath _ctxs1 _ty1 middlePath ctxs2 ty2 _ori ->
             let
               change = typePathToChange ty2 middlePath

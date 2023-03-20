@@ -88,15 +88,14 @@ chTerm kctx ctx c t =
 --                        else cVar /\ Var md x tArgs
                     VarInsert _ -> unsafeThrow "shouldn't get here"
                     VarTypeChange pch ->
-                        if not (chIsId cin) then
-                              if not (pChIsId pch) then unsafeThrow "I didn't think it was possible to have a non-id typechange both from ctx and term in var case!" else
---                              if null tArgs then
---                                  tyInject (snd (getEndpoints cin)) /\ Var md x tArgs else
---                                  tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD else
-                                tyInject (snd (getEndpoints cin)) /\ Buffer defaultBufferMD (Var md x tArgs) (fst (getEndpoints cin)) (Hole defaultHoleMD) (snd (getEndpoints cin))
-                        else
-                        let ch /\ tyArgs' = chTypeArgs2 kctx tArgs pch in
-                        ch /\ Var md x tyArgs'
+                        if chIsId cin then
+                            let ch /\ tyArgs' = chTypeArgs2 kctx tArgs pch in
+                            ch /\ Var md x tyArgs'
+                        else if pChIsId pch then
+                            tyInject (snd (getEndpoints cin)) /\ Buffer defaultBufferMD (Var md x tArgs) (fst (getEndpoints cin)) (Hole defaultHoleMD) (snd (getEndpoints cin))
+                        else if null tArgs && pch == PChange cin then
+                            (tyInject (snd (getEndpoints cin))) /\ Var md x Nil
+                        else unsafeThrow "I didn't think it was possible to have a non-id, non-equal typechange both from ctx and term in var case! (or equal but with tyArgs)"
             (CArrow c1 c2) /\ (Lambda md tBind@(TermBind _ x) ty t bodyTy) ->
                 if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen 1" else
                 if not (bodyTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen 2" else

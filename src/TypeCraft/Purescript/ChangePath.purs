@@ -146,11 +146,11 @@ chTypePath ch typePath =
     recTypePath {
       lambda2:
         \termPath md tBind@{tBind: TermBind _ x} {-Type-} body bodyTy ->
-            let c /\ body' = chTerm (kCtxInject body.ctxs.kctx body.ctxs.actx) (insert x (VarTypeChange (PChange ch)) (ctxInject body.ctxs.ctx))
-                                        (tyInject bodyTy) body.term in
-            let (kctx' /\ ctx2) /\ termPath' = chTermPath (CArrow ch c) termPath in
+            let (kctx' /\ ctx2) /\ termPath' = chTermPath (CArrow ch (tyInject bodyTy)) termPath in
             if not (kCtxIsId kctx') then unsafeThrow "ktx assumptinon violated" else
-            (kctx' /\ ctx2) /\ Lambda2 md tBind.tBind {-Type-} body' (snd (getEndpoints c)) : termPath'
+            let body' = chTermBoundary (kCtxInject body.ctxs.kctx body.ctxs.actx) (insert x (VarTypeChange (PChange ch)) ctx2)
+                                        (tyInject bodyTy) body.term in
+            (kctx' /\ ctx2) /\ Lambda2 md tBind.tBind {-Type-} body' bodyTy : termPath'
         , let4: \termPath md tBind@{tBind: TermBind _ x} tyBinds def {-Type-} body bodyTy ->
         --    let (kctx' /\ ctx') /\ termPath' = chTermPath kctx ctx (tyInject bodyTy) termPath in
             let innerCtx = insert x (VarTypeChange (tyBindsWrapChange tyBinds.tyBinds ch)) (ctxInject ctx) in
