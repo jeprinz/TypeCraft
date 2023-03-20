@@ -78,7 +78,8 @@ recTerm args {ctxs, term : Var md x tyArgs} = args.var md x {ctxs, tyArgs}
 recTerm args {ctxs, ty, term : Let md tBind@(TermBind xmd x) tyBinds def defTy body bodyTy}
     = if not (ty == bodyTy) then unsafeThrow "shouldn't happen recTerm let" else
         -- TODO; should use number of tbinds here!
-        let ctxs' = addLetTypesToCtx (addLetToCtx ctxs tBind tyBinds defTy) tyBinds in
+--        let ctxs' = addLetTypesToCtx (addLetToCtx ctxs tBind tyBinds defTy) tyBinds in
+        let ctxs' = addLetToCtx ctxs tBind tyBinds defTy in
         args.lett md {ctxs, tBind} {ctxs, tyBinds}
             {ctxs: ctxs',  ty: defTy, term: def}
             {ctxs: addLetTypesToCtx ctxs tyBinds, ty: defTy}

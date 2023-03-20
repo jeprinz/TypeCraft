@@ -55,19 +55,19 @@ recTermPath :: forall a. TermPathRec a -> TermPathRecValue -> a
 recTermPath args {ctxs, ty, term, termPath: (Let3 md tBind@(TermBind xmd x) tyBinds {-Term-} defTy body bodyTy) : up} =
     if not (ty == defTy) then unsafeThrow "dynamic type error detected 1" else
     let ctxs' = ctxs{mdctx = delete' x ctxs.mdctx, ctx = delete' x ctxs.ctx} in
-    let ctxs'' = removeLetTypeFromCtx ctxs' tyBinds in
-    args.let3 {ctxs: ctxs'', ty: bodyTy, term: Let md tBind tyBinds term defTy body bodyTy, termPath: up} md
-        {ctxs: ctxs'', tBind} {ctxs: ctxs'', tyBinds}
-        {ctxs: ctxs', ty: defTy}
+    let ctxs'' = addLetTypesToCtx ctxs tyBinds in
+    args.let3 {ctxs: ctxs', ty: bodyTy, term: Let md tBind tyBinds term defTy body bodyTy, termPath: up} md
+        {ctxs: ctxs', tBind} {ctxs: ctxs', tyBinds}
+        {ctxs: ctxs'', ty: defTy}
         {ctxs, ty: bodyTy, term: body} -- body
         bodyTy -- bodyTy
 recTermPath args {ctxs, ty, term, termPath: (Let5 md tBind@(TermBind _ x) tyBinds def defTy {-Term-} bodyTy) : up} =
     if not (ty == bodyTy) then unsafeThrow "dynamic type error detedted" else
     let ctxs' = ctxs{mdctx = delete' x ctxs.mdctx, ctx = delete' x ctxs.ctx} in
-    let ctxs'' = removeLetTypeFromCtx ctxs' tyBinds in
-    args.let5 {ctxs: ctxs'', ty: ty, term: (Let md tBind tyBinds def defTy term bodyTy), termPath: up} md
-        {ctxs: ctxs'', tBind} {ctxs: ctxs', tyBinds}
-        {ctxs, ty: defTy, term: def} --def
+    let ctxs'' = addLetTypesToCtx ctxs tyBinds in
+    args.let5 {ctxs: ctxs', ty: ty, term: (Let md tBind tyBinds def defTy term bodyTy), termPath: up} md
+        {ctxs: ctxs', tBind} {ctxs: ctxs', tyBinds}
+        {ctxs: ctxs'', ty: defTy, term: def} --def
         {ctxs: ctxs', ty: defTy} -- defTy
         bodyTy -- bodyTy
 recTermPath args {ctxs, ty, term, termPath: (App1 md {-Term-} t2 argTy outTy) : up} =
@@ -136,7 +136,7 @@ recTypePath args {ctxs, ty, typePath: (Lambda2 md tBind@(TermBind xmd x) {-Type-
 recTypePath args {ctxs, ty, typePath: (Let4 md tBind@(TermBind xmd x) tyBinds def {-Type-} body bodyTy) : termPath} =
     let ctxs' = ctxs{ctx = insert x (tyBindsWrapType tyBinds ty) ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx} in
     let ctxsRemoved = removeLetTypeFromCtx ctxs tyBinds in
-    args.let4 {ctxs, ty: bodyTy, term: Let md tBind tyBinds def ty body bodyTy, termPath}
+    args.let4 {ctxs: ctxsRemoved, ty: bodyTy, term: Let md tBind tyBinds def ty body bodyTy, termPath}
         md {ctxs: ctxsRemoved, tBind}
         {ctxs: ctxsRemoved, tyBinds}
         {ctxs: ctxs', ty: ty, term: def}
