@@ -69,8 +69,8 @@ chTermPath ch termPath =
             if not (kCtxIsId kctx'') then unsafeThrow "ktx assumptinon violated" else
             let ctx''' = insert x (VarTypeChange (tyBindsWrapChange tyBinds (tyInject defTy.ty))) ctx'' in
             let kctx''' = addLetToKCCtx kctx'' tyBinds in
-            let def' = chTermBoundary kctx'' ctx''' (tyInject defTy.ty) def.term in -- TODO: why would the def of the let ever change anyway?
-            (kctx''' /\ ctx''') /\ Let5 md tBind.tBind tyBinds def' defTy.ty (snd (getEndpoints ch)) : up'
+            let def' = chTermBoundary kctx''' ctx''' (tyInject defTy.ty) def.term in -- TODO: why would the def of the let ever change anyway? It could happen. E.g. let f = let g = _ in [...f...] in bla, then enlambda at bla
+            (kctx'' /\ ctx''') /\ Let5 md tBind.tBind tyBinds def' defTy.ty (snd (getEndpoints ch)) : up'
         , data4: \up md tyBind tyBinds ctrs bodyTy ->
             if not (fst (getEndpoints ch) == bodyTy) then unsafeThrow "shouldn't happen chPath 5" else
             let (kctx' /\ ctx') /\ up' = chTermPath ch up in

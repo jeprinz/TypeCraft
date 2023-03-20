@@ -102,21 +102,18 @@ modifyQuery f st = case st.mode of
 submitCompletion :: CursorMode -> Completion -> Maybe CursorMode
 submitCompletion cursorMode compl = case cursorMode.cursorLocation of
   InsideHoleCursor ctxs ty path -> case compl of
-    CompletionTerm tm' {-ty'-} sub ->
+    CompletionTerm preTerm {-ty'-} sub ->
       let
         ty' = applySubType sub ty
-
-        -- TODO: needs to be subInsideHolePath
+        tm = subTerm sub preTerm
         path' = subInsideHolePath sub path
-
         ctxs' = subAllCtx sub ctxs
-
         termPath = case path' of
           (Hole1 _) List.: termPath -> termPath
           _ -> unsafeThrow "Shouldn't happen"
       in
         pure
-          { cursorLocation: TermCursor ctxs' ty' termPath tm'
+          { cursorLocation: TermCursor ctxs' ty' termPath tm
           , query: emptyQuery
           }
     _ -> Nothing

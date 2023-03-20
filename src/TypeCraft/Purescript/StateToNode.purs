@@ -133,8 +133,7 @@ cursorModeToNode cursorMode =
   cursorModePathToNode :: Node -> Node
   cursorModePathToNode = case cursorMode.cursorLocation of
     TermCursor ctxs ty termPath term ->
---        if not (Map.isEmpty ctxs.mdkctx && Map.isEmpty ctxs.mdctx && Map.isEmpty ctxs.kctx && Map.isEmpty ctxs.ctx) then unsafeThrow "Contexts at top of program not empty!" else
-        trace ("Rendering cursor mode. termPath.ctxs.mdctx is empty?: "<> show (Map.isEmpty ctxs.mdctx)) \_ ->
+--        trace ("Rendering cursor mode. termPath.ctxs.mdctx is empty?: "<> show (Map.isEmpty ctxs.mdctx)) \_ ->
         termPathToNode true Nil (BISelect Nil term ctxs ty) { ctxs, term, termPath, ty }
     TypeCursor ctxs typePath ty -> typePathToNode true Nil (BISelect Nil ty ctxs unit) { ctxs, ty, typePath }
     TypeBindCursor ctxs typeBindPath tyBind -> typeBindPathToNode true Nil { ctxs, typeBindPath, tyBind }
@@ -174,10 +173,11 @@ cursorModeToNode cursorMode =
     in
       case cmpl of
         -- a CompletionTerm can be filled in only at InsideHoleCursor
-        CompletionTerm term {-ty-} sub -> case cursorMode.cursorLocation of
-          InsideHoleCursor ctxs ty' _path -> 
+        CompletionTerm termPre {-ty-} sub -> case cursorMode.cursorLocation of
+          InsideHoleCursor ctxs tyPre _path ->
             let
-              ty = applySubType sub ty'
+              ty = applySubType sub tyPre
+              term = subTerm sub termPre
             in
               setNodeGetCursor getCursor
                 $ addNodeStyle (NodeStyle "query-replace-new")
