@@ -7,7 +7,7 @@ import TypeCraft.Purescript.Grammar
 import Data.List (List(..), (:))
 import Data.List as List
 import Data.Map as Map
-import Data.Map.Internal (Map, empty, filterKeys, insert, lookup, filter)
+import Data.Map.Internal (Map, empty, filterKeys, lookup, filter)
 import Data.Map.Internal (empty, lookup, insert, union, mapMaybeWithKey)
 import Data.Maybe (Maybe(..))
 import Data.Set (Set)
@@ -18,8 +18,7 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.MD
-import TypeCraft.Purescript.Util (hole', delete')
-import TypeCraft.Purescript.Util (lookup')
+import TypeCraft.Purescript.Util (hole', delete', lookup', insert')
 import Data.Either (Either)
 import TypeCraft.Purescript.Freshen (genFreshener, subCtrParam)
 import Debug (trace)
@@ -43,17 +42,17 @@ type TypeAliasContext = Map TypeVarID (List TypeBind /\ Type) -- The array is th
 type ChangeCtx = Map TermVarID VarChange
 
 ctxKindCons :: KindChangeCtx -> TypeBind -> TVarChange -> KindChangeCtx
-ctxKindCons kctx (TypeBind _ x) c = insert x c kctx
+ctxKindCons kctx (TypeBind _ x) c = insert' x c kctx
 
 type CAllContext = KindChangeCtx /\ ChangeCtx
 
 addLetToCCtx :: ChangeCtx -> TermBind -> List TypeBind -> Type -> ChangeCtx
 addLetToCCtx ctx tBind@(TermBind _ x) tyBinds ty =
-        insert x (VarTypeChange (pTyInject (tyBindsWrapType tyBinds ty))) ctx
+        insert' x (VarTypeChange (pTyInject (tyBindsWrapType tyBinds ty))) ctx
 
 addLetToKCCtx :: KindChangeCtx -> List TypeBind -> KindChangeCtx
 addLetToKCCtx kctx Nil = kctx
-addLetToKCCtx kctx (TypeBind _ x : tyBinds) = addLetToKCCtx (insert x (TVarKindChange KCType Nothing) kctx) tyBinds
+addLetToKCCtx kctx (TypeBind _ x : tyBinds) = addLetToKCCtx (insert' x (TVarKindChange KCType Nothing) kctx) tyBinds
 
 removeLetFromKCCtx :: KindChangeCtx -> List TypeBind -> KindChangeCtx
 removeLetFromKCCtx kctx Nil = kctx
@@ -64,7 +63,7 @@ removeLetFromCCtx (kctx /\ ctx) (TermBind _ x) = kctx /\ delete' x ctx
 
 addDataToKCCtx :: KindChangeCtx -> TypeBind -> List TypeBind -> KindChangeCtx
 addDataToKCCtx kctx (TypeBind _ x) tyBinds =
-    insert x (TVarKindChange (kindInject (tyBindsWrapKind tyBinds Type)) Nothing) kctx
+    insert' x (TVarKindChange (kindInject (tyBindsWrapKind tyBinds Type)) Nothing) kctx
 
 removeDataFromKCCtx :: KindChangeCtx -> TypeBind -> KindChangeCtx
 removeDataFromKCCtx kctx (TypeBind _ x) = delete' x kctx
@@ -184,11 +183,11 @@ listTypeBindChWrapPolyChange ListTypeBindChangeNil pch = PChange pch
 
 addTyBindChsToKCCtx :: ListTypeBindChange -> KindChangeCtx -> KindChangeCtx
 addTyBindChsToKCCtx (ListTypeBindChangeCons (TypeBind _ x) ch) kctx =
-    addTyBindChsToKCCtx ch (insert x (TVarKindChange KCType Nothing) kctx)
+    addTyBindChsToKCCtx ch (insert' x (TVarKindChange KCType Nothing) kctx)
 addTyBindChsToKCCtx (ListTypeBindChangePlus (TypeBind _ x) ch) kctx =
-    addTyBindChsToKCCtx ch (insert x (TVarInsert Type Nothing) kctx)
+    addTyBindChsToKCCtx ch (insert' x (TVarInsert Type Nothing) kctx)
 addTyBindChsToKCCtx (ListTypeBindChangeMinus (TypeBind _ x) ch) kctx =
-    addTyBindChsToKCCtx ch (insert x (TVarDelete Type Nothing) kctx)
+    addTyBindChsToKCCtx ch (insert' x (TVarDelete Type Nothing) kctx)
 addTyBindChsToKCCtx ListTypeBindChangeNil kctx = kctx
 
 -- This probably won't be needed?
@@ -210,12 +209,12 @@ constructorTypesImpl :: TypeVarID -> List TypeVarID -> List Constructor -> Map T
 constructorTypesImpl dataType tyVarIds Nil = empty
 constructorTypesImpl dataType tyVarIds (Constructor _ (TermBind _ x) params : ctrs)
     = let tyArgs = map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD (TypeVar x) Nil)) tyVarIds
-    in insert x (ctrParamsToType dataType tyVarIds params) (constructorTypesImpl dataType tyVarIds ctrs)
+    in insert' x (ctrParamsToType dataType tyVarIds params) (constructorTypesImpl dataType tyVarIds ctrs)
 
 constructorNames :: List Constructor -> Map TermVarID String
 constructorNames Nil = empty
 constructorNames (Constructor _ (TermBind xmd x) params : ctrs)
-    = insert x xmd.varName (constructorNames ctrs)
+    = insert' x xmd.varName (constructorNames ctrs)
 
 ctrParamsToType :: {-The datatype-}TypeVarID -> {-Datatype parameters-}List TypeVarID -> List CtrParam -> PolyType
 ctrParamsToType dataType tyVarIds ctrParams =
@@ -236,8 +235,8 @@ constructorIds (Constructor _ (TermBind _ x) _ : ctrs) = Set.insert x (construct
 addDataToCtx :: AllContext -> TypeBind -> List TypeBind -> List Constructor -> AllContext
 addDataToCtx ctxs tyBind@(TypeBind xmd x) tyBinds ctrs =
     ctxs{
-        kctx = insert x (bindsToKind tyBinds) ctxs.kctx
-        , mdkctx = insert x xmd.varName ctxs.mdkctx
+        kctx = insert' x (bindsToKind tyBinds) ctxs.kctx
+        , mdkctx = insert' x xmd.varName ctxs.mdkctx
         , ctx= union ctxs.ctx (constructorTypes tyBind tyBinds ctrs)
         , mdctx= union ctxs.mdctx (constructorNames ctrs)
     }
@@ -255,9 +254,9 @@ removeDataFromCtx ctxs (TypeBind _ x) _tyBinds ctrs =
 addTLetToCtx :: AllContext -> TypeBind -> (List TypeBind) -> Type -> AllContext
 addTLetToCtx ctxs tyBind@(TypeBind xmd x) tyBinds def =
     ctxs
-        {kctx = insert x (bindsToKind tyBinds) ctxs.kctx
-        , mdkctx = insert x xmd.varName ctxs.mdkctx
-        , actx = insert x (tyBinds /\ def) ctxs.actx
+        {kctx = insert' x (bindsToKind tyBinds) ctxs.kctx
+        , mdkctx = insert' x xmd.varName ctxs.mdkctx
+        , actx = insert' x (tyBinds /\ def) ctxs.actx
         }
 
 removeTLetFromCtx :: AllContext -> TypeBind -> AllContext
@@ -265,7 +264,7 @@ removeTLetFromCtx ctxs (TypeBind _ x) = ctxs{kctx= delete' x ctxs.kctx, mdkctx= 
 
 addLetToCtx :: AllContext -> TermBind -> List TypeBind -> Type -> AllContext
 addLetToCtx ctxs tBind@(TermBind xmd x) tyBinds defTy
-    = ctxs{ctx = insert x (tyBindsWrapType tyBinds defTy) ctxs.ctx, mdctx = insert x xmd.varName ctxs.mdctx}
+    = ctxs{ctx = insert' x (tyBindsWrapType tyBinds defTy) ctxs.ctx, mdctx = insert' x xmd.varName ctxs.mdctx}
 
 addLetTypesToCtx :: AllContext -> List TypeBind -> AllContext
 addLetTypesToCtx ctxs tyBinds
@@ -273,10 +272,10 @@ addLetTypesToCtx ctxs tyBinds
     where
     addNames :: List TypeBind -> MDTypeContext -> MDTypeContext
     addNames Nil mdkctx = mdkctx
-    addNames (TypeBind {varName} x : tyBinds) mdkctx = addNames tyBinds (insert x varName mdkctx)
+    addNames (TypeBind {varName} x : tyBinds) mdkctx = addNames tyBinds (insert' x varName mdkctx)
     addKinds :: List TypeBind -> TypeContext -> TypeContext
     addKinds Nil kctx = kctx
-    addKinds (TypeBind _ x : tyBinds) kctx = addKinds tyBinds (insert x Type kctx)
+    addKinds (TypeBind _ x : tyBinds) kctx = addKinds tyBinds (insert' x Type kctx)
 
 removeLetTypeFromCtx :: AllContext -> List TypeBind -> AllContext
 removeLetTypeFromCtx ctxs tyBinds

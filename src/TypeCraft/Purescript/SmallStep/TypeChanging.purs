@@ -18,9 +18,10 @@ import Effect.Exception.Unsafe (unsafeThrow)
 QUESTIONS:
 How can this deal with typechange bouncing back up for dealing with polymorhpism?
 Or even more simply, how can it deal with adding an argument to a variable? A typechange has to be propagated up from the variable.
+Answer: downChange needs to also return a typechange going up!
 -}
 
-downChange :: Label -> CAllContext -> Change -> Label /\ Array (Change /\ CAllContext)
+downChange :: Label -> CAllContext -> Change -> Label /\ Change /\Array (Change /\ CAllContext)
 downChange (LApp md {-Term-} {-Term-} argTy outTy) ctxs ch = hole' "downChange"
 downChange (LLambda md tBind ty1 {-Term-} ty2) ctxs ch = hole' "downChange"
 downChange (LVar md x tyArgs) ctxs ch = hole' "downChange"
@@ -28,6 +29,7 @@ downChange (LLet md tBind tyBinds {-Term-} defTy {-Term-} bodyTy) (kctx /\ ctx) 
     let ctx' = addLetToCCtx ctx tBind tyBinds defTy in
     let kctx' = addLetToKCCtx kctx tyBinds in
     LLet md tBind tyBinds {--} defTy {--} (snd (getEndpoints ch))
+    /\ (tyInject bodyTy)
     /\ [((tyInject defTy) /\ (kctx' /\ ctx')) , (ch /\ (kctx' /\ ctx'))]
 downChange (LData md tyBind tyBinds ctrs {-Term-} bodyTy) ctxs ch = hole' "downChange"
 downChange (LTLet md tyBind tyBinds def {-Term-} bodyTy) ctxs ch = hole' "downChange"

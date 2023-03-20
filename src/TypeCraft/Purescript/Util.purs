@@ -4,7 +4,7 @@ import Data.Tuple.Nested
 import Prelude
 
 import Data.List (List, head)
-import Data.Map (Map, toUnfoldable, fromFoldable, lookup, member, delete, unionWith)
+import Data.Map (Map, toUnfoldable, fromFoldable, lookup, member, delete, unionWith, insert)
 import Data.Maybe (Maybe(..))
 import Data.UUID (UUID)
 import Data.UUID as UUID
@@ -41,6 +41,12 @@ justWhen true k = Just (k unit)
 delete' :: forall v k . Ord k => k -> Map k v -> Map k v
 delete' k m  = if member k m then delete k m else unsafeThrow "Tried to delete an element not present in the map"
 --delete' k m  = delete k m
+
+insert' :: forall v k . Ord k => k -> v -> Map k v -> Map k v
+insert' k v m =
+    if member k m then unsafeThrow "Tried to insert an element already present in the map" else
+    insert k v m
+
 
 mapKeys :: forall k v . Ord k => (k -> k) -> Map k v -> Map k v
 mapKeys f m =

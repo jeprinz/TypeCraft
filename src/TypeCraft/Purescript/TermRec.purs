@@ -5,7 +5,7 @@ import Prim hiding (Type)
 import Data.Tuple.Nested (type (/\), (/\))
 
 import TypeCraft.Purescript.Grammar
-import Data.Map.Internal (Map, empty, lookup, insert, union)
+import Data.Map.Internal (Map, empty, lookup, union)
 import Data.Set (Set)
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
@@ -19,6 +19,7 @@ import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.TypeChangeAlgebra (pGetEndpoints)
 import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)
 import Debug (trace)
+import TypeCraft.Purescript.Util
 
 type TermRecValue = {ctxs :: AllContext, ty :: Type, term :: Term}
 type TypeRecValue = {ctxs :: AllContext, ty :: Type}
@@ -64,7 +65,7 @@ recTerm :: forall a. TermRec a -> TermRecValue -> a
 recTerm args {ctxs, ty: (Arrow _ ty1 ty2), term : (Lambda md bind@(TermBind xmd x) xty body bodyTy)}
     = if not (ty1 == xty) then unsafeThrow "dynamic type error detected 8" else
       if not (ty2 == bodyTy) then unsafeThrow "dynamic type error detected 9" else
-      let ctxs' = ctxs{mdctx= insert x xmd.varName ctxs.mdctx, ctx= insert x (PType ty1) ctxs.ctx} in
+      let ctxs' = ctxs{mdctx= insert' x xmd.varName ctxs.mdctx, ctx= insert' x (PType ty1) ctxs.ctx} in
         args.lambda md {ctxs, tBind: bind}
             {ctxs, ty: xty}
             {ctxs: ctxs', ty: ty2, term : body}
@@ -81,7 +82,7 @@ recTerm args {ctxs, ty, term : Let md tBind@(TermBind xmd x) tyBinds def defTy b
 --        let ctxs' = addLetTypesToCtx (addLetToCtx ctxs tBind tyBinds defTy) tyBinds in
         let ctxs' = addLetToCtx ctxs tBind tyBinds defTy in
         args.lett md {ctxs, tBind} {ctxs, tyBinds}
-            {ctxs: ctxs',  ty: defTy, term: def}
+            {ctxs: addLetTypesToCtx ctxs' tyBinds,  ty: defTy, term: def}
             {ctxs: addLetTypesToCtx ctxs tyBinds, ty: defTy}
             {ctxs: ctxs', ty: ty, term: body}
             bodyTy
@@ -90,8 +91,6 @@ recTerm args {ctxs, ty, term : Data md tyBind@(TypeBind xmd x) tyBinds ctrs body
     let ctxs' = addDataToCtx ctxs tyBind tyBinds ctrs in
     args.dataa md {ctxs, tyBind}
         {ctxs, tyBinds} {ctxs: ctxs{kctx= ctxs'.kctx, mdkctx= ctxs'.mdkctx}, ctrs}
-        -- TODO: on line below, don't just put Type for kind, actually use the list of tbinds to get the number of parameters!!!!
-        -- TODO TODO TODO TODO: actually add constructors to the context!
         {ctxs: ctxs', ty: ty, term: body}
         bodyTy
 recTerm args {ctxs, ty, term : TLet md tyBind@(TypeBind xmd x) tyBinds def body bodyTy} =

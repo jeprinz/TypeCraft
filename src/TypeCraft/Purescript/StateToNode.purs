@@ -10,6 +10,7 @@ import Data.List (List(..), reverse)
 import Data.Maybe (Maybe(..), maybe)
 import Data.String as String
 import Data.Tuple (snd)
+import Data.Map as Map
 import Data.Tuple.Nested ((/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Alpha (applySubType)
@@ -131,7 +132,9 @@ cursorModeToNode cursorMode =
 
   cursorModePathToNode :: Node -> Node
   cursorModePathToNode = case cursorMode.cursorLocation of
-    TermCursor ctxs ty termPath term -> -- trace ("Rendering cursor mode. termPath is: \n" <> show termPath <> "\n and term is: \n" <> show term) \_ ->
+    TermCursor ctxs ty termPath term ->
+--        if not (Map.isEmpty ctxs.mdkctx && Map.isEmpty ctxs.mdctx && Map.isEmpty ctxs.kctx && Map.isEmpty ctxs.ctx) then unsafeThrow "Contexts at top of program not empty!" else
+        trace ("Rendering cursor mode. termPath.ctxs.mdctx is empty?: "<> show (Map.isEmpty ctxs.mdctx)) \_ ->
         termPathToNode true Nil (BISelect Nil term ctxs ty) { ctxs, term, termPath, ty }
     TypeCursor ctxs typePath ty -> typePathToNode true Nil (BISelect Nil ty ctxs unit) { ctxs, ty, typePath }
     TypeBindCursor ctxs typeBindPath tyBind -> typeBindPathToNode true Nil { ctxs, typeBindPath, tyBind }
