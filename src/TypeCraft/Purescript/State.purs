@@ -55,7 +55,7 @@ isEmptyQuery { string } = String.null string
 
 -- TODO: completions for other syntax kinds
 data Completion
-  = CompletionTerm Term Sub
+  = CompletionTerm Term Sub -- NOTE: the term should not already have the sub applied
   | CompletionTermPath UpPath Change Sub
   -- | CompletionTermPath2 UpPath (Unit -> CursorLocation) -- A more generic version of a completion
   | CompletionType Type Sub

@@ -20,11 +20,12 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Alpha (emptySub)
 import TypeCraft.Purescript.ChangeTerm (chCtrList, chParamList, chTypeBindList)
 import TypeCraft.Purescript.Context (kCtxInject)
-import TypeCraft.Purescript.Grammar (Change(..), Constructor(..), CtrParam(..), Kind(..), ListCtrChange(..), ListCtrParamChange(..), ListTypeBindChange(..), Tooth(..), Type(..), TypeArg(..), TypeVar(..), TypeVarID, freshHole, freshTHole, freshTermBind, freshTypeBind, tyInject)
+import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.MD (defaultAppMD, defaultArrowMD, defaultBufferMD, defaultCtrMD, defaultCtrParamMD, defaultGADTMD, defaultLambdaMD, defaultLetMD, defaultTLetMD, defaultTNeuMD, defaultTypeArgMD, defaultTypeBoundaryMD)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, State)
 import TypeCraft.Purescript.Unification (fillNeutral, runUnify, unify)
 import Debug (trace)
+import TypeCraft.Purescript.Unification (normThenUnify)
 
 type CompletionGroup
   = { filterLabel :: String -> Boolean
@@ -51,7 +52,27 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
                       }
                     ]
         )
-        (Map.toUnfoldable ctxs.mdctx :: Array (_ /\ _)) 
+        (Map.toUnfoldable ctxs.mdctx :: Array (_ /\ _))
+      do -- TODO: After I implement the thing I need to do anyway for copy/paste, where it takes a path and finds its most general typing, might this already be good?
+        let
+            ty1 = freshTHole unit
+            ty2 = freshTHole unit
+        case (runUnify (normThenUnify ctxs.actx ty (Arrow defaultArrowMD ty1 ty2))) of -- TODO: shouldn't all unifies in this file be normThenUnify?
+            Left _ -> pure unit
+            Right (_ /\ sub) ->
+              Writer.tell <<< List.fromFoldable $
+                [ { filterLabel: (_ `kindaStartsWithAny` [ "lambda", "\\" ])
+                  , completions:
+                      [ const
+                          let
+                            tmBind = freshTermBind Nothing
+                          in
+                            CompletionTerm -- lam (~ : alpha) ↦ (? : ty)
+                              (Lambda defaultLambdaMD tmBind ty1 (freshHole unit) ty2)
+                              sub
+                      ]
+                  }
+            ]
   TermCursor _ctxs ty _path _tm ->
     Writer.execWriter do
       -- en-lambda
