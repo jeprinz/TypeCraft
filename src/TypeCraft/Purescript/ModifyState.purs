@@ -23,7 +23,7 @@ import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
 import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select(..), State, botSelectOrientation, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
-import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints, getCtxEndpoints, getKCtxAliasEndpoints, getKCtxTyEndpoints, invert, invertListTypeBindChange)
+import TypeCraft.Purescript.TypeChangeAlgebra
 import TypeCraft.Purescript.Util (hole')
 
 handleKey :: Key -> State -> Maybe State
@@ -358,7 +358,7 @@ delete st = do
               change = termPathToChange ty2 tmPath2
               (kctx' /\ ctx') /\ tmPath1' = chTermPath (invert change) { term: tm1, ty: ty1, ctxs: ctxs1, termPath: tmPath1 }
               (ctx /\ kctx /\ _mdctx /\ _mdkctx) = downPathToCtxChange ctxs1 (List.reverse tmPath2)
-              tm2' = chTermBoundary kctx ctx (tyInject ty2) tm2
+              tm2' = chTermBoundary (invertKCtx kctx) (invertCtx ctx) (tyInject ty2) tm2
               ctxs' = ctxs1 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
             in
               pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty2 tmPath1' tm2' }

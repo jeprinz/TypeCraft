@@ -212,6 +212,20 @@ invertVarChange (VarTypeChange pch) = VarTypeChange (invertPolyChange pch)
 invertVarChange (VarDelete ty) = VarInsert ty
 invertVarChange (VarInsert ty) = VarDelete ty
 
+invertTypeAliasChange :: TypeAliasChange -> TypeAliasChange
+invertTypeAliasChange (TAForall tyBind tac) = TAForall tyBind (invertTypeAliasChange tac)
+invertTypeAliasChange (TAPlus tyBind tac) = TAMinus tyBind (invertTypeAliasChange tac)
+invertTypeAliasChange (TAMinus tyBind tac) = TAPlus tyBind (invertTypeAliasChange tac)
+invertTypeAliasChange (TAChange ch) = TAChange (invert ch)
+
+--data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange)
+--    | TVarDelete Kind (Maybe (List TypeBind /\ Type))
+--    | TVarInsert Kind (Maybe (List TypeBind /\ Type))
+invertTVarChange :: TVarChange -> TVarChange
+invertTVarChange (TVarKindChange pch mtac) = TVarKindChange (invertKindChange pch) (map invertTypeAliasChange mtac)
+invertTVarChange (TVarDelete ty tac) = TVarInsert ty tac
+invertTVarChange (TVarInsert ty tac) = TVarDelete ty tac
+
 invertListTypeBindChange :: ListTypeBindChange -> ListTypeBindChange
 invertListTypeBindChange (ListTypeBindChangeCons tyBind ch) = ListTypeBindChangeCons tyBind (invertListTypeBindChange ch)
 invertListTypeBindChange (ListTypeBindChangePlus tyBind ch) = ListTypeBindChangeMinus tyBind (invertListTypeBindChange ch)
@@ -251,11 +265,20 @@ kChIsId KCType = true
 kChIsId (KCArrow ch) = kChIsId ch
 kChIsId _ = false
 
+invertKindChange :: KindChange -> KindChange
+invertKindChange (KCArrow kc) = invertKindChange (KCArrow (invertKindChange kc))
+invertKindChange KCType = KCType
+invertKindChange (KPlus kc) = KMinus (invertKindChange kc)
+invertKindChange (KMinus kc) = KPlus (invertKindChange kc)
+
 ctxIsId :: ChangeCtx -> Boolean
 ctxIsId = all varChIsId
 
 invertCtx :: ChangeCtx -> ChangeCtx
 invertCtx = map invertVarChange
+
+invertKCtx :: KindChangeCtx -> KindChangeCtx
+invertKCtx = map invertTVarChange
 
 kCtxIsId :: KindChangeCtx -> Boolean
 kCtxIsId = all tVarChIsId
