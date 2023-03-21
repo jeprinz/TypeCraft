@@ -106,24 +106,18 @@ arguments. fillNeutral'' prioritizes many arguments, and fillNeutral' prioritize
 --    pure $ Var defaultVarMD id tyArgs
 
 fillNeutral'' :: TypeAliasContext -> Type -> TermVarID -> Type -> List.List TypeArg -> Unify Term
-fillNeutral'' actx varTy id locTy tyArgs = do
-    res <- fillNeutral''Impl actx varTy id locTy tyArgs (\t -> t)
-    case res of
-        Just t -> pure $ t
-        Nothing -> Except.throwError "didn't work"
+fillNeutral'' actx varTy id locTy tyArgs = fillNeutral''Impl actx varTy id locTy tyArgs (\t -> t)
 
-fillNeutral''Impl :: TypeAliasContext -> Type -> TermVarID -> Type -> List.List TypeArg -> (Term -> Term) -> Unify (Maybe Term)
+fillNeutral''Impl :: TypeAliasContext -> Type -> TermVarID -> Type -> List.List TypeArg -> (Term -> Term) -> Unify Term
 fillNeutral''Impl actx varTy id locTy tyArgs wrapInApps =
     let ifNoMoreVars = do
             void $ normThenUnify actx locTy varTy
-            pure $ Just $ wrapInApps (Var defaultVarMD id tyArgs)
+            pure $ wrapInApps (Var defaultVarMD id tyArgs)
     in
     case varTy of
         Arrow _ ty1 ty2 -> do
-            withOneMoreArg <- fillNeutral''Impl actx ty2 id locTy tyArgs (\t -> (App defaultAppMD (wrapInApps t) (freshHole unit) ty1 ty2))
-            case withOneMoreArg of
-                Just t -> pure $ Just t
-                Nothing -> ifNoMoreVars
+            Except.catchError (fillNeutral''Impl actx ty2 id locTy tyArgs (\t -> (App defaultAppMD (wrapInApps t) (freshHole unit) ty1 ty2)))
+                \_ -> ifNoMoreVars
         _ -> ifNoMoreVars
 
 -- first type is that of variable, second type is that of location that variable will fill
