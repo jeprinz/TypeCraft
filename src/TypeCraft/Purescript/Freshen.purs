@@ -117,3 +117,6 @@ subCtrParam sub (CtrParam md ty) = CtrParam md (subType sub ty)
 
 subConstructor :: TyVarSub -> Constructor -> Constructor
 subConstructor sub (Constructor md tBind ctrParams) = Constructor md tBind (map (subCtrParam sub) ctrParams)
+
+--------------------------------------------------------------------------------
+

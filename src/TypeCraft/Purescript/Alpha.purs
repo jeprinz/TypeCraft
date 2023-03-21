@@ -40,6 +40,9 @@ polyTypeEqImpl equiv (Forall x pt1) (Forall y pt2) = polyTypeEqImpl (Map.insert 
 polyTypeEqImpl equiv (PType ty1) (PType ty2) = (subType equiv ty1) == ty2
 polyTypeEqImpl _ _ _ = false
 
+convertSub :: TyVarEquiv -> Sub
+convertSub equiv = { subTypeVars : (map (\x -> TNeu defaultTNeuMD (TypeVar x) List.Nil) equiv) , subTHoles : Map.empty}
+
 subType :: TyVarEquiv -> Type -> Type
 subType equiv = applySubType { subTypeVars : (map (\x -> TNeu defaultTNeuMD (TypeVar x) List.Nil) equiv) , subTHoles : Map.empty}
 

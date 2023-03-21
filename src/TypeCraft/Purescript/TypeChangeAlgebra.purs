@@ -12,6 +12,7 @@ import Data.List (unzip, (:), List(..), foldl, all)
 import Data.List as List
 import Data.Map (Map, singleton, empty, unionWith, mapMaybe, insert, delete)
 import Data.Map as Map
+import Data.Set as Set
 import Data.Map.Internal (Map, insert, empty, lookup)
 import Data.Maybe (Maybe(..))
 import Data.Traversable (sequence)
@@ -232,6 +233,7 @@ invertListTypeBindChange (ListTypeBindChangePlus tyBind ch) = ListTypeBindChange
 invertListTypeBindChange (ListTypeBindChangeMinus tyBind ch) = ListTypeBindChangePlus tyBind (invertListTypeBindChange ch)
 invertListTypeBindChange ListTypeBindChangeNil = ListTypeBindChangeNil
 
+-- TODO: maybe morally, this function should just be replaced by checking if the endpoints are equal. The chIsId' function checks for a true groupoid identity. Although technically, that is even more permissive than this. Although I doubt that those cases come up.
 chIsId :: Change -> Boolean
 chIsId (CArrow c1 c2) = chIsId c1 && chIsId c2
 chIsId (CHole _ _ _) = true
@@ -540,3 +542,31 @@ normalizeType actx ty =
             let sub = Map.fromFoldable (List.zip ids types) in
             normalizeType actx (applySubType {subTypeVars: sub, subTHoles: Map.empty} def)
 
+--------------------------------------------------------------------------------
+
+chIsId' :: Change -> Boolean
+chIsId' (CArrow c1 c2) = chIsId' c1 && chIsId' c2
+chIsId' (CHole _ _ _) = true
+chIsId' (Replace t1 t2) = false -- this case might need to be different depending on the situation. Not sure whats canonically correct.
+chIsId' (CNeu varId params) = all (\b -> b) (map (case _ of
+    ChangeParam change -> chIsId' change
+    _ -> false) params)
+chIsId' _ = false
+
+generalizeChange :: Change -> Change
+generalizeChange ch =
+    if chIsId' ch then
+        let hid = freshTypeHoleID unit in
+        CHole hid Set.empty Map.empty
+    else case ch of
+            (CArrow change1 change2) -> CArrow (generalizeChange change1) (generalizeChange change2)
+            (CHole holeId w s) -> CHole holeId w s
+            (Replace t1 t2) -> Replace t2 t1
+            (Plus t change) -> Plus t (generalizeChange change)
+            (Minus t change) -> Minus t (generalizeChange change)
+            (CNeu varId params) -> CNeu varId (map invertParam params)
+
+generalizeParam :: ChangeParam -> ChangeParam
+generalizeParam (ChangeParam change) = ChangeParam (generalizeChange change)
+generalizeParam (PlusParam t) = MinusParam t
+generalizeParam (MinusParam t) = PlusParam t
