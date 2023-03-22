@@ -20,8 +20,7 @@ import Data.Tuple (fst, snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Substitution (Sub)
-import TypeCraft.Purescript.Util (hole')
-import TypeCraft.Purescript.Util (lookup')
+import TypeCraft.Purescript.Util
 import TypeCraft.Purescript.Alpha
 import Data.Maybe (maybe)
 import Debug (trace)
@@ -570,3 +569,59 @@ generalizeParam :: ChangeParam -> ChangeParam
 generalizeParam (ChangeParam change) = ChangeParam (generalizeChange change)
 generalizeParam (PlusParam t) = MinusParam t
 generalizeParam (MinusParam t) = PlusParam t
+
+
+{-
+Since it seems really hard to properly keep track of the typechanges,
+maybe the best approach is:
+For any variables who's type hasn't changed at all, great keep them.
+For any variables who'se type has changed, just fully delete and insert a completely new variable?
+
+(ALSO KEEP IN MIND FRESHENING!!!!!!!!!) wait no freshening is irrelevant, that only applies to things bound in the term itself.
+-}
+
+--type AllChangeContexts = ChangeCtx /\ KindChangeCtx /\ MDTermChangeCtx /\ MDTypeChangeCtx
+getChangeCtx :: TermContext -> TermContext -> ChangeCtx
+getChangeCtx ctx1 ctx2 = threeCaseUnion VarDelete VarInsert (\t1 t2 -> VarTypeChange $ polyReplace t1 t2) ctx1 ctx2
+
+-- This is extermely janky because I'm just making a random guess as to how the parameters changed, but its the simplest thing to implement without changing a lot of other stuff. It will very rarely come up in practice.
+polyReplace :: PolyType -> PolyType -> PolyChange
+polyReplace (Forall x pt1) (Forall y pt2) = CForall x (polyReplace pt1 (subPolyType (convertSub (Map.insert x y Map.empty)) pt2))
+polyReplace (PType t1) (PType t2) | t1 == t2 = PChange (tyInject t1)
+polyReplace (PType t1) (PType t2) = PChange (Replace t1 t2)
+polyReplace (Forall x pt1) pt2 = PMinus x (polyReplace pt1 pt2)
+polyReplace pt1 (Forall x pt2) = PPlus x (polyReplace pt1 pt2)
+
+--type TypeAliasContext = Map TypeVarID (List TypeBind /\ Type) -- The array is the free variables in the Type.
+--type KindChangeCtx = Map TypeVarID TVarChange
+getKindChangeCtx :: TypeContext -> TypeContext -> TypeAliasContext -> TypeAliasContext -> KindChangeCtx
+getKindChangeCtx kctx1 kctx2 actx1 actx2 =
+    let ctxs1 = threeCaseUnion (\k -> k /\ Nothing) (\_ -> unsafeThrow "shouldn't happen2")
+            (\k tyDef -> k /\ Just tyDef) kctx1 actx1 in
+    let ctxs2 = threeCaseUnion (\k -> k /\ Nothing) (\_ -> unsafeThrow "shouldn't happen3")
+            (\k tyDef -> k /\ Just tyDef) kctx2 actx2 in
+    threeCaseUnion (\(k /\ tyDef) -> TVarDelete k tyDef) (\(k /\ tyDef) -> TVarInsert k tyDef)
+        (\(k1 /\ tyDef1) (k2 /\ tyDef2) -> TVarKindChange (kindReplace k1 k2) (typeAliasReplace <$> tyDef1 <*> tyDef2)) ctxs1 ctxs2
+
+--data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange)
+--    | TVarDelete Kind (Maybe (List TypeBind /\ Type))
+--    | TVarInsert Kind (Maybe (List TypeBind /\ Type))
+kindReplace :: Kind -> Kind -> KindChange
+kindReplace (KArrow k1) (KArrow k2) = KCArrow (kindReplace k1 k2)
+kindReplace Type Type = KCType
+kindReplace (KArrow k1) k2 = KMinus (kindReplace k1 k2)
+kindReplace k1 (KArrow k2) = KPlus (kindReplace k1 k2)
+--
+--data TypeAliasChange
+--  = TAForall TypeBind TypeAliasChange
+--  | TAPlus TypeBind TypeAliasChange
+--  | TAMinus TypeBind TypeAliasChange
+--  | TAChange Change
+
+typeAliasReplace :: (List TypeBind /\ Type) -> (List TypeBind /\ Type) -> TypeAliasChange
+typeAliasReplace ((tyBind@(TypeBind _ x) : tyBinds1) /\ t1) (((TypeBind _ y) : tyBinds2) /\ t2) | x == y =
+    TAForall tyBind (typeAliasReplace (tyBinds1 /\ t1) (tyBinds2 /\ t2))
+--typeAliasReplace ((tyBind1 : tyBinds1) /\ t1) ((tyBind2 : tyBinds2) /\ t2) | x == y =
+typeAliasReplace (Nil /\ t1) (Nil /\ t2) = TAChange (Replace t1 t2)
+typeAliasReplace ((tyBind : tyBinds) /\ t1) tyDef2 = TAMinus tyBind (typeAliasReplace (tyBinds /\ t1) tyDef2)
+typeAliasReplace tyDef1 ((tyBind : tyBinds) /\ t2) = TAPlus tyBind (typeAliasReplace tyDef1 (tyBinds /\ t2))

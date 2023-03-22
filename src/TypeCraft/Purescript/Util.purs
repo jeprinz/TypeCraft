@@ -5,10 +5,12 @@ import Prelude
 
 import Data.List (List, head)
 import Data.Map (Map, toUnfoldable, fromFoldable, lookup, member, delete, unionWith, insert)
+import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.UUID (UUID)
 import Data.UUID as UUID
 import Effect.Exception.Unsafe (unsafeThrow)
+import Data.Maybe (maybe)
 
 -- hole :: forall a. a
 -- hole = unsafeThrow "hole"
@@ -61,3 +63,13 @@ union' m1 m2 = unionWith (\_ _ -> unsafeThrow "duplicate key in union'") m1 m2
 
 readUUID :: String -> UUID
 readUUID str = fromJust' ("failed to parse UUID: " <> str) <<< UUID.parseUUID $ str
+
+threeCaseUnion :: forall v1 v2 v3 k . Ord k =>
+    (v1 -> v3) -> (v2 -> v3) -> (v1 -> v2 -> v3)
+    -> Map k v1 -> Map k v2 -> Map k v3
+threeCaseUnion onlyLeft onlyRight both m1 m2 =
+    let mLeft = Map.filterWithKey (\k _ -> not (member k m2)) m1 in
+    let mRight = Map.filterWithKey (\k _ -> not (member k m1)) m2 in
+    union'
+        (union' (map onlyLeft mLeft) (map onlyRight mRight))
+        (Map.mapMaybeWithKey (\k v -> maybe Nothing (\v2 -> Just $ both v v2) (Map.lookup k m2)) m1)

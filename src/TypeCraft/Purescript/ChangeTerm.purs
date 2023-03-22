@@ -121,9 +121,9 @@ chTerm kctx ctx c t =
                 let ctx' = addLetToCCtx ctx tBind binds ty in
                 let kctx' = addLetToKCCtx kctx binds in
                 let c2 /\ t2' = chTerm kctx ctx' c t2 in
-                let t1'= chTermBoundary kctx' ctx' (tyInject ty) t1 in
+                let t1'= chTermBoundary kctx' ctx' (tyInject ty) t1 in -- TODO: is this correct!?! should it first apply the kctx to the type?
                 -- TODO: apply change to x to the let itself!
-                c2 /\ Let md tBind binds t1' ty t2' (snd (getEndpoints c2))
+                c2 /\ Let md tBind binds t1' ty t2' (snd (getEndpoints c2)) -- TODO: certianly, this will be a bug if a type is deleted for example. ty needs to get updated somehow!
             c /\ Buffer md t1 ty1 t2 bodyTy ->
                 let c1 /\ t1' = chTerm kctx ctx (tyInject ty1) t1 in
                 let c2 /\ t2' = chTerm kctx ctx c t2 in

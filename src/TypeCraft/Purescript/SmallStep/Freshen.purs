@@ -44,15 +44,19 @@ freshenTerm t = uTermToTerm (freshenUTermImpl Map.empty Map.empty (termToUTerm t
 
 
 --data UTooth = UTooth Label (List UTerm) (List UTerm) -- The left and right children
-freshenUPathImpl :: TyVarSub -> TermVarSub -> List UTooth -> List UTooth
-freshenUPathImpl _ksub _sub Nil = Nil
+freshenUPathImpl :: TyVarSub -> TermVarSub -> List UTooth -> TyVarSub /\ TermVarSub /\ List UTooth
+freshenUPathImpl ksub sub Nil = ksub /\ sub /\ Nil
 freshenUPathImpl ksub sub ((UTooth label leftKids rightKids) : up) =
     let label' /\ ksub' /\ sub' = freshenLabel ksub sub label in
     let mapper = map (freshenUTermImpl ksub' sub') in
-    (UTooth label' (mapper leftKids) (mapper rightKids)) : (freshenUPathImpl ksub' sub' up)
+    let innerksub /\ innersub /\ up' = freshenUPathImpl ksub' sub' up in
+    innerksub /\ innersub /\ (UTooth label' (mapper leftKids) (mapper rightKids)) : up'
 
-freshenTermPath :: List Tooth -> List Tooth
-freshenTermPath path = (map uToothToTooth) (freshenUPathImpl Map.empty Map.empty ((map toothToUTooth) path))
+freshenTermPath :: List Tooth -> TyVarSub /\ TermVarSub /\ List Tooth
+freshenTermPath path =
+    let upath = (map toothToUTooth) path in
+    let innerksub /\ innersub /\ upath' = freshenUPathImpl Map.empty Map.empty upath in
+    innerksub /\ innersub /\ (map uToothToTooth upath')
 
 freshenLabel :: TyVarSub -> TermVarSub -> Label -> Label /\ TyVarSub /\ TermVarSub
 freshenLabel ksub sub (LApp md {-Term-} {-Term-} argTy outTy) =
