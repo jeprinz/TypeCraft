@@ -185,9 +185,9 @@ addTyBindChsToKCCtx :: ListTypeBindChange -> KindChangeCtx -> KindChangeCtx
 addTyBindChsToKCCtx (ListTypeBindChangeCons (TypeBind _ x) ch) kctx =
     addTyBindChsToKCCtx ch (insert' x (TVarKindChange KCType Nothing) kctx)
 addTyBindChsToKCCtx (ListTypeBindChangePlus (TypeBind _ x) ch) kctx =
-    addTyBindChsToKCCtx ch (insert' x (TVarInsert Type Nothing) kctx)
+    addTyBindChsToKCCtx ch (insert' x (TVarInsert (freshTypeHoleID unit) Type Nothing) kctx)
 addTyBindChsToKCCtx (ListTypeBindChangeMinus (TypeBind _ x) ch) kctx =
-    addTyBindChsToKCCtx ch (insert' x (TVarDelete Type Nothing) kctx)
+    addTyBindChsToKCCtx ch (insert' x (TVarDelete (freshTypeHoleID unit) Type Nothing) kctx)
 addTyBindChsToKCCtx ListTypeBindChangeNil kctx = kctx
 
 -- This probably won't be needed?

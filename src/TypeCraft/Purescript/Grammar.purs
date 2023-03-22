@@ -206,8 +206,8 @@ data TypeAliasChange
   | TAChange Change
 
 data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange)
-    | TVarDelete Kind (Maybe (List TypeBind /\ Type))
-    | TVarInsert Kind (Maybe (List TypeBind /\ Type))
+    | TVarDelete TypeHoleID Kind (Maybe (List TypeBind /\ Type)) -- The hole id is the hole which will replace instances of this type. They need to be replaced by the same hole, or else it would be a type error sometimes! Of course, we may want to unlink the holes later in case they didn't all need to be the same.
+    | TVarInsert TypeHoleID Kind (Maybe (List TypeBind /\ Type)) -- This needs to typeholeis so that TVarChanges are invertible. Just make a fresh hole id here, it will probably never be used anyway.
 type KindChangeCtx = Map TypeVarID TVarChange
 
 data ListTypeArgChange = ListTypeArgChangeNil | ListTypeArgChangeCons Change ListTypeArgChange

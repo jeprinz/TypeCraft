@@ -223,8 +223,8 @@ invertTypeAliasChange (TAChange ch) = TAChange (invert ch)
 --    | TVarInsert Kind (Maybe (List TypeBind /\ Type))
 invertTVarChange :: TVarChange -> TVarChange
 invertTVarChange (TVarKindChange pch mtac) = TVarKindChange (invertKindChange pch) (map invertTypeAliasChange mtac)
-invertTVarChange (TVarDelete ty tac) = TVarInsert ty tac
-invertTVarChange (TVarInsert ty tac) = TVarDelete ty tac
+invertTVarChange (TVarDelete tHole ty tac) = TVarInsert tHole ty tac
+invertTVarChange (TVarInsert tHole ty tac) = TVarDelete tHole ty tac
 
 invertListTypeBindChange :: ListTypeBindChange -> ListTypeBindChange
 invertListTypeBindChange (ListTypeBindChangeCons tyBind ch) = ListTypeBindChangeCons tyBind (invertListTypeBindChange ch)
@@ -408,10 +408,10 @@ composeTypeAliasChange tac1 tac2 = case tac1 /\ tac2 of
 
 composeTVarChange :: TVarChange -> TVarChange -> Maybe TVarChange
 composeTVarChange (TVarKindChange kc1 mtac1) (TVarKindChange kc2 mtac2) = Just $ TVarKindChange (composeKindChange kc1 kc2) (composeTypeAliasChange <$> mtac1 <*> mtac2)
-composeTVarChange (TVarInsert k ta) (TVarKindChange kc tac) = Just $ TVarInsert (snd (kChGetEndpoints kc)) ((snd <$> (taChGetEndpoints <$> tac)))
-composeTVarChange (TVarKindChange kc tac) (TVarDelete k ta) = Just $ TVarDelete (fst (kChGetEndpoints kc)) ((fst <$> (taChGetEndpoints <$> tac)))
-composeTVarChange (TVarInsert kc1 ta1) (TVarDelete kc2 ta2) = Nothing
-composeTVarChange (TVarDelete k1 ta1) (TVarInsert k2 ta2) | k1 == k2 && ta1 == ta2 = Just $ TVarKindChange (kindInject k1) (tacInject <$> ta1)
+composeTVarChange (TVarInsert tHole k ta) (TVarKindChange kc tac) = Just $ TVarInsert tHole (snd (kChGetEndpoints kc)) ((snd <$> (taChGetEndpoints <$> tac)))
+composeTVarChange (TVarKindChange kc tac) (TVarDelete tHole k ta) = Just $ TVarDelete tHole (fst (kChGetEndpoints kc)) ((fst <$> (taChGetEndpoints <$> tac)))
+composeTVarChange (TVarInsert tHole1 kc1 ta1) (TVarDelete tHole2 kc2 ta2) = Nothing
+composeTVarChange (TVarDelete tHole1 k1 ta1) (TVarInsert tHole2 k2 ta2) | tHole1 == tHole2 && k1 == k2 && ta1 == ta2 = Just $ TVarKindChange (kindInject k1) (tacInject <$> ta1)
 composeTVarChange _ _ = unsafeThrow "TVarChanges composed in a way that doesn't make sense, or I wrote a bug into the function"
 
 composeNameChange :: NameChange -> NameChange -> Maybe NameChange
@@ -456,14 +456,14 @@ composeCtxs ctx1 ctx2 = mmapMap2 composeVarChange ctx1 ctx2
 getKCtxTyEndpoints :: KindChangeCtx -> TypeContext /\ TypeContext
 getKCtxTyEndpoints kctx =
     mapMaybe (case _ of
-        TVarInsert _ _ -> Nothing
+        TVarInsert _ _ _ -> Nothing
         TVarKindChange kch tac -> Just (fst (kChGetEndpoints kch))
-        TVarDelete kind ta -> Just kind) kctx
+        TVarDelete _ kind ta -> Just kind) kctx
     /\
     mapMaybe (case _ of
-        TVarInsert kind ta -> Just kind
+        TVarInsert _ kind ta -> Just kind
         TVarKindChange kch tac -> Just (snd (kChGetEndpoints kch))
-        TVarDelete _ _ -> Nothing) kctx
+        TVarDelete _ _ _ -> Nothing) kctx
 
 composeKCtx :: KindChangeCtx -> KindChangeCtx -> KindChangeCtx
 composeKCtx kctx1 kctx2 = mmapMap2 composeTVarChange kctx1 kctx2
@@ -471,14 +471,14 @@ composeKCtx kctx1 kctx2 = mmapMap2 composeTVarChange kctx1 kctx2
 getKCtxAliasEndpoints :: KindChangeCtx -> TypeAliasContext /\ TypeAliasContext
 getKCtxAliasEndpoints kctx =
     mapMaybe (case _ of
-        TVarInsert _ _ -> Nothing
+        TVarInsert _ _ _ -> Nothing
         TVarKindChange kch tac -> fst <$> taChGetEndpoints <$> tac
-        TVarDelete kind ta -> ta) kctx
+        TVarDelete _ kind ta -> ta) kctx
     /\
     mapMaybe (case _ of
-        TVarInsert kind ta -> ta
+        TVarInsert _ kind ta -> ta
         TVarKindChange kch tac -> snd <$> taChGetEndpoints <$> tac
-        TVarDelete _ _ -> Nothing) kctx
+        TVarDelete _ _ _ -> Nothing) kctx
 
 getMDCtxEndpoints :: MDTermChangeCtx -> MDTermContext /\ MDTermContext
 getMDCtxEndpoints mdctx =
@@ -600,7 +600,7 @@ getKindChangeCtx kctx1 kctx2 actx1 actx2 =
             (\k tyDef -> k /\ Just tyDef) kctx1 actx1 in
     let ctxs2 = threeCaseUnion (\k -> k /\ Nothing) (\_ -> unsafeThrow "shouldn't happen3")
             (\k tyDef -> k /\ Just tyDef) kctx2 actx2 in
-    threeCaseUnion (\(k /\ tyDef) -> TVarDelete k tyDef) (\(k /\ tyDef) -> TVarInsert k tyDef)
+    threeCaseUnion (\(k /\ tyDef) -> TVarDelete (freshTypeHoleID unit) k tyDef) (\(k /\ tyDef) -> TVarInsert (freshTypeHoleID unit) k tyDef)
         (\(k1 /\ tyDef1) (k2 /\ tyDef2) -> TVarKindChange (kindReplace k1 k2) (typeAliasReplace <$> tyDef1 <*> tyDef2)) ctxs1 ctxs2
 
 --data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange)

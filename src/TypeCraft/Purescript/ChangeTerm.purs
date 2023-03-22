@@ -95,7 +95,9 @@ chTerm kctx ctx c t =
                             tyInject (snd (getEndpoints cin)) /\ Buffer defaultBufferMD (Var md x tArgs) (fst (getEndpoints cin)) (Hole defaultHoleMD) (snd (getEndpoints cin))
                         else if null tArgs && pch == PChange cin then
                             (tyInject (snd (getEndpoints cin))) /\ Var md x Nil
-                        else unsafeThrow "I didn't think it was possible to have a non-id, non-equal typechange both from ctx and term in var case! (or equal but with tyArgs)"
+                        else unsafeThrow ("I didn't think it was possible to have a non-id, non-equal typechange both from ctx and term in var case! (or equal but with tyArgs)"
+                                <> "\n pch is: " <> show pch <> " and cin is: " <> show cin
+                                )
             (CArrow c1 c2) /\ (Lambda md tBind@(TermBind _ x) ty t bodyTy) ->
                 if not (ty == fst (getEndpoints c1)) then unsafeThrow "shouldn't happen 1" else
                 if not (bodyTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen 2" else
@@ -121,9 +123,11 @@ chTerm kctx ctx c t =
                 let ctx' = addLetToCCtx ctx tBind binds ty in
                 let kctx' = addLetToKCCtx kctx binds in
                 let c2 /\ t2' = chTerm kctx ctx' c t2 in
-                let t1'= chTermBoundary kctx' ctx' (tyInject ty) t1 in -- TODO: is this correct!?! should it first apply the kctx to the type?
+                let ty' /\ tyCh = chType kctx ty in
+                trace ("In Let, tyCH is: " <> show tyCh) \_ ->
+                let t1'= chTermBoundary kctx' ctx' tyCh t1 in -- TODO: is this correct!?! should it first apply the kctx to the type?
                 -- TODO: apply change to x to the let itself!
-                c2 /\ Let md tBind binds t1' ty t2' (snd (getEndpoints c2)) -- TODO: certianly, this will be a bug if a type is deleted for example. ty needs to get updated somehow!
+                c2 /\ Let md tBind binds t1' ty' t2' (snd (getEndpoints c2)) -- TODO: certianly, this will be a bug if a type is deleted for example. ty needs to get updated somehow!
             c /\ Buffer md t1 ty1 t2 bodyTy ->
                 let c1 /\ t1' = chTerm kctx ctx (tyInject ty1) t1 in
                 let c2 /\ t2' = chTerm kctx ctx c t2 in
@@ -197,10 +201,10 @@ chType kctx startType@(TNeu md tv args) =
                     let args' /\ cargs = chTypeArgs kctx kindChange args in
                     TNeu md (TypeVar x) args' /\ CNeu (CTypeVar x) cargs
                 Just taCh -> hole' "chType" -- if the type variable was that of a type alias, we must deal with the possiblity that the type alias was changed
-            Just (TVarDelete kind maybeValue) ->
-                let newType = freshTHole unit in
+            Just (TVarDelete tHole kind maybeValue) ->
+                let newType = makeTHole tHole in
                 newType /\ Replace startType newType
-            Just (TVarInsert kind maybeValue) -> unsafeThrow "I don't think this should happen but I'm not 100% sure"
+            Just (TVarInsert _ kind maybeValue) -> unsafeThrow "I don't think this should happen but I'm not 100% sure"
         --    (Just (TVarTypeChange _)) -> unsafeThrow "I need to figure out what is the deal with TVarTypeChange!!!"
         CtxBoundaryTypeVar k mtv name x -> -- because this represents an Insert boundary, x can't be in kctx. Therefore, we output the identity
             hole' "chType" -- We still need to change the args though.
