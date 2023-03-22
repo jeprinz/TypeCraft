@@ -320,15 +320,16 @@ paste st = do
             InsideHoleCursor ctxs ty insideHolePath ->
                 let kctxDiff = getKindChangeCtx ctxs'.kctx ctxs.kctx ctxs'.actx ctxs.actx in
                 let ctxDiff = getChangeCtx ctxs'.ctx ctxs.ctx in
-                let ty'Diff /\ chIn = chType kctxDiff ty' in -- ??????
+                let _ /\ chIn = chType kctxDiff ty' in -- ??????
                 let ch /\ tm'Diff = chTerm kctxDiff ctxDiff chIn tm' in
+                let ty'Diff = snd (getEndpoints ch) in
                 -- TODO: finish this implementation! should chIn be used like this? And how should ty'Diff and tm'Diff be used below?
-                case runUnify (normThenUnify ctxs.actx ty' ty) of
+                case runUnify (normThenUnify ctxs.actx ty'Diff ty) of
                     Left msg -> Nothing
                     Right (newTy /\ sub) ->
                         recInsideHolePath {
                             hole1 : \termPath ->
-                                pure $ st {mode = makeCursorMode $ TermCursor (subAllCtx sub ctxs) newTy (subTermPath sub termPath.termPath) (subTerm sub tm')}
+                                pure $ st {mode = makeCursorMode $ TermCursor (subAllCtx sub ctxs) newTy (subTermPath sub termPath.termPath) (subTerm sub tm'Diff)}
                         } {ctxs, ty, insideHolePath}
             _ -> Nothing
           SelectMode _selectMode -> Nothing
