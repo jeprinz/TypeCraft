@@ -24,12 +24,13 @@ import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
 import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select(..), State, botSelectOrientation, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
 import TypeCraft.Purescript.TypeChangeAlgebra
-import TypeCraft.Purescript.Util (hole')
+import TypeCraft.Purescript.Util
 import TypeCraft.Purescript.SmallStep.Freshen (freshenTerm, freshenTermPath)
 import TypeCraft.Purescript.Unification (runUnify, normThenUnify)
 import Data.Either (Either(..))
 import TypeCraft.Purescript.PathRec (recInsideHolePath)
 import TypeCraft.Purescript.Alpha (convertSub)
+import Data.Maybe (maybe)
 
 handleKey :: Key -> State -> Maybe State
 handleKey key st
@@ -333,17 +334,30 @@ paste st = do
                         } {ctxs, ty, insideHolePath}
             _ -> Nothing
           SelectMode _selectMode -> Nothing
-        TermPathClip _ctxs1' _ty1' tmPath' ctxs2' ty2' -> case st.mode of
+        TermPathClip ctxs1' _ty1' tmPath' ctxs2' ty2' -> case st.mode of
           CursorMode cursorMode -> case cursorMode.cursorLocation of
             TermCursor ctxs ty tmPath tm ->
-              -- TODO: there is a whole step that isn't implemented in both term paste and path paste: finding stuff that is out of context and dealing with that.
+              -- STEP 1: we need to generalize the inside and outside types of tmPath'
               let originalCh = termPathToChange ty2' tmPath' in
               let genCh = generalizeChange originalCh in
-              let innerGenTy = fst (getEndpoints genCh) in
+              let innerGenTy = fst (getEndpoints genCh) in -- the inner generalized type is what must unify with the type of the term that the cursor is on
               case runUnify (normThenUnify ctxs.actx innerGenTy ty) of
                   Left msg -> Nothing
-                  Right (newTy /\ sub) ->
+                  Right (newTy /\ sub) -> -- TODO: this sub needs to be applied to ty, tmPath, and tm. It doesn't need to be applied to tmPath', because that gets changed by a call to chTermPath
+                      -- STEP 2: given a specific instantiation of the inner type that will fit at the term, we need to change tmPath' so that it has this type inside
                       let ctxs' /\ tmPath'Changed = chTermPath (Replace (fst (getEndpoints originalCh)) newTy) {ctxs: ctxs2', ty: ty2', term: Hole defaultHoleMD, termPath: tmPath'} in
+                      -- STEP 3: get the ctx changes describing what variables have been removed or changed, and apply them to tmPath'Changed
+                      let kctxDiff1 = getKindChangeCtx ctxs1'.kctx ctxs.kctx ctxs1'.actx ctxs.actx in -- first get the diff to the top context
+                      let ctxDiff1 = getChangeCtx ctxs1'.ctx ctxs.ctx in
+                      let kctxDiff2 = threeCaseUnion (\tvc -> unsafeThrow "shouldn't happen paste1") -- then, the diff for the inside adds in everything that was in the bottom context but not the top
+                           (\(k /\ tyDef) -> TVarKindChange (kindInject k) (tacInject <$> tyDef)) (\tvc _ -> tvc) kctxDiff1
+                           (threeCaseUnion (\k -> (k /\ Nothing)) (\_ -> unsafeThrow "shouldn't happen paste2") (\k tyDef -> k /\ Just tyDef) ctxs2'.kctx ctxs2'.actx) in
+                      let ctxDiff2 = threeCaseUnion (\_ -> unsafeThrow "shouldn't happen paste3")
+                           (\pty -> VarTypeChange (pTyInject pty)) (\vc _ -> vc) ctxDiff1 ctxs2'.ctx in
+--                      let ctxs''' /\ tmPath'Changed' = chTermPath (tyInject ?h)
+                      -- TODO: big problem: we need to change the context of the term path here. But we have no way of doing this!!!!!
+                      -- One possible janky solution is to make chTermPath accept a context change at the TOP which would allieviate the need for getting *ctxDiff2 anyway, and not require much new code.
+                      -- STEP 4: we need to get the typechange going up and ctx change going down and apply them to the term and path in the cursor
                       let ctxCh /\ kctxCh /\ _ /\ _ = downPathToCtxChange ctxs (List.reverse tmPath'Changed) in
                       let tm' = chTermBoundary kctxCh ctxCh (tyInject newTy) tm in
                       let finalCh = termPathToChange newTy tmPath'Changed in

@@ -123,7 +123,7 @@ chTerm kctx ctx c t =
                 let ctx' = addLetToCCtx ctx tBind binds ty in
                 let kctx' = addLetToKCCtx kctx binds in
                 let c2 /\ t2' = chTerm kctx ctx' c t2 in
-                let ty' /\ tyCh = chType kctx ty in
+                let ty' /\ tyCh = chType kctx' ty in
                 trace ("In Let, tyCH is: " <> show tyCh) \_ ->
                 let t1'= chTermBoundary kctx' ctx' tyCh t1 in -- TODO: is this correct!?! should it first apply the kctx to the type?
                 -- TODO: apply change to x to the let itself!
