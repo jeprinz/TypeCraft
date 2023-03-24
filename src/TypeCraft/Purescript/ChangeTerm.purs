@@ -155,7 +155,7 @@ chTerm kctx ctx c t =
                 --     Just xChInCtx -> hole' "chTerm"
                 --     Nothing -> hole' "chTerm"
                 hole' "chTerm" -- TODO: jacob
-            cin /\ t -> hole' "chTerm" -- tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
+            cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
         )
     in
         let ch' /\ t' = doInsertArgs cRes tRes in
