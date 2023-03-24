@@ -343,9 +343,9 @@ moveSelectRight select =
                 let (ctxs1' /\ topPath' /\ syn1') = fromJust $ getCursorParts particularChild in
                 Just $ SelectMode {select: partsToSelect (topPath' /\ ctxs1' /\ syn1' /\ middlePath' /\ ctxs2 /\ syn2 /\ botSelectOrientation)}
         true {-topSelectOrientation-} ->
-            let cursor = (goRightUntilSort (sortFromSyn syn1) (partsToCursor (ctxs2 /\ middlePath /\ syn2))) in
-            let (ctxs2' /\ middlePath' /\ syn2') = fromJust $ getCursorParts cursor in
-            Just $ SelectMode {select: partsToSelect (topPath /\ ctxs1 /\ syn1 /\ middlePath' /\ ctxs2' /\ syn2' /\ topSelectOrientation)}
+                do cursor <- (goRightUntilSort (sortFromSyn syn1) (partsToCursor (ctxs2 /\ middlePath /\ syn2)))
+                   let (ctxs2' /\ middlePath' /\ syn2') = fromJust $ getCursorParts cursor
+                   Just $ SelectMode {select: partsToSelect (topPath /\ ctxs1 /\ syn1 /\ middlePath' /\ ctxs2' /\ syn2' /\ topSelectOrientation)}
 
 sortFromSyn :: Syn -> GrammaticalSort
 sortFromSyn (STerm _ _) = GSTerm
@@ -377,11 +377,15 @@ goLeftUntilSort sort cursor =
 I believe that it should always be the case for each sort of Selection that if you go right far enough, you will find something
 of the correct sort. This is merely a quirk of our grammar, not something that is generally necessarily true.
 -}
-goRightUntilSort :: GrammaticalSort -> CursorLocation -> CursorLocation
+goRightUntilSort :: GrammaticalSort -> CursorLocation -> Maybe CursorLocation
 goRightUntilSort sort cursor =
-    let cursor' = stepCursorForwards cursor in
-    if not (getCursorSort cursor' == sort) then goRightUntilSort sort cursor'
-    else cursor'
+---- Int is children to step past
+--stepCursorForwardsImpl :: Int -> CursorLocation -> Maybe CursorLocation
+    case stepCursorForwardsImpl 0 cursor of
+        Just cursor' ->
+            if not (getCursorSort cursor' == sort) then goRightUntilSort sort cursor'
+            else Just cursor'
+        Nothing -> Nothing
 
 {-
 Possible plan for writing the Cursor Movement code without quite so much repetition:
