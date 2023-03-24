@@ -25,7 +25,7 @@ main =
   traverse_ testAllCompletions
     [ Examples.example1
     {- , Examples.example2 -}
-    , Examples.example3
+    {-, Examples.example3 -}
     ]
 
 -- testAllCompletions example2

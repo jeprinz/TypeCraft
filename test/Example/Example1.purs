@@ -3,7 +3,6 @@ module Test.Example.Example1 where
 import Prelude
 import Prim hiding (Type)
 import TypeCraft.Purescript.Grammar
-
 import Data.List (List(..))
 import Data.Map as Map
 import Data.Set as Set
@@ -24,8 +23,12 @@ example2 =
     /\ (THole {} (TypeHoleID <<< fromJust $ UUID.parseUUID "104261b2-a21e-45f4-bc86-c51e27c856f6") (Set.fromFoldable []) (Map.fromFoldable []))
 
 -- lam ~ : ? => ?
-example3 :: Term /\ Type 
-example3 = 
+example3 :: Term /\ Type
+example3 =
   (Lambda { bodyIndented: false } (TermBind { varName: "" } (TermVarID (readUUID "ead1c092-34df-41a9-b026-0417e52e42bf"))) (THole ({}) ((TypeHoleID (readUUID "1d98c9c5-0f67-45a2-945a-13f85e482857"))) (Set.fromFoldable []) (Map.fromFoldable [])) (Hole {}) (THole ({}) ((TypeHoleID (readUUID "e665497b-5b09-4bd0-993d-dcadb5dd8211"))) (Set.fromFoldable []) (Map.fromFoldable [])))
     /\ (Arrow ({ codIndented: false }) ((THole ({}) ((TypeHoleID (readUUID "1d98c9c5-0f67-45a2-945a-13f85e482857"))) (Set.fromFoldable []) (Map.fromFoldable []))) ((THole ({}) ((TypeHoleID (readUUID "e665497b-5b09-4bd0-993d-dcadb5dd8211"))) (Set.fromFoldable []) (Map.fromFoldable []))))
 
+example4 :: Term /\ Type
+example4 =
+  (Buffer {} (Hole {}) (THole ({}) ((TypeHoleID (readUUID "4f1ef326-ee28-4b8f-be07-b0220100da68"))) (Set.fromFoldable []) (Map.fromFoldable [])) (Hole {}) (THole ({}) ((TypeHoleID (readUUID "d6c53afe-3f4f-4901-bf22-8b6c0186fcc0"))) (Set.fromFoldable []) (Map.fromFoldable [])))
+    /\ (THole ({}) ((TypeHoleID (readUUID "d6c53afe-3f4f-4901-bf22-8b6c0186fcc0"))) (Set.fromFoldable []) (Map.fromFoldable []))

@@ -159,9 +159,19 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         kids = ([] as JSX.Element[]).concat([Punc.angleL], kids)
       }
 
+      // if cursoring at the hole-inner, instead of showing normal stuff inside
+      // hole (e.g. "?"), show a vertical line cursor and the query string
+      if (classNames.includes("hole-inner") && node.styles.includes('cursor')) {
+        if (node.queryString === undefined)
+          kids = [<div className="hole-inner-cursor"></div>]
+        else
+          kids = [<span>{node.queryString}</span>]
+      }
+
       kids = [
         <div
           id={hoverId.id}
+          key={rndCtx.steps.map(step => step.toString()).join("-")}
           className={([] as string[]).concat(["node"], classNames).join(" ")}
           onMouseDown={onMouseDown}
           onMouseUp={onMouseUp}
@@ -175,12 +185,15 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
       if (node.queryString !== undefined) {
         kids = [
-          <div className="node cursor">
+          <div className="node">
             <div className="query">
               <div className="query-inner">
-                <div className="query-string">
-                  <span className="query-string-inner">{node.queryString}</span>
-                </div>
+                { /* this is shown inside the hole if cursor is at hole-inner */
+                  classNames.includes("hole-inner") ? [] :
+                    <div className="query-string">
+                      <span className="query-string-inner">{node.queryString}</span>
+                    </div>
+                }
                 <div className="query-completions">{
                   node.completions !== undefined && node.completions.length > 0 ?
                     node.completions.map((node, i) => renderCompletion(node, i)) :
@@ -333,7 +346,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'cursor-mode-wrapper': return go(node, rndCtx, ["cursor-mode-wrapper"], kid(), indentationLevel)
         case 'select-mode-wrapper': return go(node, rndCtx, ["select-mode-wrapper"], kid(), indentationLevel)
         // hole
-        case 'hole-inner': return go(node, rndCtx, ["hole-inner"], [<span>?</span>], indentationLevel)
+        // case 'hole-inner': return go(node, rndCtx, ["hole-inner"], [<span>?</span>], indentationLevel)
+        case 'hole-inner': return go(node, rndCtx, ["hole-inner"], [], indentationLevel)
       }
     }
 
