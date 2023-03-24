@@ -44,8 +44,7 @@ unify :: Type -> Type -> Unify Type
 unify ty1 ty2 = case ty1 /\ ty2 of
   THole _ hid1 _ _ /\ THole _ hid2 _ _ | hid1 == hid2 -> pure ty1 -- need this case, otherwise unifying a hole with itself would fail occurs check!
   THole _ hid w _ /\ _ -> do
-    Debug.traceM "[!] don't forget to do this"
-    -- TODO: checkOccursTypeVarAny w ty2 -- Need to check that nothing in w appears in ty2
+    checkOccursTypeVarAny w ty2
     checkOccurs hid ty2
     State.modify_ (\sub -> sub { subTHoles = Map.insert hid ty2 sub.subTHoles })
     pure ty2
@@ -78,7 +77,18 @@ checkOccursAny hids ty = go ty
     TNeu _ _ args -> traverse_ (go <<< \(TypeArg _ ty) -> ty) args
 
 checkOccursTypeVarAny :: Set.Set TypeVarID -> Type -> Unify Unit
-checkOccursTypeVarAny _ _ = unsafeThrow "TODO: impl checkOccursTypeVarAny"
+checkOccursTypeVarAny w ty = case ty of
+    Arrow _ ty1 ty2 -> do
+      checkOccursTypeVarAny w ty1
+      checkOccursTypeVarAny w ty2
+    THole _ hid' _ _ -> pure unit
+    TNeu _ tv List.Nil -> checkOccursTypeVarTypeVarAny w tv
+    TNeu _ _ args -> traverse_ (checkOccursTypeVarAny w <<< \(TypeArg _ ty) -> ty) args
+
+--data TypeVar = TypeVar TypeVarID | CtxBoundaryTypeVar Kind (Maybe TypeDefVal) String TypeVarID -- TypeVar represents a variable in scope, and CtxBoundaryTypeVar represents a variable inside a context boundary Insert, with the given type.
+checkOccursTypeVarTypeVarAny :: Set.Set TypeVarID -> TypeVar -> Unify Unit
+checkOccursTypeVarTypeVarAny w (TypeVar x) = if Set.member x w then Except.throwError "failed to unify because type in hole's weakening appeared" else pure unit
+checkOccursTypeVarTypeVarAny w (CtxBoundaryTypeVar _ _ _ x) = if Set.member x w then Except.throwError "failed to unify because type in hole's weakening appeared 2" else pure unit
 
 -- create neutral form from variable of first type that can fill the hole of the
 -- second type
