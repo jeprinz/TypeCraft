@@ -358,12 +358,7 @@ typeToNode isActive aboveInfo ty =
                     <$> Map.toUnfoldable substitutions
                 )
             )
-            $ makeNode
-                { getCursor: Nothing
-                , getSelect: Nothing
-                , kids: []
-                , tag: THoleNodeTag
-                }
+            $ arrangeType args []
     }
     ty
   where
