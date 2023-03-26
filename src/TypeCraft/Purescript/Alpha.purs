@@ -202,7 +202,8 @@ subTypeArgListPath sub (tooth : teeth) =
     case tooth of
         TypeArgListCons2 tyArg -> TypeArgListCons2 (subTypeArg sub tyArg) : subTypeArgListPath sub teeth
         TNeu1 md x {--} -> TNeu1 md x : subTypeArgListPath sub teeth
-        _ -> unsafeThrow "Either wasn't a TypeArgList path, or I forgot a case in subTypeArgListPath"
+        Var1 md x {-List TypeArg-} -> Var1 md x : subTermPath sub teeth
+        _ -> unsafeThrow ("Either wasn't a TypeArgList path, or I forgot a case in subTypeArgListPath. tooth was: " <> show tooth)
 
 
 subPolyChange :: Sub -> PolyChange -> PolyChange
