@@ -1,6 +1,9 @@
 :root {
   --node-box-shadow-thickness: 0.2rem;
   --node-box-shadow-thickness-neg: calc(-1 * var(--node-box-shadow-thickness));
+
+  --cursor-background-color: rgb(244, 244, 244);
+  --select-background-color: rgb(208, 236, 255);
 }
 
 /* node */
@@ -19,32 +22,42 @@
   /* padding: 0.6rem 0.6rem; */
   padding: 0 0.2rem;
   display: inline-block;
-  background-color: rgba(255, 173, 145, 0.5);
+  /* background-color: rgba(255, 173, 145, 0.5); */
   box-shadow: 0 0 0 1px rgb(255, 106, 0) inset, 0 0 2px 1px black inset;
 }
 
 .node.cursorable>.tm_hol-inner:hover {
-  background-color: rgba(255, 204, 187, 0.5);
+  /* background-color: rgba(255, 204, 187, 0.5); */
 }
 
 .node.hole-inner {
   display: inline-block;
   margin: 0 0;
-  padding-left: 0.2rem;
-  margin-right: calc(0.2rem + 2px);
+  padding: 0 0.2rem;
   border-radius: 0;
 }
 
 .node.hole-inner.cursor {
   box-shadow: none;
   border-radius: 0;
-  box-shadow: 2px 0 0 0 black;
+  /* box-shadow: 2px 0 0 0 black; */
 }
 
 .node.hole-inner.cursor .hole-inner-cursor {
-  /* TODO */
-  margin: 0 0;
-  display: inline-block;
+  animation: blink-animation 1s steps(2, start) infinite;
+  -webkit-animation: blink-animation 1s steps(2, start) infinite;
+}
+
+@keyframes blink-animation {
+  to {
+    visibility: hidden;
+  }
+}
+
+@-webkit-keyframes blink-animation {
+  to {
+    visibility: hidden;
+  }
 }
 
 
@@ -75,13 +88,12 @@ TODO: old style, with just "?" inside hole
   border-radius: 0.2rem;
   padding: 0 0.2rem;
   display: inline-block;
-  background-color: rgb(255, 114, 147);
-  background-color: rgba(255, 114, 147, 0.5);
+  /* background-color: rgba(255, 114, 147, 0.5); */
   box-shadow: 0 0 0 1px rgb(255, 86, 126) inset, 0 0 2px 1px black inset;
 }
 
 .node.cursorable>.ty_hol-inner:hover {
-  background-color: rgba(255, 174, 193, 0.5);
+  /* background-color: rgba(255, 174, 193, 0.5); */
 }
 
 /* tm_ty-boundary */
@@ -144,7 +156,7 @@ TODO: old style, with just "?" inside hole
 }
 
 .query-insert-top {
-  background-color: rgb(208, 236, 255);
+  background-color: var(--select-background-color);
 
   border-radius: 0.2rem;
   box-shadow: 0 0 0 1px orange inset, 2px 2px 4px 0 black;
@@ -160,7 +172,7 @@ TODO: old style, with just "?" inside hole
 }
 
 .query-replace-new {
-  background-color: rgb(208, 236, 255);
+  background-color: var(--select-background-color);
 
   border-radius: 0.2rem;
   box-shadow: 0 0 0 1px orange inset, 2px 2px 4px 0 black inset;
@@ -255,16 +267,12 @@ TODO: old style, with just "?" inside hole
   padding: 0 0.2rem;
   display: inline-block;
   white-space: pre;
-  /* border: 1px dashed black; */
-  /* box-shadow: 0 0 0 1px black; */
-  /* background-color: rgb(255, 224, 165);
-  box-shadow: 0 0 0 1px orange inset, 1px 1px 2px 0 black inset; */
-  background-color: rgb(255, 214, 157);
+  /* background-color: rgb(255, 214, 157); */
   box-shadow: 0 0 0 1px rgb(255, 182, 80) inset, 0 0 2px 1px black inset;
 }
 
 .node.cursorable>.label-empty:hover {
-  background-color: rgb(255, 231, 198);
+  /* background-color: rgb(255, 231, 198); */
 }
 
 /* cursor, select, etc. */
@@ -287,7 +295,7 @@ TODO: old style, with just "?" inside hole
 .node.select-top {
   border-radius: 0.2rem;
   box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue, var(--node-box-shadow-thickness) 0 0 0 blue;
-  background-color: rgb(208, 236, 255)
+  background-color: var(--select-background-color)
 }
 
 .node.select-bot {
@@ -337,7 +345,7 @@ TODO: old style, with just "?" inside hole
   margin-left: 0.1rem;
 }
 
-.node.list.nil.list-head > .punctuation.listNil {
+.node.list.nil.list-head>.punctuation.listNil {
   margin-left: -0.1rem;
   margin-right: -0.1rem;
 }
@@ -361,7 +369,7 @@ TODO: old style, with just "?" inside hole
 .node.list.cons.select-top {
   border-radius: 0;
   box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
-  background-color: rgb(208, 236, 255)
+  background-color: var(--select-background-color)
 }
 
 .node.list.cons.select-bot {
@@ -416,7 +424,7 @@ TODO: old style, with just "?" inside hole
 
 .hover {
   cursor: pointer;
-  background-color: rgb(208, 236, 255)
+  background-color: var(--cursor-background-color)
 }
 
 .hover.node.list.nil {
@@ -429,7 +437,7 @@ TODO: old style, with just "?" inside hole
 /* mouseDown: hover outside of cursor */
 .mouseDown .hover {
   box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue, var(--node-box-shadow-thickness) 0 0 0 blue;
-  background-color: rgb(208, 236, 255);
+  background-color: var(--cursor-background-color);
 }
 
 /* mouseDown: hover inside of cursor */
@@ -441,7 +449,7 @@ TODO: old style, with just "?" inside hole
 /* mouseDown: cursor outside of hover */
 .mouseDown .cursor {
   box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue, var(--node-box-shadow-thickness) 0 0 0 blue;
-  background-color: rgb(208, 236, 255);
+  background-color: var(--cursor-background-color);
 }
 
 /* mouseDown: cursor inside of hover */
@@ -456,7 +464,7 @@ TODO: old style, with just "?" inside hole
 .mouseDown .hover.node.list.cons {
   border-radius: 0;
   box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
-  background-color: rgb(208, 236, 255);
+  background-color: var(--cursor-background-color);
 }
 
 /* mouseDown: hover inside of cursor */
@@ -470,7 +478,7 @@ TODO: old style, with just "?" inside hole
 .mouseDown .cursor.node.list.cons {
   border-radius: 0;
   box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
-  background-color: rgb(208, 236, 255);
+  background-color: var(--cursor-background-color);
 }
 
 /* mouseDown: cursor inside of hover */
@@ -553,4 +561,3 @@ TODO: old style, with just "?" inside hole
   position: absolute;
   bottom: 0;
 }
-

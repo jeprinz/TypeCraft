@@ -163,9 +163,11 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       // hole (e.g. "?"), show a vertical line cursor and the query string
       if (classNames.includes("hole-inner") && node.styles.includes('cursor')) {
         if (node.queryString === undefined)
-          kids = [<div className="hole-inner-cursor"></div>]
+          kids = [<span className="hole-inner-cursor">|</span>]
         else
-          kids = [<span>{node.queryString}</span>]
+          kids = [
+            <span className="hole-innner-query-string">{node.queryString}<span className="hole-inner-cursor">|</span></span>,
+          ]
       }
 
       kids = [
