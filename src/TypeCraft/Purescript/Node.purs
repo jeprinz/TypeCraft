@@ -2,7 +2,6 @@ module TypeCraft.Purescript.Node where
 
 import Prelude
 import Prim hiding (Type)
-
 import Data.Array (find)
 import Data.Bounded.Generic (genericBottom, genericTop)
 import Data.Enum (class BoundedEnum, class Enum, enumFromTo)
@@ -270,10 +269,18 @@ newtype NodeStyle
 foreign import setNodeMetadata :: NodeMetadata -> Node -> Node
 
 -- takes string of type hole id
-foreign import makeTHoleNodeMetadata_ :: String -> NodeMetadata
+foreign import makeTHoleNodeMetadata_ :: String -> Array String -> Array { typeVarID :: String, type_ :: Node } -> NodeMetadata
 
-makeTHoleNodeMetadata :: TypeHoleID -> NodeMetadata
-makeTHoleNodeMetadata = makeTHoleNodeMetadata_ <<< UUID.toString <<< \(TypeHoleID uuid) -> uuid
+makeTHoleNodeMetadata ::
+  TypeHoleID ->
+  Array String ->
+  Array { typeVarID :: String, type_ :: Node } ->
+  NodeMetadata
+makeTHoleNodeMetadata (TypeHoleID uuid) wkn sub =
+  makeTHoleNodeMetadata_
+    (UUID.toString uuid)
+    wkn
+    sub
 
 foreign import makeTNeuNodeMetadata :: String -> NodeMetadata
 
@@ -284,6 +291,8 @@ foreign import makeTypeBindNodeMetadata :: String -> NodeMetadata
 foreign import makeTermBindNodeMetadata :: String -> NodeMetadata
 
 foreign import makeCtrParamNodeMetadata :: String -> NodeMetadata
+
+foreign import makeHoleMetadata :: Node -> NodeMetadata
 
 -- utilities
 setIndentNodeIndentationIf :: Boolean -> Node -> Node

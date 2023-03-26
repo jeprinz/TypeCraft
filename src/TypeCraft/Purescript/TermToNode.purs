@@ -8,14 +8,16 @@ import TypeCraft.Purescript.TermRec
 import Data.Array as Array
 import Data.List (List(..), (:))
 import Data.List as List
+import Data.Map as Map
 import Data.Maybe (Maybe(..))
+import Data.Set as Set
 import Data.Tuple.Nested (type (/\), (/\))
 import Data.UUID as UUID
 import Debug (trace, traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext, typeVarGetName)
 import TypeCraft.Purescript.CursorMovement (getMiddlePath)
-import TypeCraft.Purescript.Grammar (Change(..), Constructor(..), CtrParam(..), Term(..), TermBind(..), Tooth(..), Type(..), TypeArg(..), TypeBind(..), UpPath)
+import TypeCraft.Purescript.Grammar (Change(..), Constructor(..), CtrParam(..), Term(..), TermBind(..), Tooth(..), Type(..), TypeArg(..), TypeBind(..), TypeVar(..), TypeVarID(..), UpPath)
 import TypeCraft.Purescript.Util (justWhen, lookup')
 
 data AboveInfo syn
@@ -240,29 +242,30 @@ termToNode isActive aboveInfo term =
             ]
     , hole:
         \md ->
-            arrangeTerm args
-                [ arrangeKidAI cursorOnlyInfo (insideHoleToNode isActive) {ctxs: term.ctxs, ty: term.ty}
+          setNodeMetadata (makeHoleMetadata (typeToNode false AINothing { ctxs: term.ctxs, ty: term.ty }))
+            $ arrangeTerm args
+                [ arrangeKidAI cursorOnlyInfo (insideHoleToNode isActive) { ctxs: term.ctxs, ty: term.ty }
                 ]
---          let
---            getCursor =
---              join
---                $ justWhen args.isActive \_ -> do
---                    cursorLocation <- args.makeCursor unit
---                    Just (_ { mode = makeCursorMode cursorLocation })
---          in
---            makeNode
---              { kids: [ typeToNode false AINothing { ctxs: term.ctxs, ty: term.ty } ]
---              , getCursor: getCursor
---              , getSelect:
---                  join
---                    $ justWhen args.isActive \_ -> do
---                        select <- args.makeSelect unit
---                        if List.null (getMiddlePath select) then
---                          getCursor
---                        else
---                          Just (_ { mode = makeSelectMode select })
---              , tag: termToNodeTag term.term
---              }
+    --          let
+    --            getCursor =
+    --              join
+    --                $ justWhen args.isActive \_ -> do
+    --                    cursorLocation <- args.makeCursor unit
+    --                    Just (_ { mode = makeCursorMode cursorLocation })
+    --          in
+    --            makeNode
+    --              { kids: [ typeToNode false AINothing { ctxs: term.ctxs, ty: term.ty } ]
+    --              , getCursor: getCursor
+    --              , getSelect:
+    --                  join
+    --                    $ justWhen args.isActive \_ -> do
+    --                        select <- args.makeSelect unit
+    --                        if List.null (getMiddlePath select) then
+    --                          getCursor
+    --                        else
+    --                          Just (_ { mode = makeSelectMode select })
+    --              , tag: termToNodeTag term.term
+    --              }
     , buffer:
         \md def defTy body _bodyTy ->
           arrangeTerm args
@@ -338,9 +341,29 @@ typeToNode isActive aboveInfo ty =
                 [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
                 ]
     , tHole:
-        \md x _weakenings _substitutions ->
-          setNodeMetadata (makeTHoleNodeMetadata x)
-            $ arrangeType args []
+        \md x weakenings substitutions ->
+          setNodeMetadata
+            ( makeTHoleNodeMetadata
+                x
+                ( (\tyVarID -> typeVarGetName ty.ctxs.mdkctx (TypeVar tyVarID))
+                    <$> Set.toUnfoldable weakenings
+                )
+                -- TODO: need to get the tyVarID's name in a special way, since
+                -- its not in scope
+                ( ( \(_tyVarID /\ type_) ->
+                      { typeVarID: "<todo>" -- typeVarGetName ty.ctxs.mdkctx (TypeVar tyVarID)
+                      , type_: typeToNode false AINothing { ctxs: ty.ctxs, ty: type_ }
+                      }
+                  )
+                    <$> Map.toUnfoldable substitutions
+                )
+            )
+            $ makeNode
+                { getCursor: Nothing
+                , getSelect: Nothing
+                , kids: []
+                , tag: THoleNodeTag
+                }
     }
     ty
   where
@@ -720,30 +743,32 @@ ctrListToNode isActive aboveInfo ctrs =
 
 stepInsideHoleKids :: Array PreNode -> Array Node
 stepInsideHoleKids [] = []
+
 stepInsideHoleKids _ = unsafeThrow "insideHole doesn't have kids"
 
-type InsideHoleCursorInfo =
-    { isActive :: Boolean
+type InsideHoleCursorInfo
+  = { isActive :: Boolean
     , makeCursor :: Unit -> Maybe CursorLocation
     , makeSelect :: Unit -> Maybe Select
     }
 
 arrangeInsideHole :: InsideHoleCursorInfo -> Node
 arrangeInsideHole args =
-    arrangeNodeKids {
-        isActive: args.isActive
-        , tag: HoleInnerNodeTag
-        , stepKids: stepInsideHoleKids
-        , makeCursor: args.makeCursor
-        , makeSelect: args.makeSelect
-    } []
+  arrangeNodeKids
+    { isActive: args.isActive
+    , tag: HoleInnerNodeTag
+    , stepKids: stepInsideHoleKids
+    , makeCursor: args.makeCursor
+    , makeSelect: args.makeSelect
+    }
+    []
 
 insideHoleToNode :: Boolean -> AboveInfo Unit -> InsideHoleRecValue -> Node
 insideHoleToNode isActive aboveInfo inside =
-    arrangeInsideHole {
-        isActive
-        , makeCursor: \_ -> Just $ InsideHoleCursor inside.ctxs inside.ty (aIGetPath aboveInfo)
-        , makeSelect : \_ -> Nothing
+  arrangeInsideHole
+    { isActive
+    , makeCursor: \_ -> Just $ InsideHoleCursor inside.ctxs inside.ty (aIGetPath aboveInfo)
+    , makeSelect: \_ -> Nothing
     }
 
 -- | Change

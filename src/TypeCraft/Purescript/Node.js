@@ -6,7 +6,7 @@ export const getNodeTag_ = (data) => data.tag
 
 // Cursor
 
-export const setNodeGetCursor_ = getCursor => node => ({...node, getCursor})
+export const setNodeGetCursor_ = getCursor => node => ({ ...node, getCursor })
 
 // NodeTag
 
@@ -36,9 +36,10 @@ export const makeNewlineNodeIndentation = 'newline'
 // NodeMetadata
 export const setNodeMetadata = metadata => node => ({ ...node, metadata })
 
-export const makeTHoleNodeMetadata_ = typeHoleId => ({ case: 'ty hol', typeHoleId })
+export const makeTHoleNodeMetadata_ = typeHoleId => weakenings => substitutions => ({ case: 'ty hol', typeHoleId, weakenings, substitutions })
 export const makeTNeuNodeMetadata = label => ({ case: 'ty neu', label })
 export const makeVarNodeMetadata = label => ({ case: 'tm var', label })
 export const makeTypeBindNodeMetadata = label => ({ case: 'ty-bnd', label })
 export const makeTermBindNodeMetadata = label => ({ case: 'tm-bnd', label })
 export const makeCtrParamNodeMetadata = label => ({ case: 'ctr-prm', label })
+export const makeHoleMetadata = type_ => ({ case: 'tm hol', type_ })

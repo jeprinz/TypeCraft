@@ -74,9 +74,10 @@ export type NodeStyle =
     'list-head-var'
 
 export type NodeMetadata
-    = { case: "ty hol", typeHoleId: string }
+    = { case: "ty hol", typeHoleId: string, weakenings: string[], substitutions: { typeVarID: string, type_: Node }[] }
     | { case: "ty neu", label: string }
     | { case: "tm var", label: string }
     | { case: "ty-bnd", label: string }
     | { case: "tm-bnd", label: string }
     | { case: "ctr-prm", label: string }
+    | { case: "tm hol", type_: Node }

@@ -272,6 +272,17 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         return renderNode(node.kids[kid_i], nextRenderContext(kid_i, node.styles.includes('cursor'), rndCtx), indentationLevel_kid)
       }
 
+      // like kid, but does all the kids and flattens
+      function kids(separator: JSX.Element[] = []): JSX.Element[] {
+        let elems = []
+        while (kid_i < node.kids.length) {
+          elems.push(kid())
+          if (kid_i < node.kids.length - 1)
+            elems.push(separator)
+        }
+        return elems.flat()
+      }
+
       // const showLabel = (label: string | undefined) => label !== undefined ? (label.length > 0 ? label : "~") : "<undefined>"
       const renderLabel = (label: string | undefined): JSX.Element[] => {
         if (label !== undefined) {
@@ -296,10 +307,17 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       switch (node.tag) {
         case 'ty arr': return go(node, rndCtx, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat(), indentationLevel)
         case 'ty hol':
-          assert(node.metadata !== undefined && node.metadata.case === 'ty hol')
-          return go(node, rndCtx, ["ty_hol"], [<div className="ty_hol-inner">✶{node.metadata.typeHoleId.substring(0, 2)}</div>].flat(), indentationLevel)
+          assert(node.metadata !== undefined && node.metadata.case === 'ty hol', `node.metadata.case was expected to be 'ty hol', but it actually was ${node.metadata?.case}`)
+          return go(node, rndCtx, ["ty_hol"], [
+            // hole id
+            <div className="ty_hol-inner">✶{node.metadata.typeHoleId.substring(0, 2)}</div>,
+            // weakenings
+            node.metadata.weakenings.map(wkn => [<span>{wkn},</span>]).flat(),
+            // TODO: substitutions
+            []
+          ].flat(), indentationLevel)
         case 'ty neu':
-          assert(node.metadata !== undefined && node.metadata.case === 'ty neu')
+          assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)
           return go(node, rndCtx, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
         case 'ty cx-boundary': return go(node, rndCtx, ["ty_cx-boundary"], [kid(), kid()].flat(), indentationLevel)
         case 'poly-ty forall': return go(node, rndCtx, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
@@ -308,25 +326,32 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm app': return go(node, rndCtx, ["tm_app"], [kid(), [Punc.space], kid(), [Punc.application]].flat(), indentationLevel)
         case 'tm lam': return go(node, rndCtx, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
         case 'tm var':
-          assert(node.metadata !== undefined)
-          assert(node.metadata.case === 'tm var')
+          assert(node.metadata !== undefined && node.metadata.case === 'tm var', `node.metadata.case was expected to be 'tm var', but it actually was ${node.metadata?.case}`)
           return go(node, rndCtx, ["tm_var"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
         case 'tm let': return go(node, rndCtx, ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm dat': return go(node, rndCtx, ["tm_dat"], [[Punc.data], kid(), kid(), [Punc.assign_shortFront], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-let': return go(node, rndCtx, ["tm_ty-let"], [[Punc.let_], kid(), kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat(), indentationLevel) // TODO: render typechange
         case 'tm cx-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
-        case 'tm hol': return go(node, rndCtx, ["tm_hol"], [<div className="tm_hol-inner">{kid()}</div>].flat(), indentationLevel) // TODO: enabled when AINothing works
+        case 'tm hol':
+          assert(node.metadata !== undefined && node.metadata.case === 'tm hol', `node.metadata.case was expected to be 'tm hol', but it actually was ${node.metadata?.case}`)
+          return go(node, rndCtx, ["tm_hol"], [
+            <span className="tm_hol-inner">{[
+              kid(),
+              Punc.colonHole,
+              renderNode(node.metadata.type_, rndCtx, indentationLevel + 1)
+            ]}</span>
+          ].flat(), indentationLevel)
         case 'tm buf': return go(node, rndCtx, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'ty-bnd':
-          assert(node.metadata !== undefined && node.metadata.case === 'ty-bnd')
+          assert(node.metadata !== undefined && node.metadata.case === 'ty-bnd', `node.metadata.case was expected to be 'ty-bnd', but it actually was ${node.metadata?.case}`)
           return go(node, rndCtx, ["ty-bnd"], renderLabel(node.metadata.label), indentationLevel)
         case 'tm-bnd':
-          assert(node.metadata !== undefined && node.metadata.case === 'tm-bnd')
+          assert(node.metadata !== undefined && node.metadata.case === 'tm-bnd', `node.metadata.case was expected to be 'tm-bnd', but it actually was ${node.metadata?.case}`)
           return go(node, rndCtx, ["tm-bnd"], renderLabel(node.metadata.label), indentationLevel)
         case 'ctr-prm':
           // TODO: label
-          assert(node.metadata !== undefined && node.metadata.case === 'ctr-prm')
+          assert(node.metadata !== undefined && node.metadata.case === 'ctr-prm', `node.metadata.case was expected to be 'ctr-prm', but it actually was ${node.metadata?.case}`)
           return go(node, rndCtx, ["ctr-prm"], [renderLabel(node.metadata.label), [Punc.colon], kid()].flat(), indentationLevel)
         case 'ctr': return go(node, rndCtx, ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat(), indentationLevel)
         // ty-arg-list
@@ -348,13 +373,14 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'cursor-mode-wrapper': return go(node, rndCtx, ["cursor-mode-wrapper"], kid(), indentationLevel)
         case 'select-mode-wrapper': return go(node, rndCtx, ["select-mode-wrapper"], kid(), indentationLevel)
         // hole
-        // case 'hole-inner': return go(node, rndCtx, ["hole-inner"], [<span>?</span>], indentationLevel)
-        case 'hole-inner': return go(node, rndCtx, ["hole-inner"], [], indentationLevel)
+        case 'hole-inner': return go(node, rndCtx, ["hole-inner"], [<span>?</span>], indentationLevel)
+        // case 'hole-inner': return go(node, rndCtx, ["hole-inner"], [], indentationLevel)
       }
     }
 
     return renderNode(backend.props.format(editor.state.backendState), emptyRenderContext, 0)
   }
+
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
     // always capture these events:
