@@ -19,6 +19,9 @@ QUESTIONS:
 How can this deal with typechange bouncing back up for dealing with polymorhpism?
 Or even more simply, how can it deal with adding an argument to a variable? A typechange has to be propagated up from the variable.
 Answer: downChange needs to also return a typechange going up!
+IDEA: really when it propagates a change going up, it should only do so after changes have come back up from the leaves.
+    So should it really be a (Array (Change /\ CAllContext) -> Change)?
+    But either of these is really just redundant with upChange!
 -}
 
 downChange :: Label -> CAllContext -> Change -> Label /\ Change /\Array (Change /\ CAllContext)
@@ -37,6 +40,9 @@ downChange (LTypeBoundary md ch1 {-Term-}) ctxs ch = hole' "downChange"
 downChange (LContextBoundary md x vc {-Term-}) ctxs ch = hole' "downChange"
 downChange (LHole md {-NEEDS WEAKENINGS! (A set of variables by which the context was weakened)-}) ctxs ch = hole' "downChange"
 downChange (LBuffer md {-Term-} bufTy {-Term-} bodyTy) ctxs ch = hole' "downChange"
+
+upChange' :: Label -> AllContext -> Array Change -> Label /\ Change
+upChange' = hole' "upChange'"
 
 upChange :: Label -> Int -> CAllContext -> Change -> Label /\ Array (Change /\ CAllContext) /\ Array (Change /\ CAllContext)
 upChange (LApp md {-Term-} {-Term-} argTy outTy) 0 ctxs ch = hole' "upChange"

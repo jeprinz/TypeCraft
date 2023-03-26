@@ -31,6 +31,7 @@ import Data.Either (Either(..))
 import TypeCraft.Purescript.PathRec (recInsideHolePath)
 import TypeCraft.Purescript.Alpha (convertSub)
 import Data.Maybe (maybe)
+import TypeCraft.Purescript.Alpha (subTypePath)
 
 handleKey :: Key -> State -> Maybe State
 handleKey key st
@@ -160,15 +161,12 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
     --     }
     _ -> unsafeThrow "tried to submit a non-CompletionTerm* completion at a TermCursor"
   TypeCursor ctxs path ty -> case compl of
-    CompletionType ty' _sub ->
-      --            let path' = subTypePath sub path in
-      --            let ctxs' = subAllCtx sub ctxs in
-      let
-        (kctx' /\ ctx') /\ path' = chTypePath (Replace ty ty') { ctxs, ty, typePath: path }
-      in
-        let
-          ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
-        in
+    CompletionType ty' sub ->
+      -- TODO: This should really be in the InsideTypeHoleCursor case!!!!!!!!!!!!!!!
+      let path' = subTypePath sub path in
+      let ctxs' = subAllCtx sub ctxs in
+--      let (kctx' /\ ctx') /\ path' = chTypePath (Replace ty ty') { ctxs, ty, typePath: path } in
+--      let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
           pure
             { cursorLocation: TypeCursor ctxs' path' ty'
             , query: emptyQuery

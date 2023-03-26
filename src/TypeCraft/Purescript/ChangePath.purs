@@ -90,7 +90,11 @@ chTermPath ch termPath =
                     let (kctx' /\ ctx') /\ up' = chTermPath c up in
                     let argCh /\ t2' = chTerm idChkctx idChCtx chArgTy t2.term in
                     (kctx' /\ ctx') /\ Buffer3 defaultBufferMD t2' (snd (getEndpoints argCh)) {-Term-} outTy : up'
-                _ -> unsafeThrow "shouldn't get herer app1 case of chTermPath'"
+--                other ->
+--                    if not (fst (getEndpoints other) == Arrow defaultArrowMD argTy outTy) then unsafeThrow "shouldn't happen chPath 20" else
+--                    let (kctx' /\ ctx') /\ up' = chTermPath (tyInject outTy) up in
+--                    ?h
+                _ -> unsafeThrow "shouldn't get herer app1 case of chTermPath'" -- TODO: its possible to get a (Replace _ Hole) typechange here, should probably just default to wrapping in a context boundary
         , app2 : \up md t {-Term-} argTy outTy ->
             trace ("App2 case of chTermPath triggered. ch is: " <> show ch) \_ ->
             if not (fst (getEndpoints ch) == argTy) then unsafeThrow "shouldn't happen chTermPath App2 case" else
