@@ -312,9 +312,27 @@ export default function makeFrontend(backend: Backend): JSX.Element {
             // hole id
             <div className="ty_hol-inner">✶{node.metadata.typeHoleId.substring(0, 2)}</div>,
             // weakenings
-            node.metadata.weakenings.map(wkn => [<span>{wkn},</span>]).flat(),
-            // TODO: substitutions
-            []
+            node.metadata.weakenings.length === 0 ? [] :
+              <span className="ty_hol-weakenings">
+                {node.metadata.weakenings.map(wkn =>
+                  <span className="ty_hol-weakening">
+                    {wkn}
+                    {Punc.comma}
+                  </span>
+                ).flat()}
+              </span>,
+            // substitutions
+            node.metadata.substitutions.length === 0 ? [] :
+              <span className="ty_hol-substitutions">
+                {node.metadata.substitutions.map(({ typeVarID, type_ }) => [
+                  <span className="ty_hol-substitution">
+                    <span className="ty_hol-substitution-typeVarID">{typeVarID}</span>
+                    {Punc.mapsto}
+                    <span className="ty_hol-substitution-type">{renderNode(type_, rndCtx, indentationLevel + 1)}</span>
+                  </span>,
+                  Punc.comma
+                ].flat()).flat()}
+              </span>
           ].flat(), indentationLevel)
         case 'ty neu':
           assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)

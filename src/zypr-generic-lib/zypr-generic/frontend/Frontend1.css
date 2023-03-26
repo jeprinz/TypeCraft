@@ -82,6 +82,14 @@ TODO: old style, with just "?" inside hole
 
 /* ty_hol */
 
+.ty_hol-substitutions {
+  border: 2px dotted black;
+}
+
+.ty_hol-substitution {
+
+}
+
 .ty_hol-inner {
   display: inline-block;
   white-space: pre;
