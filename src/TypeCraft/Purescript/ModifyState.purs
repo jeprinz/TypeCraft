@@ -317,7 +317,7 @@ paste st = do
           CursorMode cursorMode -> case cursorMode.cursorLocation of
 --            TermCursor ctxs ty tmPath _tm -> pure $ st { mode = makeCursorMode $ TermCursor ctxs ty (TypeBoundary1 defaultTypeBoundaryMD (Replace ty' ty) List.: tmPath) tm' }
             InsideHoleCursor ctxs ty insideHolePath ->
-                let kctxDiff = getKindChangeCtx ctxs'.kctx ctxs.kctx ctxs'.actx ctxs.actx in
+                let kctxDiff = getKindChangeCtx ctxs'.kctx ctxs.kctx ctxs'.actx ctxs.actx ctxs'.mdkctx ctxs.mdkctx in
                 let ctxDiff = getChangeCtx ctxs'.ctx ctxs.ctx in
                 let _ /\ chIn = chType kctxDiff ty' in -- ??????
                 let ch /\ tm'Diff = chTerm kctxDiff ctxDiff chIn tm' in
@@ -345,7 +345,7 @@ paste st = do
                       -- STEP 2: given a specific instantiation of the inner type that will fit at the term, we need to change tmPath' so that it has this type inside
                       let ctxs' /\ tmPath'Changed = chTermPath (Replace (fst (getEndpoints originalCh)) newTy) {ctxs: ctxs2', ty: ty2', term: Hole defaultHoleMD, termPath: tmPath'} in
                       -- STEP 3: get the ctx changes describing what variables have been removed or changed, and apply them to tmPath'Changed
-                      let kctxDiff1 = getKindChangeCtx ctxs1'.kctx ctxs.kctx ctxs1'.actx ctxs.actx in -- first get the diff to the top context
+                      let kctxDiff1 = getKindChangeCtx ctxs1'.kctx ctxs.kctx ctxs1'.actx ctxs.actx ctxs1'.mdkctx ctxs.mdkctx in -- first get the diff to the top context
                       let ctxDiff1 = getChangeCtx ctxs1'.ctx ctxs.ctx in
                       let kctxDiff2 = threeCaseUnion (\tvc -> unsafeThrow "shouldn't happen paste1") -- then, the diff for the inside adds in everything that was in the bottom context but not the top
                            (\(k /\ tyDef) -> TVarKindChange (kindInject k) (tacInject <$> tyDef)) (\tvc _ -> tvc) kctxDiff1

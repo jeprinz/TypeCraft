@@ -16,12 +16,12 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Util (hole')
 import TypeCraft.Purescript.Util (lookup')
-import Debug (trace)
 import TypeCraft.Purescript.Freshen
 import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.Util (delete')
 import TypeCraft.Purescript.Alpha (applySubChange)
+import Debug (trace)
 
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
 -- TODO: Im not sure how I should understand this. I think that this is used for places where we assume that the output change is id, but I'm not sure what the criteria for that is.
@@ -190,7 +190,8 @@ chType kctx (Arrow md t1 t2) =
     let t2' /\ c2 = chType kctx t2 in
     Arrow md t1' t2' /\ CArrow c1 c2
 chType kctx (THole md x w s) = THole md x w s /\ CHole x w s
-chType kctx startType@(TNeu md tv args) =
+chType kctx (TNeu md tv args) =
+    trace "RUNNINGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG" \_ ->
     case tv of
         TypeVar x ->
             case lookup x kctx of
@@ -201,13 +202,23 @@ chType kctx startType@(TNeu md tv args) =
                     let args' /\ cargs = chTypeArgs kctx kindChange args in
                     TNeu md (TypeVar x) args' /\ CNeu (CTypeVar x) cargs
                 Just taCh -> hole' "chType" -- if the type variable was that of a type alias, we must deal with the possiblity that the type alias was changed
-            Just (TVarDelete tHole kind maybeValue) ->
-                let newType = makeTHole tHole in
-                newType /\ Replace startType newType
-            Just (TVarInsert _ kind maybeValue) -> unsafeThrow "I don't think this should happen but I'm not 100% sure"
-        --    (Just (TVarTypeChange _)) -> unsafeThrow "I need to figure out what is the deal with TVarTypeChange!!!"
-        CtxBoundaryTypeVar k mtv name x -> -- because this represents an Insert boundary, x can't be in kctx. Therefore, we output the identity
-            hole' "chType" -- We still need to change the args though.
+            Just (TVarDelete name kind maybeValue) ->
+                let args' /\ cargs = chTypeArgs kctx (kindInject kind) args in
+                TNeu md (CtxBoundaryTypeVar kind maybeValue name x) args' /\ CNeu (PlusCtxBoundaryTypeVar kind maybeValue name x) cargs
+            Just (TVarInsert _ kind maybeValue) -> unsafeThrow "Shouldn't happen chType 1"
+        cbtv@(CtxBoundaryTypeVar k mtv name x) -> -- because this represents an Insert boundary, x can't be in kctx. Therefore, we output the identity
+            let nothingCase =
+                    let args' /\ cargs = chTypeArgs kctx (kindInject k) args in
+                    TNeu md cbtv args' /\ CNeu (CCtxBoundaryTypeVar k mtv name x) cargs
+            in
+            case lookup x kctx of
+            Nothing -> nothingCase
+            Just (TVarInsert name k2 maybeValue) ->
+                -- If the kind changed, then just to simplify things, don't consider this the same variable anymore.
+                if not (k == k2) then nothingCase else
+                let args' /\ cargs = chTypeArgs kctx (kindInject k) args in
+                TNeu md (TypeVar x) args' /\ CNeu (MinusCtxBoundaryTypeVar k maybeValue name x) cargs -- Technically the name could have changed, but I think its fine.
+            Just _ -> unsafeThrow "Shouldn't happen chType 2"
 
 
 chTypeArgs :: KindChangeCtx -> KindChange -> List TypeArg -> List TypeArg /\ List ChangeParam

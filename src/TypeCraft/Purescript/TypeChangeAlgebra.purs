@@ -10,7 +10,7 @@ import Control.Alt ((<|>))
 import Control.Apply (lift2)
 import Data.List (unzip, (:), List(..), foldl, all)
 import Data.List as List
-import Data.Map (Map, singleton, empty, unionWith, mapMaybe, insert, delete)
+import Data.Map (Map, singleton, empty, unionWith, mapMaybe, insert, delete, mapMaybeWithKey)
 import Data.Map as Map
 import Data.Set as Set
 import Data.Map.Internal (Map, insert, empty, lookup)
@@ -594,14 +594,20 @@ polyReplace pt1 (Forall x pt2) = PPlus x (polyReplace pt1 pt2)
 
 --type TypeAliasContext = Map TypeVarID (List TypeBind /\ Type) -- The array is the free variables in the Type.
 --type KindChangeCtx = Map TypeVarID TVarChange
-getKindChangeCtx :: TypeContext -> TypeContext -> TypeAliasContext -> TypeAliasContext -> KindChangeCtx
-getKindChangeCtx kctx1 kctx2 actx1 actx2 =
-    let ctxs1 = threeCaseUnion (\k -> k /\ Nothing) (\_ -> unsafeThrow "shouldn't happen2")
-            (\k tyDef -> k /\ Just tyDef) kctx1 actx1 in
-    let ctxs2 = threeCaseUnion (\k -> k /\ Nothing) (\_ -> unsafeThrow "shouldn't happen3")
-            (\k tyDef -> k /\ Just tyDef) kctx2 actx2 in
-    threeCaseUnion (\(k /\ tyDef) -> TVarDelete (freshTypeHoleID unit) k tyDef) (\(k /\ tyDef) -> TVarInsert (freshTypeHoleID unit) k tyDef)
-        (\(k1 /\ tyDef1) (k2 /\ tyDef2) -> TVarKindChange (kindReplace k1 k2) (typeAliasReplace <$> tyDef1 <*> tyDef2)) ctxs1 ctxs2
+getKindChangeCtx :: TypeContext -> TypeContext -> TypeAliasContext -> TypeAliasContext -> MDTypeContext -> MDTypeContext -> KindChangeCtx
+getKindChangeCtx kctx1 kctx2 actx1 actx2 mdkctx1 mdkctx2 =
+    let ctxs1 = mapMaybeWithKey (\x kind ->
+        Just $ let tyDef = lookup x actx1 in
+               (kind /\ tyDef /\ lookup' x mdkctx1)) kctx1 in
+    let ctxs2 = mapMaybeWithKey (\x kind ->
+        Just $ let tyDef = lookup x actx2 in
+               (kind /\ tyDef /\ lookup' x mdkctx2)) kctx2 in
+--    let ctxs1 = threeCaseUnion (\k -> k /\ Nothing) (\_ -> unsafeThrow "shouldn't happen2")
+--            (\k tyDef -> k /\ Just tyDef) kctx1 actx1 in
+--    let ctxs2 = threeCaseUnion (\k -> k /\ Nothing) (\_ -> unsafeThrow "shouldn't happen3")
+--            (\k tyDef -> k /\ Just tyDef) kctx2 actx2 in
+    threeCaseUnion (\(k /\ tyDef /\ name) -> TVarDelete name k tyDef) (\(k /\ tyDef /\ name) -> TVarInsert name k tyDef)
+        (\(k1 /\ tyDef1 /\ _name1) (k2 /\ tyDef2 /\ _name2) -> TVarKindChange (kindReplace k1 k2) (typeAliasReplace <$> tyDef1 <*> tyDef2)) ctxs1 ctxs2
 
 --data TVarChange = TVarKindChange KindChange (Maybe TypeAliasChange)
 --    | TVarDelete Kind (Maybe (List TypeBind /\ Type))

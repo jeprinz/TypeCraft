@@ -32,7 +32,7 @@ typeBindPathToChange :: ListTypeBindChange -> UpPath -> ListTypeBindChange
 typeBindPathToChange inside Nil = inside
 typeBindPathToChange inside (tooth : teeth) =
     case tooth of
-        TypeBindListCons2 tyBind {--} -> ListTypeBindChangePlus tyBind (typeBindPathToChange inside teeth)
+        TypeBindListCons2 tyBind@(TypeBind xmd _x) {--} -> ListTypeBindChangePlus tyBind (typeBindPathToChange inside teeth)
         _ -> unsafeThrow "path that isn't a TypeBindListCons2 given to typeBindPathToChange"
 
 -- The input type comes from the bottom, and the output Change goes from bottom to top.
@@ -110,7 +110,7 @@ termToothCtxChange kctx ctx actx mdkctx mdctx tooth =
                 -- TODO: If I forget this, it will create bugs where the recursor doesn't go in scope after you make a data!!!!
                 -- TODO: Is there a way to express this so its not as repetitive with the functions in Context.purs which add data to context? They are different because this uses Insert, while that yields an identity change!
             /\
-            insert x (TVarInsert (freshTypeHoleID unit) (tyBindsWrapKind tyBinds Type) Nothing) (kCtxInject kctx actx)
+            insert x (TVarInsert xmd.varName (tyBindsWrapKind tyBinds Type) Nothing) (kCtxInject kctx actx)
             /\ let ctrNames = constructorNames ctrs in
                let ctrNameChanges = map NameChangeInsert ctrNames in
                union (mdctxInject mdctx) ctrNameChanges
