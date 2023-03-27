@@ -188,13 +188,19 @@ composeKindChange kc1 (KPlus kc2) = KPlus (composeKindChange kc1 kc2)
 composeKindChange (KMinus kc1) kc2 = KMinus (composeKindChange kc1 kc2)
 composeKindChange _ _ = unsafeThrow "shouldn't get here in composeKindChange, or I missed a case"
 
+invertTypeVar :: CTypeVar -> CTypeVar
+invertTypeVar (CTypeVar x) = CTypeVar x
+invertTypeVar (CCtxBoundaryTypeVar k mtd name x) = CCtxBoundaryTypeVar k mtd name x
+invertTypeVar (PlusCtxBoundaryTypeVar k mtd name x) = MinusCtxBoundaryTypeVar k mtd name x
+invertTypeVar (MinusCtxBoundaryTypeVar k mtd name x) = PlusCtxBoundaryTypeVar k mtd name x
+
 invert :: Change -> Change
 invert (CArrow change1 change2) = CArrow (invert change1) (invert change2)
 invert (CHole holeId w s) = CHole holeId w s
 invert (Replace t1 t2) = Replace t2 t1
 invert (Plus t change) = Minus t (invert change)
 invert (Minus t change) = Plus t (invert change)
-invert (CNeu varId params) = CNeu varId (map invertParam params)
+invert (CNeu varId params) = CNeu (invertTypeVar varId) (map invertParam params)
 
 invertPolyChange :: PolyChange -> PolyChange
 invertPolyChange (PChange c) = PChange (invert c)

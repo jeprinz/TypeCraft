@@ -335,8 +335,14 @@ export default function makeFrontend(backend: Backend): JSX.Element {
               </span>
           ].flat(), indentationLevel)
         case 'ty neu':
-          assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)
-          return go(node, rndCtx, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
+//           assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)
+//           assert(node.metadata !== undefined, 'bla bla bla')
+          // TODO: Note from jacob: I put this if statement because the code was crashing when it was displaying a CNeu. This case at least makes it not crash. We should make it display the right thing in the future.
+          if (node.metadata === undefined || node.metadata.case !== 'ty neu'){
+            return go (node, rndCtx, ["ty_neu"], [[Punc.braceL], [Punc.braceL], [Punc.braceR], [Punc.braceR]].flat(), indentationLevel)
+          }{
+              return go(node, rndCtx, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
+          }
         case 'ty cx-boundary': return go(node, rndCtx, ["ty_cx-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel)
         case 'poly-ty forall': return go(node, rndCtx, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
         case 'poly-ty ty': return go(node, rndCtx, ["poly-ty_ty"], kid(), indentationLevel)

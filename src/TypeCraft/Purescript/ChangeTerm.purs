@@ -31,7 +31,8 @@ chTermBoundary kctx ctx c t =
     let c /\ t' = chTerm kctx ctx c t in
     if chIsId c
         then t'
-        else TypeBoundary defaultTypeBoundaryMD (invert c) t'
+        else
+            TypeBoundary defaultTypeBoundaryMD (invert c) t'
 
 getRightCtxInj :: ChangeCtx -> ChangeCtx
 getRightCtxInj ctx =

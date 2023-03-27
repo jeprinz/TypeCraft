@@ -343,7 +343,7 @@ typeToNode isActive aboveInfo ty =
                         makeWrapperNode TContextBoundaryNodeTag
                     _ -> \ node -> node
           in
-          wrap $ setNodeMetadata (makeTNeuNodeMetadata (typeVarGetName ty.ctxs.mdkctx x)) -- TODO: Should display the type variable differently if its wrapped in a boundary!
+          wrap $ setNodeMetadata (makeTNeuNodeMetadata (typeVarGetName ty.ctxs.mdkctx x))
             $ arrangeType args
                 [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
                 ]
