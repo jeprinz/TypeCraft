@@ -191,7 +191,6 @@ chType kctx (Arrow md t1 t2) =
     Arrow md t1' t2' /\ CArrow c1 c2
 chType kctx (THole md x w s) = THole md x w s /\ CHole x w s
 chType kctx (TNeu md tv args) =
-    trace "RUNNINGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG" \_ ->
     case tv of
         TypeVar x ->
             case lookup x kctx of

@@ -337,7 +337,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'ty neu':
           assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)
           return go(node, rndCtx, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
-        case 'ty cx-boundary': return go(node, rndCtx, ["ty_cx-boundary"], [kid(), kid()].flat(), indentationLevel)
+        case 'ty cx-boundary': return go(node, rndCtx, ["ty_cx-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel)
         case 'poly-ty forall': return go(node, rndCtx, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
         case 'poly-ty ty': return go(node, rndCtx, ["poly-ty_ty"], kid(), indentationLevel)
         case 'ty-arg': return go(node, rndCtx, ["ty-arg"], kid(), indentationLevel)
