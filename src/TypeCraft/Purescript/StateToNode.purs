@@ -133,7 +133,7 @@ cursorModeToNode cursorMode =
   cursorModePathToNode :: Node -> Node
   cursorModePathToNode = case cursorMode.cursorLocation of
     TermCursor ctxs ty termPath term ->
---        trace ("Rendering cursor mode. termPath.ctxs.mdctx is empty?: "<> show (Map.isEmpty ctxs.mdctx)) \_ ->
+        trace ("Rendering cursor mode. term is: "<> show term) \_ ->
         termPathToNode true Nil (BISelect Nil term ctxs ty) { ctxs, term, termPath, ty }
     TypeCursor ctxs typePath ty -> typePathToNode true Nil (BISelect Nil ty ctxs unit) { ctxs, ty, typePath }
     TypeBindCursor ctxs typeBindPath tyBind -> typeBindPathToNode true Nil { ctxs, typeBindPath, tyBind }

@@ -22,6 +22,7 @@ import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.Util (delete')
 import TypeCraft.Purescript.Alpha (applySubChange)
 import Debug (trace)
+import TypeCraft.Purescript.Util (insert')
 
 -- calls chTerm, but if it returns a non-id change, it wraps in a boundary
 -- TODO: Im not sure how I should understand this. I think that this is used for places where we assume that the output change is id, but I'm not sure what the criteria for that is.
@@ -120,10 +121,11 @@ chTerm kctx ctx c t =
             c /\ Let md tBind@(TermBind _ x) binds t1 ty t2 tyBody ->
                 -- TODO: need to include the binds into the kctx for some things I think?
                 if not (fst (getEndpoints c) == tyBody) then unsafeThrow "shouldn't happen 5" else
-                let ctx' = addLetToCCtx ctx tBind binds ty in
                 let kctx' = addLetToKCCtx kctx binds in
-                let c2 /\ t2' = chTerm kctx ctx' c t2 in
                 let ty' /\ tyCh = chType kctx' ty in
+--                let ctx' = addLetToCCtx ctx tBind binds ty' in
+                let ctx' = insert' x (VarTypeChange (tyBindsWrapChange binds tyCh)) ctx in
+                let c2 /\ t2' = chTerm kctx ctx' c t2 in
                 trace ("In Let, tyCH is: " <> show tyCh) \_ ->
                 let t1'= chTermBoundary kctx' ctx' tyCh t1 in -- TODO: is this correct!?! should it first apply the kctx to the type?
                 -- TODO: apply change to x to the let itself!

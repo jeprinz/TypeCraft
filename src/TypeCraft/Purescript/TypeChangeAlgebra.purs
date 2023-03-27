@@ -232,14 +232,22 @@ invertListTypeBindChange (ListTypeBindChangePlus tyBind ch) = ListTypeBindChange
 invertListTypeBindChange (ListTypeBindChangeMinus tyBind ch) = ListTypeBindChangePlus tyBind (invertListTypeBindChange ch)
 invertListTypeBindChange ListTypeBindChangeNil = ListTypeBindChangeNil
 
+cTypeVarIsId :: CTypeVar -> Boolean
+cTypeVarIsId (CTypeVar _) = true
+cTypeVarIsId (CCtxBoundaryTypeVar _ _ _ _) = true
+cTypeVarIsId (PlusCtxBoundaryTypeVar _ _ _ _) = false
+cTypeVarIsId (MinusCtxBoundaryTypeVar _ _ _ _) = false
+
 -- TODO: maybe morally, this function should just be replaced by checking if the endpoints are equal. The chIsId' function checks for a true groupoid identity. Although technically, that is even more permissive than this. Although I doubt that those cases come up.
 chIsId :: Change -> Boolean
 chIsId (CArrow c1 c2) = chIsId c1 && chIsId c2
 chIsId (CHole _ _ _) = true
 chIsId (Replace t1 t2) = t1 == t2 -- debatable, not sure if this case should always return false?
-chIsId (CNeu varId params) = all (\b -> b) (map (case _ of
+chIsId (CNeu varId params) =
+    cTypeVarIsId varId &&
+    (all (\b -> b) (map (case _ of
     ChangeParam change -> chIsId change
-    _ -> false) params)
+    _ -> false) params))
 chIsId _ = false
 
 pChIsId :: PolyChange -> Boolean

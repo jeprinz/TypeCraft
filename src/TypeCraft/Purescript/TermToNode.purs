@@ -327,6 +327,7 @@ arrangeType args =
 
 typeToNode :: Boolean -> AboveInfo Type -> TypeRecValue -> Node
 typeToNode isActive aboveInfo ty =
+--  trace ("typeToNode called on ty: " <> show ty) \_ ->
   recType
     { arrow:
         \md ty1 ty2 ->
