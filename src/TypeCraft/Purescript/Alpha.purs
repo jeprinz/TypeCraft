@@ -86,7 +86,7 @@ subFromVars m = {subTypeVars: m, subTHoles: Map.empty}
 applySubType :: Sub -> Type -> Type
 applySubType sub = case _ of
   Arrow md ty1 ty2 -> Arrow md (applySubType sub ty1) (applySubType sub ty2)
-  (THole md hid w s) -> maybe (THole md hid w (union' s sub.subTypeVars)) (applySubType (subFromVars s)) (Map.lookup hid sub.subTHoles) -- TODO: is union' correct here?
+  (THole md hid w s) -> maybe (THole md hid w (union' (map (applySubType sub) s) sub.subTypeVars)) (applySubType (subFromVars s)) (Map.lookup hid sub.subTHoles) -- TODO: is union' correct here?
   ty@(TNeu md (TypeVar id) List.Nil) -> maybe ty identity (Map.lookup id sub.subTypeVars)
   TNeu md id args -> TNeu md id ((\(TypeArg md ty) -> TypeArg md (applySubType sub ty)) <$> args)
 
