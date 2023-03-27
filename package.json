@@ -21,8 +21,8 @@
     "build-frontend": "react-scripts build",
     "build": "npm run build-backend && npm run build-frontend",
     "serve": "serve -s build",
-    "launch-frontend": "npm run build && npm run start",
-    "launch": "npm run start",
+    "launch-frontend": "npm run start",
+    "launch": "npm run build && npm run start",
     "start": "react-scripts start",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
