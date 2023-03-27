@@ -422,16 +422,10 @@ delete st = do
                 in
                   pure $ st { mode = makeCursorMode $ TypeCursor ctxs' topPath' ty2 }
           TypeBindListSelect topPath _ctxs1 _tyBinds1 middlePath ctxs2 tyBinds2 _ori ->
-            let
-              innerCh = chTypeBindList tyBinds2
-            in
-              let
-                change = typeBindPathToChange innerCh middlePath
-              in
-                let
-                  topPath' = chListTypeBindPath (invertListTypeBindChange change) { ctxs: ctxs2, tyBinds: tyBinds2, listTypeBindPath: topPath }
-                in
-                  pure $ st { mode = makeCursorMode $ TypeBindListCursor ctxs2 topPath' tyBinds2 }
+              let innerCh = chTypeBindList tyBinds2 in
+              let change = typeBindPathToChange innerCh middlePath in
+              let topPath' = chListTypeBindPath (invertListTypeBindChange change) { ctxs: ctxs2, tyBinds: tyBinds2, listTypeBindPath: topPath } in
+              pure $ st { mode = makeCursorMode $ TypeBindListCursor ctxs2 topPath' tyBinds2 }
           _ -> hole' "delete: other syntactical kinds of selects"
 
 escape :: State -> Maybe State

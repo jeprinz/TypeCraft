@@ -73,6 +73,7 @@ chTerm kctx ctx c t =
                 let xVarCh = lookup' x ctx in
                 trace ("In var case here: cin is" <> show cin <> " and xVarCh is: " <> show xVarCh) \_ ->
                 case xVarCh of
+                    -- TODO: CtxBoundary, and still need to change args!
                     VarDelete _ -> tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD -- later use context boundary
 --                    VarTypeChange xChange ->
 --                        let tryPolymorhpismCase =
@@ -183,7 +184,7 @@ chTypeArgs2 kctx tyArgs (PPlus x pc) =
     ch /\ (TypeArg defaultTypeArgMD (freshTHole unit)) : tyArgsOut
 chTypeArgs2 kctx (tyArg : tyArgs) (PMinus x pc) =
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
-    ch /\ tyArgs
+    ch /\ tyArgsOut
 chTypeArgs2 _ _ _ = unsafeThrow "invalid input to chTypeArgs2, or I forgot a case"
 
 -- could avoid returning Type (because you can get it from the change with getEndpoints), if I put metadata into Change
@@ -264,7 +265,7 @@ chParamList kctx (param : params) =
 
 chTypeBindList :: List TypeBind -> ListTypeBindChange
 chTypeBindList Nil = ListTypeBindChangeNil
-chTypeBindList (tyBind : tyBinds) = ListTypeBindChangePlus tyBind (chTypeBindList tyBinds)
+chTypeBindList (tyBind : tyBinds) = ListTypeBindChangeCons tyBind (chTypeBindList tyBinds)
 
 chTypeParamList :: KindChangeCtx -> List TypeArg -> ListTypeArgChange /\ List TypeArg
 --chTypeParamList kctx tyArgs = (tyArgs <#> \(TypeArg _ ty) -> tyInject ty) /\ tyArgs -- TODO: impl
