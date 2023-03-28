@@ -83,6 +83,7 @@ chTermPath ch termPath =
                     if not (argTy == fst (getEndpoints c1) && outTy == fst (getEndpoints c2)) then unsafeThrow "shouldn't happen chPath 1" else
                     let (kctx' /\ ctx') /\ up' = chTermPath c2 up in
                     let t' = chTermBoundary kctx' ctx' c1 t2.term in
+                    -- kctx assumption here
                     (kctx' /\ ctx') /\ App1 md t' (snd (getEndpoints c1)) (snd (getEndpoints c2)) : up'
                 (Minus t c) ->
                     if not (t == argTy && fst (getEndpoints c) == outTy) then unsafeThrow "shouldn't happen chPath 2" else
@@ -90,11 +91,12 @@ chTermPath ch termPath =
                     let (kctx' /\ ctx') /\ up' = chTermPath c up in
                     let argCh /\ t2' = chTerm idChkctx idChCtx chArgTy t2.term in
                     (kctx' /\ ctx') /\ Buffer3 defaultBufferMD t2' (snd (getEndpoints argCh)) {-Term-} outTy : up'
---                other ->
---                    if not (fst (getEndpoints other) == Arrow defaultArrowMD argTy outTy) then unsafeThrow "shouldn't happen chPath 20" else
---                    let (kctx' /\ ctx') /\ up' = chTermPath (tyInject outTy) up in
---                    ?h
-                _ -> unsafeThrow "shouldn't get herer app1 case of chTermPath'" -- TODO: its possible to get a (Replace _ Hole) typechange here, should probably just default to wrapping in a context boundary
+                other ->
+                    if not (fst (getEndpoints other) == Arrow defaultArrowMD argTy outTy) then unsafeThrow "shouldn't happen chPath 20" else
+                    let (kctx' /\ ctx') /\ up' = chTermPath (tyInject outTy) up in
+                    if not (kCtxIsId kctx') then unsafeThrow "ktx assumptinon violated" else
+                    (kctx' /\ ctx') /\  (TypeBoundary1 defaultTypeBoundaryMD (invert other)) : App1 md t2.term argTy outTy : up'
+--                _ -> unsafeThrow "shouldn't get herer app1 case of chTermPath'" -- TODO: its possible to get a (Replace _ Hole) typechange here, should probably just default to wrapping in a context boundary
         , app2 : \up md t {-Term-} argTy outTy ->
             trace ("App2 case of chTermPath triggered. ch is: " <> show ch) \_ ->
             if not (fst (getEndpoints ch) == argTy) then unsafeThrow "shouldn't happen chTermPath App2 case" else
