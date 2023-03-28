@@ -16,6 +16,7 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import Data.Maybe (maybe)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (union')
+import TypeCraft.Purescript.TypeChangeAlgebra2 (getSubEndpoints)
 
 {-
 This file deals with issues of alpha-equivalence.
@@ -93,10 +94,26 @@ applySubType sub = case _ of
 subTypeArg :: Sub -> TypeArg -> TypeArg
 subTypeArg sub (TypeArg md ty) = TypeArg md (applySubType sub ty)
 
+--data SubChange
+--  = SubTypeChange Change
+--  | SubDelete Type
+--  | SubInsert Type
+subSubChange :: Sub -> SubChange -> SubChange
+subSubChange sub subChange =
+    case subChange of
+        SubTypeChange ch -> SubTypeChange (applySubChange sub ch)
+        SubDelete ty -> SubDelete (applySubType sub ty)
+        SubInsert ty -> SubInsert (applySubType sub ty)
+
 applySubChange :: Sub -> Change -> Change
 applySubChange sub = case _ of
   CArrow ty1 ty2 -> CArrow (applySubChange sub ty1) (applySubChange sub ty2)
-  ty@(CHole hid w s) -> maybe ty (\ t ->  tyInject (applySubType (subFromVars s) t)) (Map.lookup hid sub.subTHoles)
+--  ty@(CHole hid w s) -> maybe (CHole hid w ?h ) (\t -> tyInjectWithSub (subSubChange (subFromVars s) t)) (Map.lookup hid sub.subTHoles)
+  ty@(CHole hid w s) -> maybe (CHole hid w (map (subSubChange sub) s))
+        (\t ->
+            let s1 /\ s2 = getSubEndpoints s in
+            Replace (applySubType (subFromVars s1) t) (applySubType (subFromVars s2) t))
+        (Map.lookup hid sub.subTHoles)
   ty@(CNeu (CTypeVar id) List.Nil) -> maybe ty tyInject (Map.lookup id sub.subTypeVars)
   CNeu id args -> CNeu id (applySubChangeParam sub <$> args)
   Replace ty1 ty2 -> Replace (applySubType sub ty1) (applySubType sub ty2)

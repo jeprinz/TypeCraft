@@ -5,6 +5,7 @@ import Prim hiding (Type)
 import TypeCraft.Purescript.SmallStep.UTerm
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.TypeChangeAlgebra
+import TypeCraft.Purescript.TypeChangeAlgebra2
 import TypeCraft.Purescript.Context
 import Data.Tuple.Nested
 import Data.List (List(..), (:))

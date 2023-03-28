@@ -9,14 +9,14 @@ import Data.Map.Internal (Map, empty, lookup, union)
 import Data.Set (Set)
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints, composeChange)
+import TypeCraft.Purescript.TypeChangeAlgebra (composeChange)
+import TypeCraft.Purescript.TypeChangeAlgebra2 (getEndpoints, pGetEndpoints)
 import Data.Tuple (snd)
 import TypeCraft.Purescript.MD
 import Data.List (List(..), (:))
 import Data.Tuple (fst)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Kinds (bindsToKind)
-import TypeCraft.Purescript.TypeChangeAlgebra (pGetEndpoints)
 import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)
 import Debug (trace)
 import TypeCraft.Purescript.Util

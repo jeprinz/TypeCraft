@@ -6,6 +6,7 @@ import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.TypeChangeAlgebra
+import TypeCraft.Purescript.TypeChangeAlgebra2
 
 import Data.List (List(..), (:), foldr, null)
 import Data.Map.Internal (empty, lookup, insert)
@@ -177,12 +178,14 @@ chTypeArgs2 :: KindChangeCtx -> List TypeArg -> PolyChange -> Change /\ (List Ty
 chTypeArgs2 kctx Nil (PChange ch) = ch /\ Nil
 chTypeArgs2 kctx (tyArg@(TypeArg _ ty) : tyArgs) (CForall x pc) =
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
-    let ch' = applySubChange { subTypeVars : (insert x ty empty) , subTHoles : empty} ch in
+    let ch' = applySubChange { subTypeVars : (insert x ty empty) , subTHoles : empty} ch in -- What is this line doing????
     ch' /\ tyArg : tyArgsOut
 chTypeArgs2 kctx tyArgs (PPlus x pc) =
+    -- TODO: Here is where we need to deal with ADDING subs to holes!
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
     ch /\ (TypeArg defaultTypeArgMD (freshTHole unit)) : tyArgsOut
 chTypeArgs2 kctx (tyArg : tyArgs) (PMinus x pc) =
+    -- TODO: Here is where we need to deal with removing subs from holes
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
     ch /\ tyArgsOut
 chTypeArgs2 _ _ _ = unsafeThrow "invalid input to chTypeArgs2, or I forgot a case"
@@ -193,7 +196,7 @@ chType kctx (Arrow md t1 t2) =
     let t1' /\ c1 = chType kctx t1 in
     let t2' /\ c2 = chType kctx t2 in
     Arrow md t1' t2' /\ CArrow c1 c2
-chType kctx (THole md x w s) = THole md x w s /\ CHole x w s
+chType kctx (THole md x w s) = THole md x w s /\ CHole x w (subInject s) -- TODO: is this right?
 chType kctx (TNeu md tv args) =
     case tv of
         TypeVar x ->

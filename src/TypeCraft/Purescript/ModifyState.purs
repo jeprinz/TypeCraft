@@ -24,6 +24,7 @@ import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
 import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select(..), State, botSelectOrientation, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
 import TypeCraft.Purescript.TypeChangeAlgebra
+import TypeCraft.Purescript.TypeChangeAlgebra2
 import TypeCraft.Purescript.Util
 import TypeCraft.Purescript.SmallStep.Freshen (freshenTerm, freshenTermPath)
 import TypeCraft.Purescript.Unification (runUnify, normThenUnify)

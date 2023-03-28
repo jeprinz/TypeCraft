@@ -7,6 +7,7 @@ import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.TypeChangeAlgebra
+import TypeCraft.Purescript.TypeChangeAlgebra2
 
 import Data.List (List(..), (:))
 import Data.List as List
@@ -17,7 +18,6 @@ import Data.Tuple (fst)
 import Data.Tuple (snd)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints)
 import TypeCraft.Purescript.Util (hole')
 --import TypeCraft.Purescript.Util (hole)
 import TypeCraft.Purescript.Util (lookup')

@@ -25,57 +25,8 @@ import TypeCraft.Purescript.Alpha
 import Data.Maybe (maybe)
 import Debug (trace)
 import Data.Either (Either(..))
+import TypeCraft.Purescript.TypeChangeAlgebra2
 
-tyVarGetEndpoints :: CTypeVar -> TypeVar /\ TypeVar
-tyVarGetEndpoints (CTypeVar x)  = TypeVar x /\ TypeVar x
-tyVarGetEndpoints (CCtxBoundaryTypeVar k mtv name x) =
-    CtxBoundaryTypeVar k mtv name x /\ CtxBoundaryTypeVar k mtv name x
-tyVarGetEndpoints (PlusCtxBoundaryTypeVar k mtv name x) =
-    TypeVar x /\ CtxBoundaryTypeVar k mtv name x
-tyVarGetEndpoints (MinusCtxBoundaryTypeVar k mtv name x) =
-    CtxBoundaryTypeVar k mtv name x /\ TypeVar x
-
-getEndpoints :: Change -> Type /\ Type
-getEndpoints (CArrow a b) =
-    let a1 /\ a2 = getEndpoints a in
-    let b1 /\ b2 = getEndpoints b in
-    Arrow defaultArrowMD a1 b1 /\ Arrow defaultArrowMD a2 b2
-getEndpoints (CHole x w s) = THole defaultTHoleMD x w s /\ THole defaultTHoleMD x w s
-getEndpoints (CNeu x args) =
-    let start = TNeu defaultTNeuMD in
-    let ts1 /\ ts2 = getEndpointss args in
-    let x1 /\ x2 = tyVarGetEndpoints x in
-    let args1 = map (TypeArg defaultTypeArgMD) ts1 in
-    let args2 = map (TypeArg defaultTypeArgMD) ts2 in
-    start x1 args1 /\ start x2 args2
-getEndpoints (Replace a b) = a /\ b
-getEndpoints (Plus t c) =
-    let c1 /\ c2 = getEndpoints c in
-    c1 /\ Arrow defaultArrowMD t c2
-getEndpoints (Minus t c) =
-    let c1 /\ c2 = getEndpoints c in
-    Arrow defaultArrowMD t c1 /\ c2
-
-getEndpointss :: List ChangeParam -> List Type /\ List Type
-getEndpointss Nil = Nil /\ Nil
-getEndpointss (ChangeParam c : cs) =
-    let t1s /\ t2s = getEndpointss cs in
-    let t1 /\ t2 = getEndpoints c in
-    (t1 : t1s) /\ (t2 : t2s)
-getEndpointss (PlusParam t : cs) = let t1s /\ t2s = getEndpointss cs in t1s /\ t : t2s
-getEndpointss (MinusParam t : cs) = let t1s /\ t2s = getEndpointss cs in (t : t1s) /\ t2s
-
-pGetEndpoints :: PolyChange -> PolyType /\ PolyType
-pGetEndpoints (CForall tBind pc) =
-    let pt1 /\ pt2 = pGetEndpoints pc in
-    Forall tBind pt1 /\ Forall tBind pt2
-pGetEndpoints (PPlus tBind pc) =
-    let pt1 /\ pt2 = pGetEndpoints pc in
-    pt1 /\ Forall tBind pt2
-pGetEndpoints (PMinus tBind pc) =
-    let pt1 /\ pt2 = pGetEndpoints pc in
-    Forall tBind pt1 /\ pt2
-pGetEndpoints (PChange c) = let t1 /\ t2 = getEndpoints c in PType t1 /\ PType t2
 
 polyTypeApplyArgs :: PolyType -> ListTypeArgChange -> Change
 polyTypeApplyArgs pty ch =
@@ -90,35 +41,7 @@ tyInjectWithSub :: Type -> Map TypeVarID Change -> Change
 tyInjectWithSub (Arrow _ ty1 ty2) sub = CArrow (tyInjectWithSub ty1 sub) (tyInjectWithSub ty2 sub)
 tyInjectWithSub (TNeu _ (TypeVar x) Nil) sub | Map.member x sub = lookup' x sub -- TODO: do I need to do something with TVarContextBoundary here?
 tyInjectWithSub (TNeu _ x args) sub = CNeu (tyVarInject x) (map (case _ of TypeArg _ t -> ChangeParam (tyInjectWithSub t sub)) args)
-tyInjectWithSub (THole _ id w s) sub = CHole id w s
-
-kChGetEndpoints :: KindChange -> Kind /\ Kind
-kChGetEndpoints kc = case kc of
-    KCType -> Type /\ Type
-    KCArrow kc ->
-        let k1 /\ k2 = kChGetEndpoints kc in
-        KArrow k1 /\ KArrow k2
-    KPlus kc ->
-        let k1 /\ k2 = kChGetEndpoints kc in
-        k1 /\ KArrow k2
-    KMinus kc ->
-        let k1 /\ k2 = kChGetEndpoints kc in
-        KArrow k1 /\ k2
-
-taChGetEndpoints :: TypeAliasChange -> (List TypeBind /\ Type) /\ (List TypeBind /\ Type)
-taChGetEndpoints tac = case tac of
-    TAChange ch ->
-        let ty1 /\ ty2 = getEndpoints ch in
-        (Nil /\ ty1) /\ (Nil /\ ty2)
-    TAForall x tac ->
-        let (binds1 /\ ty1) /\ (binds2 /\ ty2) = taChGetEndpoints tac in
-        ((x : binds1) /\ ty1) /\ ((x : binds2) /\ ty2)
-    TAPlus x tac ->
-        let (binds1 /\ ty1) /\ (binds2 /\ ty2) = taChGetEndpoints tac in
-        (binds1 /\ ty1) /\ ((x : binds2) /\ ty2)
-    TAMinus x tac ->
-        let (binds1 /\ ty1) /\ (binds2 /\ ty2) = taChGetEndpoints tac in
-        ((x : binds1) /\ ty1) /\ (binds2 /\ ty2)
+tyInjectWithSub (THole _ id w s) sub = CHole id w (map (\ty -> SubTypeChange (tyInjectWithSub ty sub)) s)
 
 -- Assumption: the first typechange is from A to B, and the second is from B to C. If the B's don't line up,
 -- then this function will throw an exception
@@ -212,6 +135,11 @@ invertParam :: ChangeParam -> ChangeParam
 invertParam (ChangeParam change) = ChangeParam (invert change)
 invertParam (PlusParam t) = MinusParam t
 invertParam (MinusParam t) = PlusParam t
+
+invertSubChange :: SubChange -> SubChange
+invertSubChange (SubTypeChange ch) = SubTypeChange (invert ch)
+invertSubChange (SubDelete ty) = SubInsert ty
+invertSubChange (SubInsert ty) = SubDelete ty
 
 invertVarChange :: VarChange -> VarChange
 invertVarChange (VarTypeChange pch) = VarTypeChange (invertPolyChange pch)
@@ -452,88 +380,18 @@ alterCCtxVarChange ctx x vch = case lookup x ctx of
 
 -- Context endpoints
 
-getCtxEndpoints :: ChangeCtx -> TermContext /\ TermContext
-getCtxEndpoints ctx =
-    mapMaybe (case _ of
-        VarInsert _ -> Nothing
-        VarTypeChange pc -> Just (fst (pGetEndpoints pc))
-        VarDelete pt -> Just pt) ctx
-    /\
-    mapMaybe (case _ of
-        VarInsert pt -> Just pt
-        VarTypeChange pc -> Just (snd (pGetEndpoints pc))
-        VarDelete _ -> Nothing) ctx
 
 composeCtxs :: ChangeCtx -> ChangeCtx -> ChangeCtx
 composeCtxs ctx1 ctx2 = mmapMap2 composeVarChange ctx1 ctx2
 
-getKCtxTyEndpoints :: KindChangeCtx -> TypeContext /\ TypeContext
-getKCtxTyEndpoints kctx =
-    mapMaybe (case _ of
-        TVarInsert _ _ _ -> Nothing
-        TVarKindChange kch tac -> Just (fst (kChGetEndpoints kch))
-        TVarDelete _ kind ta -> Just kind) kctx
-    /\
-    mapMaybe (case _ of
-        TVarInsert _ kind ta -> Just kind
-        TVarKindChange kch tac -> Just (snd (kChGetEndpoints kch))
-        TVarDelete _ _ _ -> Nothing) kctx
-
 composeKCtx :: KindChangeCtx -> KindChangeCtx -> KindChangeCtx
 composeKCtx kctx1 kctx2 = mmapMap2 composeTVarChange kctx1 kctx2
-
-getKCtxAliasEndpoints :: KindChangeCtx -> TypeAliasContext /\ TypeAliasContext
-getKCtxAliasEndpoints kctx =
-    mapMaybe (case _ of
-        TVarInsert _ _ _ -> Nothing
-        TVarKindChange kch tac -> fst <$> taChGetEndpoints <$> tac
-        TVarDelete _ kind ta -> ta) kctx
-    /\
-    mapMaybe (case _ of
-        TVarInsert _ kind ta -> ta
-        TVarKindChange kch tac -> snd <$> taChGetEndpoints <$> tac
-        TVarDelete _ _ _ -> Nothing) kctx
-
-getMDCtxEndpoints :: MDTermChangeCtx -> MDTermContext /\ MDTermContext
-getMDCtxEndpoints mdctx =
-    mapMaybe (case _ of
-        NameChangeInsert _ -> Nothing
-        NameChangeSame name -> Just name
-        NameChangeDelete name -> Just name) mdctx
-    /\
-    mapMaybe (case _ of
-        NameChangeInsert name -> Just name
-        NameChangeSame name -> Just name
-        NameChangeDelete _  -> Nothing) mdctx
 
 composeMDTypeChangeCtx :: MDTypeChangeCtx -> MDTypeChangeCtx -> MDTypeChangeCtx
 composeMDTypeChangeCtx mdkctx1 mdkctx2 = mmapMap2 composeNameChange mdkctx1 mdkctx2
 
-getMDKCtxEndpoints :: MDTypeChangeCtx -> MDTypeContext /\ MDTypeContext
-getMDKCtxEndpoints mdkctx =
-    mapMaybe (case _ of
-        NameChangeInsert _ -> Nothing
-        NameChangeSame name -> Just name
-        NameChangeDelete name -> Just name) mdkctx
-    /\
-    mapMaybe (case _ of
-        NameChangeInsert name -> Just name
-        NameChangeSame name -> Just name
-        NameChangeDelete _  -> Nothing) mdkctx
-
 composeMDTermChangeCtx :: MDTermChangeCtx -> MDTermChangeCtx -> MDTermChangeCtx
 composeMDTermChangeCtx mdctx1 mdctx2 = mmapMap2 composeNameChange mdctx1 mdctx2
-
-getAllEndpoints :: AllChangeContexts -> AllContext /\ AllContext
-getAllEndpoints (ctx /\ kctx /\ mdctx /\ mdkctx) =
-    let ctx1 /\ ctx2 = getCtxEndpoints ctx in
-    let kctx1 /\ kctx2 = getKCtxTyEndpoints kctx in
-    let actx1 /\ actx2 = getKCtxAliasEndpoints kctx in
-    let mdctx1 /\ mdctx2 = getMDCtxEndpoints mdctx in
-    let mdkctx1 /\ mdkctx2 = getMDKCtxEndpoints mdkctx in
-    { ctx: ctx1, kctx: kctx1, actx: actx1, mdctx: mdctx1, mdkctx: mdkctx1 }
-    /\
-    { ctx: ctx2, kctx: kctx2, actx: actx2, mdctx: mdctx2, mdkctx: mdkctx2 }
 
 composeAllChCtxs :: AllChangeContexts -> AllChangeContexts -> AllChangeContexts
 composeAllChCtxs (ctx1 /\ kctx1 /\ mdctx1 /\ mdkctx1) (ctx2 /\ kctx2 /\ mdctx2 /\ mdkctx2) =

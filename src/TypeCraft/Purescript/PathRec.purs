@@ -16,7 +16,7 @@ import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Context (addLetToCtx)
 import TypeCraft.Purescript.Util (delete')
 import Data.Tuple (fst, snd)
-import TypeCraft.Purescript.TypeChangeAlgebra (getEndpoints)
+import TypeCraft.Purescript.TypeChangeAlgebra2 (getEndpoints)
 import TypeCraft.Purescript.Util (lookup', insert')
 import TypeCraft.Purescript.Alpha (polyTypeApply)
 import Debug (trace)

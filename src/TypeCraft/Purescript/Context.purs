@@ -102,6 +102,9 @@ kCtxInject kctx actx =
 ctxInject :: TermContext -> ChangeCtx
 ctxInject ctx = map (\ty -> VarTypeChange (pTyInject ty)) ctx
 
+subInject :: Map TypeVarID Type -> Map TypeVarID SubChange
+subInject subs = map (\ty -> SubTypeChange (tyInject ty)) subs
+
 --data ListCtrChange = ListCtrChangeNil | ListCtrChangeCons TermVarID ListCtrParamChange ListCtrChange
 --    | ListCtrChangePlus Constructor ListCtrChange
 --    | ListCtrChangeMinus Constructor ListCtrChange

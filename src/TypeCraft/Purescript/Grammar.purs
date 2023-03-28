@@ -115,7 +115,7 @@ data PolyChange
 
 data Change
   = CArrow Change Change
-  | CHole TypeHoleID (Set TypeVarID) (Map TypeVarID Type)
+  | CHole TypeHoleID (Set TypeVarID) (Map TypeVarID SubChange)
   | Replace Type Type
   | Plus Type Change
   | Minus Type Change
@@ -243,7 +243,12 @@ tyVarInject (CtxBoundaryTypeVar pt mtv name x) = CCtxBoundaryTypeVar pt mtv name
 tyInject :: Type -> Change
 tyInject (Arrow _ ty1 ty2) = CArrow (tyInject ty1) (tyInject ty2)
 tyInject (TNeu _ x args) = CNeu (tyVarInject x) (map (case _ of TypeArg _ t -> ChangeParam (tyInject t)) args)
-tyInject (THole _ id w s) = CHole id w s
+tyInject (THole _ id w s) = CHole id w (map (\ty -> SubTypeChange (tyInject ty)) s)
+
+data SubChange
+  = SubTypeChange Change
+  | SubDelete Type
+  | SubInsert Type
 
 pTyInject :: PolyType -> PolyChange
 pTyInject (Forall x t) = CForall x (pTyInject t)
@@ -404,6 +409,14 @@ instance eqChange :: Eq Change where -- This has to be manually defined for the 
   eq _ _ = false
 
 instance showChange :: Show Change where
+  show x = genericShow x
+
+derive instance genericSubChange :: Generic SubChange _
+
+instance eqSubChange :: Eq SubChange where
+  eq x = genericEq x
+
+instance showSubChange :: Show SubChange where
   show x = genericShow x
 
 derive instance genericVarChange :: Generic VarChange _

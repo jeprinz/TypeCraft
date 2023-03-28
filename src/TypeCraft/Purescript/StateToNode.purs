@@ -21,7 +21,7 @@ import TypeCraft.Purescript.Node (Node, NodeStyle(..), NodeTag(..), addNodeStyle
 import TypeCraft.Purescript.PathToNode (BelowInfo(..), ctrListPathToNode, ctrParamListPathToNode, termBindPathToNode, termPathToNode, typeBindListPathToNode, typeBindPathToNode, typePathToNode, insideHolePathToNode)
 import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMode, Mode(..), Select(..), SelectMode, State, getCompletion)
 import TypeCraft.Purescript.TermToNode (AboveInfo(..), ctrListToNode, ctrParamListToNode, termBindToNode, termToNode, typeBindListToNode, typeBindToNode, typeToNode, insideHoleToNode)
-import TypeCraft.Purescript.TypeChangeAlgebra (getAllEndpoints)
+import TypeCraft.Purescript.TypeChangeAlgebra2 (getAllEndpoints)
 import TypeCraft.Purescript.Util (fromJust', hole')
 import Debug (trace)
 import TypeCraft.Purescript.Alpha (subTerm)

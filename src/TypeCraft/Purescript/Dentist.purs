@@ -8,13 +8,12 @@ import TypeCraft.Purescript.Grammar
 import Data.Map.Internal (empty, lookup, insert, union)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.TypeChangeAlgebra (alterCCtxVarChange)
-import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)
 import TypeCraft.Purescript.Util (hole')
 import Data.Maybe (Maybe(..))
 import Data.Map(Map(..))
 import Data.List(List(..), (:))
 import TypeCraft.Purescript.TypeChangeAlgebra
+import TypeCraft.Purescript.TypeChangeAlgebra2
 import Data.Tuple (snd)
 
 {-
