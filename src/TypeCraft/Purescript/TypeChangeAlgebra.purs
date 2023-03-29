@@ -34,14 +34,15 @@ polyTypeApplyArgs pty ch =
 polyTypeApplyArgsImpl :: PolyType -> ListTypeArgChange -> Map.Map TypeVarID Change -> Change
 polyTypeApplyArgsImpl (Forall x pt) (ListTypeArgChangeCons ch chs) sub =
     polyTypeApplyArgsImpl pt chs (Map.insert x ch sub)
-polyTypeApplyArgsImpl (PType ty) ListTypeArgChangeNil sub = (tyInjectWithSub ty sub)
+polyTypeApplyArgsImpl (PType ty) ListTypeArgChangeNil sub = tyInjectWithSub ty sub
 polyTypeApplyArgsImpl _ _ _ = unsafeThrow "in polyTypeApplyArgs, wrong number of args"
 
 tyInjectWithSub :: Type -> Map TypeVarID Change -> Change
 tyInjectWithSub (Arrow _ ty1 ty2) sub = CArrow (tyInjectWithSub ty1 sub) (tyInjectWithSub ty2 sub)
-tyInjectWithSub (TNeu _ (TypeVar x) Nil) sub | Map.member x sub = lookup' x sub -- TODO: do I need to do something with TVarContextBoundary here?
+ -- TODO: do I need to do something with TVarContextBoundary here? (Later: I don't know what this comment means)
+tyInjectWithSub (TNeu _ (TypeVar x) Nil) sub | Map.member x sub = lookup' x sub
 tyInjectWithSub (TNeu _ x args) sub = CNeu (tyVarInject x) (map (case _ of TypeArg _ t -> ChangeParam (tyInjectWithSub t sub)) args)
-tyInjectWithSub (THole _ id w s) sub = CHole id w (map (\ty -> SubTypeChange (tyInjectWithSub ty sub)) s)
+tyInjectWithSub (THole _ id w s) sub = CHole id w (union' (map (\ty -> SubTypeChange (tyInjectWithSub ty sub)) s) (map SubTypeChange sub))
 
 -- Assumption: the first typechange is from A to B, and the second is from B to C. If the B's don't line up,
 -- then this function will throw an exception
