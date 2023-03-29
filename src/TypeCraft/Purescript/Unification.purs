@@ -99,7 +99,7 @@ fillNeutralImpl :: TypeAliasContext -> PolyType -> TermVarID -> Type -> Sub -> L
 fillNeutralImpl actx pty id ty sub tyArgs = case pty of
   Forall x pty' ->
     let h = (freshTHole unit) in
-    fillNeutralImpl actx pty' id ty sub{subTypeVars= Map.insert x h sub.subTypeVars} ((TypeArg defaultTypeArgMD h) List.: tyArgs)
+    fillNeutralImpl actx pty' id ty sub{subTypeVars= Map.insert x h sub.subTypeVars} (tyArgs <> List.singleton (TypeArg defaultTypeArgMD h))
   PType ty' -> fillNeutral'' actx (applySubType sub ty') id ty tyArgs
 
 {-

@@ -19,6 +19,7 @@ import TypeCraft.Purescript.Util (union')
 import TypeCraft.Purescript.TypeChangeAlgebra2
 import Data.Tuple (fst, snd)
 import Data.Maybe (Maybe(..))
+import Debug (trace)
 
 {-
 This file deals with issues of alpha-equivalence.
@@ -50,13 +51,39 @@ convertSub equiv = { subTypeVars : (map (\x -> TNeu defaultTNeuMD (TypeVar x) Li
 subType :: TyVarEquiv -> Type -> Type
 subType equiv = applySubType { subTypeVars : (map (\x -> TNeu defaultTNeuMD (TypeVar x) List.Nil) equiv) , subTHoles : Map.empty}
 
-subChange :: TyVarEquiv -> Change -> Change
-subChange equiv = applySubChange { subTypeVars : (map (\x -> TNeu defaultTNeuMD (TypeVar x) List.Nil) equiv) , subTHoles : Map.empty}
+renType :: TyVarEquiv -> Type -> Type
+renType ren (Arrow md t1 t2) = Arrow md (renType ren t1) (renType ren t2)
+renType ren (THole md x w s) = THole md x w (map (renType ren) s)
+renType ren (TNeu md tv tyArgs) = TNeu md tv (map (\(TypeArg md ty) -> TypeArg md (renType ren ty)) tyArgs)
 
---subChangeParam :: TyVarEquiv -> ChangeParam -> ChangeParam
---subChangeParam equiv (ChangeParam c) = ChangeParam (subChange equiv c)
---subChangeParam equiv (PlusParam t) = PlusParam (subType equiv t)
---subChangeParam equiv (MinusParam t) = MinusParam (subType equiv t)
+renSubChange :: TyVarEquiv -> SubChange -> SubChange
+renSubChange ren (SubTypeChange ch) = SubTypeChange (renChange ren ch)
+renSubChange ren (SubInsert ty) = SubInsert (renType ren ty)
+renSubChange ren (SubDelete ty) = SubDelete (renType ren ty)
+
+renChange :: TyVarEquiv -> Change -> Change
+renChange ren (CArrow c1 c2) = CArrow (renChange ren c1) (renChange ren c2)
+renChange ren (CHole x w s) = CHole x w (map (renSubChange ren) s)
+renChange ren (Replace t1 t2) = Replace (renType ren t1) (renType ren t2)
+renChange ren (Plus t c) = Plus (renType ren t) (renChange ren c)
+renChange ren (Minus t c) = Minus (renType ren t) (renChange ren c)
+renChange ren (CNeu tv chParams) = CNeu tv (map (renChangeParam ren) chParams)
+--data Change
+--  = CArrow Change Change
+--  | CHole TypeHoleID (Set TypeVarID) (Map TypeVarID SubChange)
+--  | Replace Type Type
+--  | Plus Type Change
+--  | Minus Type Change
+--  | CNeu CTypeVar (List ChangeParam)
+--data Type
+--  = Arrow ArrowMD Type Type
+--  | THole THoleMD TypeHoleID {-Weakenings-} (Set TypeVarID) {-Substitutions-} (Map TypeVarID Type)
+--  | TNeu TNeuMD TypeVar (List TypeArg)
+
+renChangeParam :: TyVarEquiv -> ChangeParam -> ChangeParam
+renChangeParam ren (ChangeParam c) = ChangeParam (renChange ren c)
+renChangeParam ren (PlusParam t) = PlusParam (renType ren t)
+renChangeParam ren (MinusParam t) = MinusParam (renType ren t)
 
 --subTypeArg :: TyVarEquiv -> TypeArg -> TypeArg
 --subTypeArg equiv (TypeArg md ty) = TypeArg md (subType equiv ty)
@@ -153,9 +180,9 @@ subCTypeVarGen sub (MinusCtxBoundaryTypeVar k mtv name x) = case Map.lookup x su
 applySubChangeGen :: CSub -> Change -> Change
 applySubChangeGen sub = case _ of
   CArrow ty1 ty2 -> CArrow (applySubChangeGen sub ty1) (applySubChangeGen sub ty2)
-  (CHole hid w s) -> maybe (CHole hid w (union' (map (subSubChangeGen sub) s) sub.subTypeVars))
-        (applySubChangeGen {subTHoles: Map.empty, subTypeVars: s})
-        (Map.lookup hid sub.subTHoles)
+  (CHole hid w s) -> maybe (\_ -> CHole hid w (union' (map (subSubChangeGen sub) s) sub.subTypeVars))
+        (\c _ -> applySubChangeGen {subTHoles: Map.empty, subTypeVars: s} c)
+        (Map.lookup hid sub.subTHoles) unit
   ty@(CNeu tv List.Nil) -> maybe ty identity (subCTypeVarGen sub tv) -- NOTE: if I ever do a substitution in cases other than when args are Nil, then I need to fix subCTypeVarGen to accomodate that.
   CNeu id args -> CNeu id (applySubChangeParamGen sub <$> args)
   Replace ty1 ty2 ->
@@ -172,24 +199,29 @@ applySubChangeParamGen sub = case _ of
 -- TODO TODO TODO: replace the implementation of applySubChange with a call to applySubChangeGen with the appropriate injections on sub.
 -- But I kind of want to wait until we have some unit tests before I do that...
 applySubChange :: Sub -> Change -> Change
-applySubChange sub = case _ of
-  CArrow ty1 ty2 -> CArrow (applySubChange sub ty1) (applySubChange sub ty2)
---  ty@(CHole hid w s) -> maybe (CHole hid w ?h ) (\t -> tyInjectWithSub (subSubChange (subFromVars s) t)) (Map.lookup hid sub.subTHoles)
-  ty@(CHole hid w s) -> maybe (CHole hid w (map (subSubChange sub) s))
-        (\t ->
-            let s1 /\ s2 = getSubEndpoints s in
-            Replace (applySubType (subFromVars s1) t) (applySubType (subFromVars s2) t))
-        (Map.lookup hid sub.subTHoles)
-  ty@(CNeu (CTypeVar id) List.Nil) -> maybe ty tyInject (Map.lookup id sub.subTypeVars)
-  CNeu id args -> CNeu id (applySubChangeParam sub <$> args)
-  Replace ty1 ty2 -> Replace (applySubType sub ty1) (applySubType sub ty2)
-  Plus ty ch -> Plus (applySubType sub ty) (applySubChange sub ch)
-  Minus ty ch -> Minus (applySubType sub ty) (applySubChange sub ch)
-applySubChangeParam :: Sub -> ChangeParam -> ChangeParam
-applySubChangeParam sub = case _ of
-    ChangeParam ch -> ChangeParam (applySubChange sub ch)
-    PlusParam ty -> PlusParam (applySubType sub ty)
-    MinusParam ty -> MinusParam (applySubType sub ty)
+applySubChange sub ch =
+    trace ("in applySubChange, sub is: " <> show sub <> " and ch is: " <> show ch) \_ ->
+    let res = applySubChangeGen {subTypeVars: map (SubTypeChange <<< tyInject) sub.subTypeVars, subTHoles: map tyInject sub.subTHoles} ch in
+    trace ("and now were done with applySubChange") \_ ->
+    res
+--applySubChange sub = case _ of
+--  CArrow ty1 ty2 -> CArrow (applySubChange sub ty1) (applySubChange sub ty2)
+----  ty@(CHole hid w s) -> maybe (CHole hid w ?h ) (\t -> tyInjectWithSub (subSubChange (subFromVars s) t)) (Map.lookup hid sub.subTHoles)
+--  ty@(CHole hid w s) -> maybe (CHole hid w (map (subSubChange sub) s))
+--        (\t ->
+--            let s1 /\ s2 = getSubEndpoints s in
+--            Replace (applySubType (subFromVars s1) t) (applySubType (subFromVars s2) t))
+--        (Map.lookup hid sub.subTHoles)
+--  ty@(CNeu (CTypeVar id) List.Nil) -> maybe ty tyInject (Map.lookup id sub.subTypeVars)
+--  CNeu id args -> CNeu id (applySubChangeParam sub <$> args)
+--  Replace ty1 ty2 -> Replace (applySubType sub ty1) (applySubType sub ty2)
+--  Plus ty ch -> Plus (applySubType sub ty) (applySubChange sub ch)
+--  Minus ty ch -> Minus (applySubType sub ty) (applySubChange sub ch)
+--applySubChangeParam :: Sub -> ChangeParam -> ChangeParam
+--applySubChangeParam sub = case _ of
+--    ChangeParam ch -> ChangeParam (applySubChange sub ch)
+--    PlusParam ty -> PlusParam (applySubType sub ty)
+--    MinusParam ty -> MinusParam (applySubType sub ty)
 
 emptySub :: Sub
 emptySub = { subTypeVars: Map.empty, subTHoles: Map.empty }

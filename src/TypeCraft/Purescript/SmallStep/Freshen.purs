@@ -93,7 +93,7 @@ freshenLabel ksub sub (LData md (TypeBind xmd x) tyBinds ctrs {-Term-} bodyTy) =
     /\ ksub'' /\ sub'
 freshenLabel ksub sub (LTLet md tyBind tyBinds def {-Term-} bodyTy) = hole' "freshenLabel"
 freshenLabel ksub sub (LTypeBoundary md ch1 {-Term-}) =
-    LTypeBoundary md (subChange ksub ch1) /\ ksub /\ sub
+    LTypeBoundary md (renChange ksub ch1) /\ ksub /\ sub
 freshenLabel ksub sub (LContextBoundary md x vc {-Term-}) =
     LContextBoundary md (maybe x (\x -> x) (Map.lookup x sub)) (subVarChange (convertSub ksub) vc)
     /\ ksub /\ sub

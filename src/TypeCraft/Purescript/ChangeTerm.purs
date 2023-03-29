@@ -9,6 +9,7 @@ import TypeCraft.Purescript.TypeChangeAlgebra
 import TypeCraft.Purescript.TypeChangeAlgebra2
 
 import Data.List (List(..), (:), foldr, null)
+import Data.List as List
 import Data.Map.Internal (empty, lookup, insert)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (fst)
@@ -96,7 +97,7 @@ chTerm kctx ctx c t =
                             let ch /\ tyArgs' = chTypeArgs2 kctx tArgs pch in
                             ch /\ Var md x tyArgs'
                         else if pChIsId pch then
-                            tyInject (snd (getEndpoints cin)) /\ Buffer defaultBufferMD (Var md x tArgs) (fst (getEndpoints cin)) (Hole defaultHoleMD) (snd (getEndpoints cin))
+                            tyInject (snd (getEndpoints cin)) /\ Buffer defaultBufferMD (Var md x tArgs) (fst (getEndpoints cin)) (Hole defaultHoleMD) (snd (getEndpoints cin)) -- TODO: shouldn't we call chTypeArgs2???
                         else if null tArgs && pch == PChange cin then
                             (tyInject (snd (getEndpoints cin))) /\ Var md x Nil
                         else unsafeThrow ("I didn't think it was possible to have a non-id, non-equal typechange both from ctx and term in var case! (or equal but with tyArgs)" -- TODO: it is possible, for example id<A -> A> id<A>, and then apply a typechange to the type of id. In this situation, it should just use a TypeBoudnary!

@@ -28,6 +28,10 @@ import Data.Either (Either(..))
 import TypeCraft.Purescript.TypeChangeAlgebra2
 
 
+--appendEndListTypeArgChange :: ListTypeArgChange -> Change -> ListTypeArgChange
+--appendEndListTypeArgChange ListTypeArgChangeNil ch = ListTypeArgChangeCons ch ListTypeArgChangeNil
+--appendEndListTypeArgChange (ListTypeArgChangeCons ch1 chs) ch = ListTypeArgChangeCons ch1 (appendEndListTypeArgChange chs ch)
+-- TODO: Is this backwards? Maybe globally replace ListTypeArgChange with List Change, and then just append to the end of the list instead of using cons?
 polyTypeApplyArgs :: PolyType -> ListTypeArgChange -> Change
 polyTypeApplyArgs pty ch =
     polyTypeApplyArgsImpl pty ch Map.empty
@@ -82,23 +86,48 @@ composeParamChanges (PlusParam t1 : cs1) (MinusParam t2 : cs2) | t1 == t2 = comp
 composeParamChanges _ _ = unsafeThrow "input did not satisfy assumptions (Or I wrote a bug in this function)"
 
 composePolyChange :: PolyChange -> PolyChange -> PolyChange
-composePolyChange pc1 pc2 = composePolyChangeImpl empty pc1 pc2
+composePolyChange pc1 pc2 =
+--    composePolyChangeImpl empty pc1 pc2
+    composePolyChangeImpl pc1 pc2
 
-composePolyChangeImpl :: TyVarEquiv -> PolyChange -> PolyChange -> PolyChange
-composePolyChangeImpl equiv (PChange c1) (PChange c2) = PChange (composeChange (subChange equiv c1) c2)
-composePolyChangeImpl equiv (CForall x pc1) (CForall y pc2) =
-    CForall x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
-composePolyChangeImpl equiv (PPlus x pc1) (PMinus y pc2) =
-    (composePolyChangeImpl (insert x y equiv) pc1 pc2)
-composePolyChangeImpl equiv (PMinus x pc1) (PPlus y pc2) =
-    CForall x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
-composePolyChangeImpl equiv (CForall x pc1) (PMinus y pc2) =
-    PMinus x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
-composePolyChangeImpl equiv (PPlus x pc1) (CForall y pc2) =
-    PPlus x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
-composePolyChangeImpl equiv (PMinus x pc1) pc2 = PMinus x (composePolyChangeImpl equiv pc1 pc2)
-composePolyChangeImpl equiv pc1 (PPlus x pc2) = PPlus x (composePolyChangeImpl equiv pc1 pc2)
-composePolyChangeImpl equiv _ _ = unsafeThrow "shouldn't get here. Could be that an x != y above or another case that shouldn't happen"
+{-
+I'm taking a shortcut here and hoping that in practice when PolyChanges are composed, they have the same variable IDs
+matching up.
+Previously, I was proparly handling different variables. But, I was using subChange to do renaming.
+But now subChange will apply add any subs to holes, so it can no longer be used to do renaming.
+I will have to write a separate renaming function if I need it.
+-}
+composePolyChangeImpl :: PolyChange -> PolyChange -> PolyChange
+composePolyChangeImpl (PChange c1) (PChange c2) = PChange (composeChange c1 c2)
+composePolyChangeImpl (CForall x pc1) (CForall y pc2) | x == y =
+    CForall x (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl (PPlus x pc1) (PMinus y pc2) | x == y=
+    (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl (PMinus x pc1) (PPlus y pc2) | x == y =
+    CForall x (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl (CForall x pc1) (PMinus y pc2) | x == y =
+    PMinus x (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl (PPlus x pc1) (CForall y pc2) | x == y =
+    PPlus x (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl (PMinus x pc1) pc2 = PMinus x (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl pc1 (PPlus x pc2) = PPlus x (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl _ _ = unsafeThrow "I'm hoping that this doesn't happen"
+
+--composePolyChangeImpl :: TyVarEquiv -> PolyChange -> PolyChange -> PolyChange
+--composePolyChangeImpl equiv (PChange c1) (PChange c2) = PChange (composeChange (renChange equiv c1) c2)
+--composePolyChangeImpl equiv (CForall x pc1) (CForall y pc2) =
+--    CForall x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
+--composePolyChangeImpl equiv (PPlus x pc1) (PMinus y pc2) =
+--    (composePolyChangeImpl (insert x y equiv) pc1 pc2)
+--composePolyChangeImpl equiv (PMinus x pc1) (PPlus y pc2) =
+--    CForall x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
+--composePolyChangeImpl equiv (CForall x pc1) (PMinus y pc2) =
+--    PMinus x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
+--composePolyChangeImpl equiv (PPlus x pc1) (CForall y pc2) =
+--    PPlus x (composePolyChangeImpl (insert x y equiv) pc1 pc2)
+--composePolyChangeImpl equiv (PMinus x pc1) pc2 = PMinus x (composePolyChangeImpl equiv pc1 pc2)
+--composePolyChangeImpl equiv pc1 (PPlus x pc2) = PPlus x (composePolyChangeImpl equiv pc1 pc2)
+--composePolyChangeImpl equiv _ _ = unsafeThrow "shouldn't get here. Could be that an x != y above or another case that shouldn't happen"
 -- TODO: should Replace be in PolyChange instead or in addition to in Change? Also, finish cases here!
 
 composeKindChange :: KindChange -> KindChange -> KindChange
