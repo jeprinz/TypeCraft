@@ -16,7 +16,9 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import Data.Maybe (maybe)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Util (union')
-import TypeCraft.Purescript.TypeChangeAlgebra2 (getSubEndpoints)
+import TypeCraft.Purescript.TypeChangeAlgebra2
+import Data.Tuple (fst, snd)
+import Data.Maybe (Maybe(..))
 
 {-
 This file deals with issues of alpha-equivalence.
@@ -94,10 +96,6 @@ applySubType sub = case _ of
 subTypeArg :: Sub -> TypeArg -> TypeArg
 subTypeArg sub (TypeArg md ty) = TypeArg md (applySubType sub ty)
 
---data SubChange
---  = SubTypeChange Change
---  | SubDelete Type
---  | SubInsert Type
 subSubChange :: Sub -> SubChange -> SubChange
 subSubChange sub subChange =
     case subChange of
@@ -105,6 +103,74 @@ subSubChange sub subChange =
         SubDelete ty -> SubDelete (applySubType sub ty)
         SubInsert ty -> SubInsert (applySubType sub ty)
 
+-- Whereas a Sub goes from one context to anotoher, a CSub goes from one change context to another.
+-- Thus, if it goes from a change context with - x : C to one with + x : C
+-- We need substitutions that looks like +[x/C] or -[x/T]
+-- Here we're talking about substitutions which make the context shorter; they only remove variables by substituting them away.
+-- Thus, there is no question of whether a given variable is + or - in the output context: it is either removed, or stays the same.
+type CSub
+  = { subTypeVars :: Map.Map TypeVarID SubChange
+    , subTHoles :: Map.Map TypeHoleID Change
+    }
+
+getCSubEndpoints :: CSub -> Sub /\ Sub
+getCSubEndpoints {subTypeVars , subTHoles} =
+    let subTypeVars1 /\ subTypeVars2 = getSubEndpoints subTypeVars in
+    let subTHoles' = map getEndpoints subTHoles in
+    let subTHoles1 = map fst subTHoles' in
+    let subTHoles2 = map snd subTHoles' in
+    {subTypeVars: subTypeVars1, subTHoles: subTHoles1}
+    /\ {subTypeVars: subTypeVars2, subTHoles: subTHoles2}
+
+subSubChangeGen :: CSub -> SubChange -> SubChange
+subSubChangeGen sub subChange =
+    case subChange of
+        SubTypeChange ch -> SubTypeChange (applySubChangeGen sub ch)
+        SubDelete ty -> SubDelete (applySubType (fst (getCSubEndpoints sub)) ty)
+        SubInsert ty -> SubInsert (applySubType (snd (getCSubEndpoints sub)) ty)
+
+--data CTypeVar = CTypeVar TypeVarID | CCtxBoundaryTypeVar Kind (Maybe TypeDefVal) String TypeVarID
+--    | PlusCtxBoundaryTypeVar Kind (Maybe TypeDefVal) String TypeVarID
+--    | MinusCtxBoundaryTypeVar Kind (Maybe TypeDefVal) String TypeVarID
+subCTypeVarGen :: CSub -> CTypeVar -> Maybe Change
+subCTypeVarGen sub (CTypeVar x) = case Map.lookup x sub.subTypeVars of
+    Just (SubTypeChange c) -> Just c
+    Nothing -> Nothing
+    _ -> unsafeThrow "shouldn't happen subCTypeVarGen 1"
+subCTypeVarGen sub (CCtxBoundaryTypeVar k mtv name x) = case Map.lookup x sub.subTypeVars of
+    Just _ -> unsafeThrow "shouldn't happen subCTypeVarGen 5"
+    Nothing -> Nothing
+    _ -> unsafeThrow "shouldn't happen subCTypeVarGen 2"
+subCTypeVarGen sub (PlusCtxBoundaryTypeVar k mtv name x) = case Map.lookup x sub.subTypeVars of
+   Just (SubDelete t) -> Just $ Replace t (TNeu defaultTNeuMD (CtxBoundaryTypeVar k mtv name x) List.Nil)
+   Nothing -> Nothing
+   _ -> unsafeThrow "shouldn't happen subCTypeVarGen 3"
+subCTypeVarGen sub (MinusCtxBoundaryTypeVar k mtv name x) = case Map.lookup x sub.subTypeVars of
+    Just (SubInsert t) -> Just $ Replace (TNeu defaultTNeuMD (CtxBoundaryTypeVar k mtv name x) List.Nil) t
+    Nothing -> Nothing
+    _ -> unsafeThrow "shouldn't happen subCTypeVarGen 4"
+
+applySubChangeGen :: CSub -> Change -> Change
+applySubChangeGen sub = case _ of
+  CArrow ty1 ty2 -> CArrow (applySubChangeGen sub ty1) (applySubChangeGen sub ty2)
+  (CHole hid w s) -> maybe (CHole hid w (union' (map (subSubChangeGen sub) s) sub.subTypeVars))
+        (applySubChangeGen {subTHoles: Map.empty, subTypeVars: s})
+        (Map.lookup hid sub.subTHoles)
+  ty@(CNeu tv List.Nil) -> maybe ty identity (subCTypeVarGen sub tv) -- NOTE: if I ever do a substitution in cases other than when args are Nil, then I need to fix subCTypeVarGen to accomodate that.
+  CNeu id args -> CNeu id (applySubChangeParamGen sub <$> args)
+  Replace ty1 ty2 ->
+    let sub1 /\ sub2 = getCSubEndpoints sub in -- Does this make sense? Can typechanges go from one context to another? So the left part of the replace is in the starting context, while the right part is in the ending context?
+    Replace (applySubType sub1 ty1) (applySubType sub2 ty2)
+  Plus ty ch -> Plus (applySubType (snd (getCSubEndpoints sub)) ty) (applySubChangeGen sub ch)
+  Minus ty ch -> Minus (applySubType (fst (getCSubEndpoints sub)) ty) (applySubChangeGen sub ch)
+applySubChangeParamGen :: CSub -> ChangeParam -> ChangeParam
+applySubChangeParamGen sub = case _ of
+    ChangeParam ch -> ChangeParam (applySubChangeGen sub ch)
+    PlusParam ty -> PlusParam (applySubType (snd (getCSubEndpoints sub)) ty)
+    MinusParam ty -> MinusParam (applySubType (fst (getCSubEndpoints sub)) ty)
+
+-- TODO TODO TODO: replace the implementation of applySubChange with a call to applySubChangeGen with the appropriate injections on sub.
+-- But I kind of want to wait until we have some unit tests before I do that...
 applySubChange :: Sub -> Change -> Change
 applySubChange sub = case _ of
   CArrow ty1 ty2 -> CArrow (applySubChange sub ty1) (applySubChange sub ty2)
@@ -119,10 +185,6 @@ applySubChange sub = case _ of
   Replace ty1 ty2 -> Replace (applySubType sub ty1) (applySubType sub ty2)
   Plus ty ch -> Plus (applySubType sub ty) (applySubChange sub ch)
   Minus ty ch -> Minus (applySubType sub ty) (applySubChange sub ch)
---data ChangeParam
---  = ChangeParam Change
---  | PlusParam Type
---  | MinusParam Type
 applySubChangeParam :: Sub -> ChangeParam -> ChangeParam
 applySubChangeParam sub = case _ of
     ChangeParam ch -> ChangeParam (applySubChange sub ch)

@@ -21,7 +21,7 @@ import TypeCraft.Purescript.Freshen
 import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.Util (delete')
-import TypeCraft.Purescript.Alpha (applySubChange)
+import TypeCraft.Purescript.Alpha (applySubChange, applySubChangeGen)
 import Debug (trace)
 import TypeCraft.Purescript.Util (insert')
 
@@ -99,7 +99,7 @@ chTerm kctx ctx c t =
                             tyInject (snd (getEndpoints cin)) /\ Buffer defaultBufferMD (Var md x tArgs) (fst (getEndpoints cin)) (Hole defaultHoleMD) (snd (getEndpoints cin))
                         else if null tArgs && pch == PChange cin then
                             (tyInject (snd (getEndpoints cin))) /\ Var md x Nil
-                        else unsafeThrow ("I didn't think it was possible to have a non-id, non-equal typechange both from ctx and term in var case! (or equal but with tyArgs)"
+                        else unsafeThrow ("I didn't think it was possible to have a non-id, non-equal typechange both from ctx and term in var case! (or equal but with tyArgs)" -- TODO: it is possible, for example id<A -> A> id<A>, and then apply a typechange to the type of id. In this situation, it should just use a TypeBoudnary!
                                 <> "\n pch is: " <> show pch <> " and cin is: " <> show cin
                                 )
             (CArrow c1 c2) /\ (Lambda md tBind@(TermBind _ x) ty t bodyTy) ->
@@ -183,11 +183,17 @@ chTypeArgs2 kctx (tyArg@(TypeArg _ ty) : tyArgs) (CForall x pc) =
 chTypeArgs2 kctx tyArgs (PPlus x pc) =
     -- TODO: Here is where we need to deal with ADDING subs to holes!
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
-    ch /\ (TypeArg defaultTypeArgMD (freshTHole unit)) : tyArgsOut
-chTypeArgs2 kctx (tyArg : tyArgs) (PMinus x pc) =
+    let ty = (freshTHole unit) in
+    -- This is not right! applySubChange will put SubTypeChange for that var into each hole sub. But we need SubInsert
+    let ch' = applySubChangeGen { subTypeVars : (insert x (SubInsert ty) empty) , subTHoles : empty} ch in -- What is this line doing????
+    trace ("the change afeter applying the sub is: " <> show ch') \_ ->
+    ch' /\ (TypeArg defaultTypeArgMD ty) : tyArgsOut
+chTypeArgs2 kctx ((TypeArg _ ty) : tyArgs) (PMinus x pc) =
     -- TODO: Here is where we need to deal with removing subs from holes
+    -- Similarly, here we need to place SubDelete for each hole sub
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
-    ch /\ tyArgsOut
+    let ch' = applySubChangeGen { subTypeVars : (insert x (SubDelete ty) empty) , subTHoles : empty} ch in -- What is this line doing????
+    ch' /\ tyArgsOut
 chTypeArgs2 _ _ _ = unsafeThrow "invalid input to chTypeArgs2, or I forgot a case"
 
 -- could avoid returning Type (because you can get it from the change with getEndpoints), if I put metadata into Change

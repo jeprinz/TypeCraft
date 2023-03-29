@@ -189,3 +189,5 @@ getAllEndpoints (ctx /\ kctx /\ mdctx /\ mdkctx) =
     /\
     { ctx: ctx2, kctx: kctx2, actx: actx2, mdctx: mdctx2, mdkctx: mdkctx2 }
 
+--composeSubsitutions : Map TypeVarID SubChange -> Map TypeVarID SubChange -> Map TypeVarID SubChange
+--composeSubsitutions sub1 sub2 =

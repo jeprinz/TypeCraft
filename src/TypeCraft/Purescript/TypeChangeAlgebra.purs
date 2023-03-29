@@ -176,7 +176,7 @@ cTypeVarIsId (MinusCtxBoundaryTypeVar _ _ _ _) = false
 -- TODO: maybe morally, this function should just be replaced by checking if the endpoints are equal. The chIsId' function checks for a true groupoid identity. Although technically, that is even more permissive than this. Although I doubt that those cases come up.
 chIsId :: Change -> Boolean
 chIsId (CArrow c1 c2) = chIsId c1 && chIsId c2
-chIsId (CHole _ _ _) = true
+chIsId (CHole _ _ s) = all subChIsId s
 chIsId (Replace t1 t2) = t1 == t2 -- debatable, not sure if this case should always return false?
 chIsId (CNeu varId params) =
     cTypeVarIsId varId &&
@@ -208,6 +208,11 @@ kChIsId :: KindChange -> Boolean
 kChIsId KCType = true
 kChIsId (KCArrow ch) = kChIsId ch
 kChIsId _ = false
+
+subChIsId :: SubChange -> Boolean
+subChIsId (SubTypeChange ch) = chIsId ch
+subChIsId (SubInsert _) = false
+subChIsId (SubDelete _) = false
 
 invertKindChange :: KindChange -> KindChange
 invertKindChange (KCArrow kc) = invertKindChange (KCArrow (invertKindChange kc))
