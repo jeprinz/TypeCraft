@@ -352,17 +352,17 @@ checkWeakeningViolationTypePath subIWantToMake (tooth : teeth) =
         Let4 md tBind tyBinds def {-defTy-} body bodyTy -> checkWeakeningViolationTermPath subIWantToMake teeth
         Buffer2 md def {-defTy-} body bodyTy -> checkWeakeningViolationTermPath subIWantToMake teeth
         TLet3 md tyBind tyBinds {-def-} body bodyTy -> checkWeakeningViolationTermPath subIWantToMake teeth
-        Arrow1 md {--} ty2 -> checkWeakeningViolationTermPath subIWantToMake teeth
-        Arrow2 md ty1 {--} -> checkWeakeningViolationTermPath subIWantToMake teeth
+        Arrow1 md {--} ty2 -> checkWeakeningViolationTypePath subIWantToMake teeth
+        Arrow2 md ty1 {--} -> checkWeakeningViolationTypePath subIWantToMake teeth
         TypeArg1 md {--} -> checkWeakeningViolationTypeArgPath subIWantToMake teeth
-        _ -> unsafeThrow "Either wasn't a type path, or I forgot a case in checkWeakeningViolationTermPath"
+        _ -> unsafeThrow ("Either wasn't a type path, or I forgot a case in checkWeakeningViolationTypePath. tooth was: " <> show tooth)
 
 checkWeakeningViolationTypeArgPath :: Map.Map TypeHoleID Type -> UpPath -> Boolean
 checkWeakeningViolationTypeArgPath _subIWantToMake List.Nil = false
 checkWeakeningViolationTypeArgPath subIWantToMake (tooth : teeth) =
     case tooth of
         TypeArgListCons1 {--} tyArgs -> checkWeakeningViolationTypeArgListPath subIWantToMake teeth
-        _ -> unsafeThrow "Either wasn't a TypeArg path, or I forgot a case in checkWeakeningViolationTypeArgPath"
+        _ -> unsafeThrow ("Either wasn't a TypeArg path, or I forgot a case in checkWeakeningViolationTypeArgPath. tooth was: " <> show tooth)
 
 checkWeakeningViolationTypeArgListPath :: Map.Map TypeHoleID Type -> UpPath -> Boolean
 checkWeakeningViolationTypeArgListPath sub List.Nil = false
@@ -393,7 +393,7 @@ checkHoleUsageTooth holes tooth =
         TLet4 md tyBind tyBinds def {-Term-} bodyTy -> unsafeThrow "no"
         Data4 md (TypeBind _ x) tyBinds ctrs {-Term-} bodyTy -> if List.any (ctrContainsHoles holes) ctrs || ty bodyTy then Nothing else Just
             (Set.singleton x)
-        _ -> unsafeThrow "Either wasn't a term tooth, or I forgot a case in checkHoleUsageTooth"
+        _ -> unsafeThrow ("Either wasn't a term tooth, or I forgot a case in checkHoleUsageTooth. tooth is: " <> show tooth)
 
 subTermPath :: Sub -> UpPath -> UpPath
 subTermPath sub List.Nil = List.Nil
