@@ -20,6 +20,7 @@ import TypeCraft.Purescript.TypeChangeAlgebra2
 import Data.Tuple (fst, snd)
 import Data.Maybe (Maybe(..))
 import Debug (trace)
+import TypeCraft.Purescript.Freshen (TyVarEquiv)
 
 {-
 This file deals with issues of alpha-equivalence.
@@ -32,7 +33,6 @@ Conventions:
 In a function which inputs two PolyTypes or PolyChanges,
 the TypeVarID's on the left input get mapped to corresponding TypeVarID's on the right input.
 -}
-type TyVarEquiv = Map.Map TypeVarID TypeVarID
 
 --instance eqPolyType :: Eq PolyType where
 --        eq pt1 pt2 = polyTypeEqImpl Map.empty pt1 pt2
@@ -51,39 +51,6 @@ convertSub equiv = { subTypeVars : (map (\x -> TNeu defaultTNeuMD (TypeVar x) Li
 subType :: TyVarEquiv -> Type -> Type
 subType equiv = applySubType { subTypeVars : (map (\x -> TNeu defaultTNeuMD (TypeVar x) List.Nil) equiv) , subTHoles : Map.empty}
 
-renType :: TyVarEquiv -> Type -> Type
-renType ren (Arrow md t1 t2) = Arrow md (renType ren t1) (renType ren t2)
-renType ren (THole md x w s) = THole md x w (map (renType ren) s)
-renType ren (TNeu md tv tyArgs) = TNeu md tv (map (\(TypeArg md ty) -> TypeArg md (renType ren ty)) tyArgs)
-
-renSubChange :: TyVarEquiv -> SubChange -> SubChange
-renSubChange ren (SubTypeChange ch) = SubTypeChange (renChange ren ch)
-renSubChange ren (SubInsert ty) = SubInsert (renType ren ty)
-renSubChange ren (SubDelete ty) = SubDelete (renType ren ty)
-
-renChange :: TyVarEquiv -> Change -> Change
-renChange ren (CArrow c1 c2) = CArrow (renChange ren c1) (renChange ren c2)
-renChange ren (CHole x w s) = CHole x w (map (renSubChange ren) s)
-renChange ren (Replace t1 t2) = Replace (renType ren t1) (renType ren t2)
-renChange ren (Plus t c) = Plus (renType ren t) (renChange ren c)
-renChange ren (Minus t c) = Minus (renType ren t) (renChange ren c)
-renChange ren (CNeu tv chParams) = CNeu tv (map (renChangeParam ren) chParams)
---data Change
---  = CArrow Change Change
---  | CHole TypeHoleID (Set TypeVarID) (Map TypeVarID SubChange)
---  | Replace Type Type
---  | Plus Type Change
---  | Minus Type Change
---  | CNeu CTypeVar (List ChangeParam)
---data Type
---  = Arrow ArrowMD Type Type
---  | THole THoleMD TypeHoleID {-Weakenings-} (Set TypeVarID) {-Substitutions-} (Map TypeVarID Type)
---  | TNeu TNeuMD TypeVar (List TypeArg)
-
-renChangeParam :: TyVarEquiv -> ChangeParam -> ChangeParam
-renChangeParam ren (ChangeParam c) = ChangeParam (renChange ren c)
-renChangeParam ren (PlusParam t) = PlusParam (renType ren t)
-renChangeParam ren (MinusParam t) = MinusParam (renType ren t)
 
 --subTypeArg :: TyVarEquiv -> TypeArg -> TypeArg
 --subTypeArg equiv (TypeArg md ty) = TypeArg md (subType equiv ty)
@@ -93,7 +60,7 @@ polyTypeApply pty args =
     let sub /\ ty = polyTypeImpl pty args in
     applySubType {subTypeVars: sub, subTHoles: Map.empty} ty
 polyTypeImpl :: PolyType -> List.List TypeArg -> Map.Map TypeVarID Type /\ Type
-polyTypeImpl (Forall x pt) ((TypeArg _ arg) List.: args) =
+polyTypeImpl (Forall x name pt) ((TypeArg _ arg) List.: args) =
     let sub /\ ty = polyTypeImpl pt args in
     Map.insert x arg sub /\ ty
 polyTypeImpl (PType ty) List.Nil = Map.empty /\ ty
@@ -106,17 +73,19 @@ polyTypeImpl _ _ = unsafeThrow "in polyTypeApply, wrong number of args"
 --------------------------------------------------------------------------------
 
 type Sub
-  = { subTypeVars :: Map.Map TypeVarID Type
+  = { subTypeVars :: Map.Map TypeVarID (String /\ Type)
     , subTHoles :: Map.Map TypeHoleID Type
     }
 
-subFromVars :: Map.Map TypeVarID Type -> Sub
+subFromVars :: Map.Map TypeVarID (String /\ Type) -> Sub
 subFromVars m = {subTypeVars: m, subTHoles: Map.empty}
 
 applySubType :: Sub -> Type -> Type
 applySubType sub = case _ of
   Arrow md ty1 ty2 -> Arrow md (applySubType sub ty1) (applySubType sub ty2)
-  (THole md hid w s) -> maybe (THole md hid w (union' (map (applySubType sub) s) sub.subTypeVars)) (applySubType (subFromVars s)) (Map.lookup hid sub.subTHoles) -- TODO: is union' correct here?
+  -- TODO: there is an issue with applying holes subs to a type with a hole that has subs with a hole in one if it's types, and then hole subs get added to that hole (what a sentence)
+  (THole md hid w s) -> maybe (THole md hid w (union' (map (applySubType sub) s) sub.subTypeVars))
+    (applySubType (subFromVars s)) (Map.lookup hid sub.subTHoles) -- TODO: is union' correct here?
   ty@(TNeu md (TypeVar id) List.Nil) -> maybe ty identity (Map.lookup id sub.subTypeVars)
   TNeu md id args -> TNeu md id ((\(TypeArg md ty) -> TypeArg md (applySubType sub ty)) <$> args)
 
@@ -142,6 +111,7 @@ type CSub
 
 getCSubEndpoints :: CSub -> Sub /\ Sub
 getCSubEndpoints {subTypeVars , subTHoles} =
+--    let x = 1 + getSubEndpoints subTypeVars in
     let subTypeVars1 /\ subTypeVars2 = getSubEndpoints subTypeVars in
     let subTHoles' = map getEndpoints subTHoles in
     let subTHoles1 = map fst subTHoles' in
@@ -161,7 +131,7 @@ subSubChangeGen sub subChange =
 --    | MinusCtxBoundaryTypeVar Kind (Maybe TypeDefVal) String TypeVarID
 subCTypeVarGen :: CSub -> CTypeVar -> Maybe Change
 subCTypeVarGen sub (CTypeVar x) = case Map.lookup x sub.subTypeVars of
-    Just (SubTypeChange c) -> Just c
+    Just (SubTypeChange name1 name2 c) -> Just c
     Nothing -> Nothing
     _ -> unsafeThrow "shouldn't happen subCTypeVarGen 1"
 subCTypeVarGen sub (CCtxBoundaryTypeVar k mtv name x) = case Map.lookup x sub.subTypeVars of
@@ -169,11 +139,11 @@ subCTypeVarGen sub (CCtxBoundaryTypeVar k mtv name x) = case Map.lookup x sub.su
     Nothing -> Nothing
     _ -> unsafeThrow "shouldn't happen subCTypeVarGen 2"
 subCTypeVarGen sub (PlusCtxBoundaryTypeVar k mtv name x) = case Map.lookup x sub.subTypeVars of
-   Just (SubDelete t) -> Just $ Replace t (TNeu defaultTNeuMD (CtxBoundaryTypeVar k mtv name x) List.Nil)
+   Just (SubDelete name t) -> Just $ Replace t (TNeu defaultTNeuMD (CtxBoundaryTypeVar k mtv name x) List.Nil)
    Nothing -> Nothing
    _ -> unsafeThrow "shouldn't happen subCTypeVarGen 3"
 subCTypeVarGen sub (MinusCtxBoundaryTypeVar k mtv name x) = case Map.lookup x sub.subTypeVars of
-    Just (SubInsert t) -> Just $ Replace (TNeu defaultTNeuMD (CtxBoundaryTypeVar k mtv name x) List.Nil) t
+    Just (SubInsert name t) -> Just $ Replace (TNeu defaultTNeuMD (CtxBoundaryTypeVar k mtv name x) List.Nil) t
     Nothing -> Nothing
     _ -> unsafeThrow "shouldn't happen subCTypeVarGen 4"
 

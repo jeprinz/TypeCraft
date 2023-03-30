@@ -19,6 +19,8 @@ import TypeCraft.Purescript.Util (hole')
 This file defines a shallow embedding to make it easier to write terms for testing purposes
 -}
 
+{-
+
 type CtxAndType = {kctx :: TypeContext, ctx :: TermContext, ty :: Type}
 
 type STerm = CtxAndType -> Term
@@ -124,3 +126,5 @@ exampleProg6 =
             (slet "f" [ TypeBind {varName: "A"} (TypeVarID $ unsafePerformEffect genUUID) ] (\f -> (slambda "x" \x -> (slambda "y" \y -> svar x)))
                 (sarrow (sTHole hole1) (sarrow (sTHole hole2) (sTHole hole3)))
                 (\f -> (sapp (sapp (svar f) (sTHole hole1) sHole) (sTHole hole2) sHole)))
+
+-}

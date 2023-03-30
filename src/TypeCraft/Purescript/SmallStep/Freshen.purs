@@ -3,7 +3,8 @@ module TypeCraft.Purescript.SmallStep.Freshen where
 import Prelude
 
 import TypeCraft.Purescript.SmallStep.UTerm
-import TypeCraft.Purescript.Alpha
+import TypeCraft.Purescript.Alpha hiding (renChange)
+import TypeCraft.Purescript.Freshen
 import Data.Tuple.Nested
 import Data.Map (Map)
 import Data.Map as Map

@@ -22,7 +22,7 @@ import TypeCraft.Purescript.Freshen
 import TypeCraft.Purescript.Unification
 import TypeCraft.Purescript.Kinds (bindsToKind)
 import TypeCraft.Purescript.Util (delete')
-import TypeCraft.Purescript.Alpha (applySubChange, applySubChangeGen)
+import TypeCraft.Purescript.Alpha (applySubChange, applySubChangeGen, renType)
 import Debug (trace)
 import TypeCraft.Purescript.Util (insert')
 
@@ -177,23 +177,24 @@ doInsertArgs c t = c /\ t
 -- here, the output Change is the Change inside the input PolyChange.
 chTypeArgs2 :: KindChangeCtx -> List TypeArg -> PolyChange -> Change /\ (List TypeArg)
 chTypeArgs2 kctx Nil (PChange ch) = ch /\ Nil
-chTypeArgs2 kctx (tyArg@(TypeArg _ ty) : tyArgs) (CForall x pc) =
+chTypeArgs2 kctx (tyArg@(TypeArg _ ty) : tyArgs) (CForall x name1 name2 pc) =
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
-    let ch' = applySubChange { subTypeVars : (insert x ty empty) , subTHoles : empty} ch in -- What is this line doing????
+--    let ch' = applySubChange { subTypeVars : (insert x ty empty) , subTHoles : empty} ch in
+    let ch' = applySubChangeGen { subTypeVars : (insert x (SubTypeChange name1 name2 (tyInject ty)) empty) , subTHoles : empty} ch in
     ch' /\ tyArg : tyArgsOut
-chTypeArgs2 kctx tyArgs (PPlus x pc) =
+chTypeArgs2 kctx tyArgs (PPlus x name pc) =
     -- TODO: Here is where we need to deal with ADDING subs to holes!
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
     let ty = (freshTHole unit) in
     -- This is not right! applySubChange will put SubTypeChange for that var into each hole sub. But we need SubInsert
-    let ch' = applySubChangeGen { subTypeVars : (insert x (SubInsert ty) empty) , subTHoles : empty} ch in -- What is this line doing????
+    let ch' = applySubChangeGen { subTypeVars : (insert x (SubInsert name ty) empty) , subTHoles : empty} ch in -- What is this line doing????
     trace ("the change afeter applying the sub is: " <> show ch') \_ ->
     ch' /\ (TypeArg defaultTypeArgMD ty) : tyArgsOut
-chTypeArgs2 kctx ((TypeArg _ ty) : tyArgs) (PMinus x pc) =
+chTypeArgs2 kctx ((TypeArg _ ty) : tyArgs) (PMinus x name pc) =
     -- TODO: Here is where we need to deal with removing subs from holes
     -- Similarly, here we need to place SubDelete for each hole sub
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
-    let ch' = applySubChangeGen { subTypeVars : (insert x (SubDelete ty) empty) , subTHoles : empty} ch in -- What is this line doing????
+    let ch' = applySubChangeGen { subTypeVars : (insert x (SubDelete name ty) empty) , subTHoles : empty} ch in -- What is this line doing????
     ch' /\ tyArgsOut
 chTypeArgs2 _ _ _ = unsafeThrow "invalid input to chTypeArgs2, or I forgot a case"
 
@@ -288,9 +289,9 @@ chTypeParamList kctx ((TypeArg md ty) : tyArgs) =
 ---- inputs PolyChange by which var type changed, outputs new args and TypeChange by which the whole neutral form changes
 chTypeArgsNeu :: PolyChange -> List TypeArg -> Change /\ List TypeArg
 chTypeArgsNeu (PChange ch) Nil = ch /\ Nil
-chTypeArgsNeu (CForall x ch) (arg : args) = hole' "chTypeArgsNeu"
-chTypeArgsNeu (PMinus x ch) (arg : args) = hole' "chTypeArgsNeu"
-chTypeArgsNeu (PPlus x ch) args = hole' "chTypeArgsNeu"
+chTypeArgsNeu (CForall x name1 name2 ch) (arg : args) = hole' "chTypeArgsNeu"
+chTypeArgsNeu (PMinus x name ch) (arg : args) = hole' "chTypeArgsNeu"
+chTypeArgsNeu (PPlus x name ch) args = hole' "chTypeArgsNeu"
 chTypeArgsNeu _ _ = unsafeThrow "shouldn't happen 7"
 -- TODO: there is something nontrivial to think about here. It should track a context so it knows which arguments got deleted etc.
 -- also if a type argument gets affected by the KindChangeCtx, then that needs to be reflected as well...
@@ -305,28 +306,29 @@ chTypeArgsNeu _ _ = unsafeThrow "shouldn't happen 7"
 addDataToCtx :: CAllContext -> TypeBind -> List TypeBind -> ListCtrChange -> CAllContext
 addDataToCtx (kctx /\ ctx) tyBind@(TypeBind xmd dataType) tyBinds ctrsCh =
     insert dataType (TVarKindChange (kindInject (bindsToKind tyBinds)) Nothing) kctx
-    /\ adjustCtxByCtrChanges dataType (map (\(TypeBind _ x) -> x) tyBinds) ctrsCh ctx
+    /\ adjustCtxByCtrChanges dataType tyBinds ctrsCh ctx
 
 
-adjustCtxByCtrChanges :: {-the datatype id-}TypeVarID -> {-the datatype's parameters-}List TypeVarID -> ListCtrChange -> ChangeCtx -> ChangeCtx
-adjustCtxByCtrChanges dataType tyVarIds ctrsCh ctx = case ctrsCh of
+adjustCtxByCtrChanges :: {-the datatype id-}TypeVarID -> {-the datatype's parameters-}List TypeBind -> ListCtrChange -> ChangeCtx -> ChangeCtx
+adjustCtxByCtrChanges dataType tyBinds ctrsCh ctx = case ctrsCh of
     ListCtrChangeNil -> ctx
     ListCtrChangeCons ctrId ctrParamsCh ctrsCh' ->
-        let ch = ctrParamsChangeToChange dataType tyVarIds ctrParamsCh in
+        let ch = ctrParamsChangeToChange dataType tyBinds ctrParamsCh in
         insert ctrId (VarTypeChange ch) ctx
     ListCtrChangePlus (Constructor _ (TermBind _ ctrId) ctrParams) ctrsCh' ->
-        let ty = ctrParamsToType dataType tyVarIds ctrParams in
+        let ty = ctrParamsToType dataType tyBinds ctrParams in
         insert ctrId (VarInsert ty) ctx
     ListCtrChangeMinus (Constructor _ (TermBind _ ctrId) ctrParams) ctrsCh' ->
-        let ty = ctrParamsToType dataType tyVarIds ctrParams in
+        let ty = ctrParamsToType dataType tyBinds ctrParams in
         insert ctrId (VarDelete ty) ctx
 
-ctrParamsChangeToChange :: {-datatype-}TypeVarID -> {-datatype params-}List TypeVarID -> ListCtrParamChange -> PolyChange
-ctrParamsChangeToChange dataType tyVarIds ctrParamsCh =
+ctrParamsChangeToChange :: {-datatype-}TypeVarID -> {-datatype params-}List TypeBind -> ListCtrParamChange -> PolyChange
+ctrParamsChangeToChange dataType tyBinds ctrParamsCh =
+    let tyVarIds = map (\(TypeBind _ x) -> x) tyBinds in
     let sub = genFreshener tyVarIds in -- TODO: figure out how to abstract this out and not have repetition with the other instance of these lines below
-    let freshTyVarIds = map (\id -> lookup' id sub) tyVarIds in
-    let ctrOutType = TNeu defaultTNeuMD (TypeVar dataType) (map (\x -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD (TypeVar x) Nil)) freshTyVarIds) in
-    tyVarIdsWrapChange freshTyVarIds (ctrParamsChangeToChangeImpl ctrParamsCh sub (tyInject ctrOutType))
+    let freshTyBinds = map (\(TypeBind md id) -> TypeBind md (lookup' id sub)) tyBinds in
+    let ctrOutType = TNeu defaultTNeuMD (TypeVar dataType) (map (\(TypeBind _ x) -> TypeArg defaultTypeArgMD (TNeu defaultTNeuMD (TypeVar x) Nil)) freshTyBinds) in
+    tyBindsWrapChange freshTyBinds (ctrParamsChangeToChangeImpl ctrParamsCh sub (tyInject ctrOutType))
 
 ctrParamsChangeToChangeImpl :: ListCtrParamChange -> {-freshen datatype parameters in each type-}TyVarSub -> Change -> Change
 ctrParamsChangeToChangeImpl ctrParamsCh sub outCh = case ctrParamsCh of
@@ -335,6 +337,7 @@ ctrParamsChangeToChangeImpl ctrParamsCh sub outCh = case ctrParamsCh of
         let tyVarSub = map (\x -> TNeu defaultTNeuMD (TypeVar x) Nil) sub in
         let ch' = applySubChange {subTypeVars: tyVarSub, subTHoles: empty} ch in
         CArrow ch' (ctrParamsChangeToChangeImpl ctrParamsCh' sub outCh)
-    ListCtrParamChangePlus (CtrParam _ ty) ctrParamsCh' -> Plus (subType sub ty) (ctrParamsChangeToChangeImpl ctrParamsCh' sub outCh)
-    ListCtrParamChangeMinus (CtrParam _ ty) ctrParamsCh' -> Minus (subType sub ty) (ctrParamsChangeToChangeImpl ctrParamsCh' sub outCh)
+        -- TODO: instead ofo calling subType, use renType or applySubType?
+    ListCtrParamChangePlus (CtrParam _ ty) ctrParamsCh' -> Plus (renType sub ty) (ctrParamsChangeToChangeImpl ctrParamsCh' sub outCh)
+    ListCtrParamChangeMinus (CtrParam _ ty) ctrParamsCh' -> Minus (renType sub ty) (ctrParamsChangeToChangeImpl ctrParamsCh' sub outCh)
 

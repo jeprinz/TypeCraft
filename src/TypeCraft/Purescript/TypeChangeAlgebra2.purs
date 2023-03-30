@@ -67,15 +67,15 @@ getEndpointss (PlusParam t : cs) = let t1s /\ t2s = getEndpointss cs in t1s /\ t
 getEndpointss (MinusParam t : cs) = let t1s /\ t2s = getEndpointss cs in (t : t1s) /\ t2s
 
 pGetEndpoints :: PolyChange -> PolyType /\ PolyType
-pGetEndpoints (CForall tBind pc) =
+pGetEndpoints (CForall tBind name1 name2 pc) =
     let pt1 /\ pt2 = pGetEndpoints pc in
-    Forall tBind pt1 /\ Forall tBind pt2
-pGetEndpoints (PPlus tBind pc) =
+    Forall tBind name1 pt1 /\ Forall tBind name2 pt2
+pGetEndpoints (PPlus tBind name pc) =
     let pt1 /\ pt2 = pGetEndpoints pc in
-    pt1 /\ Forall tBind pt2
-pGetEndpoints (PMinus tBind pc) =
+    pt1 /\ Forall tBind name pt2
+pGetEndpoints (PMinus tBind name pc) =
     let pt1 /\ pt2 = pGetEndpoints pc in
-    Forall tBind pt1 /\ pt2
+    Forall tBind name pt1 /\ pt2
 pGetEndpoints (PChange c) = let t1 /\ t2 = getEndpoints c in PType t1 /\ PType t2
 
 kChGetEndpoints :: KindChange -> Kind /\ Kind
@@ -118,17 +118,17 @@ getCtxEndpoints ctx =
         VarTypeChange pc -> Just (snd (pGetEndpoints pc))
         VarDelete _ -> Nothing) ctx
 
-getSubEndpoints :: Map TypeVarID SubChange -> Map TypeVarID Type /\ Map TypeVarID Type
+getSubEndpoints :: Map TypeVarID SubChange -> Map TypeVarID (String /\ Type) /\ Map TypeVarID (String /\ Type)
 getSubEndpoints ctx =
     mapMaybe (case _ of
-        SubInsert _ -> Nothing
-        SubTypeChange ch -> Just (fst (getEndpoints ch))
-        SubDelete pt -> Just pt) ctx
+        SubInsert _ _ -> Nothing
+        SubTypeChange name1 name2 ch -> Just (name1 /\ fst (getEndpoints ch))
+        SubDelete name pt -> Just (name /\ pt)) ctx
     /\
     mapMaybe (case _ of
-        SubInsert pt -> Just pt
-        SubTypeChange ch -> Just (snd (getEndpoints ch))
-        SubDelete _ -> Nothing) ctx
+        SubInsert name pt -> Just (name /\ pt)
+        SubTypeChange name1 name2 ch -> Just (name2 /\ snd (getEndpoints ch))
+        SubDelete _ _ -> Nothing) ctx
 
 getKCtxTyEndpoints :: KindChangeCtx -> TypeContext /\ TypeContext
 getKCtxTyEndpoints kctx =

@@ -5,13 +5,7 @@ import Prelude
 import Prim hiding (Type)
 
 import TypeCraft.Purescript.Grammar
-import Data.Map.Internal (Map, lookup, union, insert, empty)
-import Data.Maybe (Maybe(..))
-import Data.List (foldl, zip)
-import Data.Tuple.Nested
-import Effect.Exception.Unsafe (unsafeThrow)
-import Data.List (List, List(..), (:))
-import TypeCraft.Purescript.Context
+import Data.Map.Internal (Map)
 
 
 -- The main datatype for this file:

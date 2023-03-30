@@ -35,18 +35,19 @@ import TypeCraft.Purescript.TypeChangeAlgebra2
 polyTypeApplyArgs :: PolyType -> ListTypeArgChange -> Change
 polyTypeApplyArgs pty ch =
     polyTypeApplyArgsImpl pty ch Map.empty
-polyTypeApplyArgsImpl :: PolyType -> ListTypeArgChange -> Map.Map TypeVarID Change -> Change
-polyTypeApplyArgsImpl (Forall x pt) (ListTypeArgChangeCons ch chs) sub =
-    polyTypeApplyArgsImpl pt chs (Map.insert x ch sub)
+polyTypeApplyArgsImpl :: PolyType -> ListTypeArgChange -> Map.Map TypeVarID (String /\ Change) -> Change
+polyTypeApplyArgsImpl (Forall x name pt) (ListTypeArgChangeCons ch chs) sub =
+    polyTypeApplyArgsImpl pt chs (Map.insert x (name /\ ch) sub)
 polyTypeApplyArgsImpl (PType ty) ListTypeArgChangeNil sub = tyInjectWithSub ty sub
 polyTypeApplyArgsImpl _ _ _ = unsafeThrow "in polyTypeApplyArgs, wrong number of args"
 
-tyInjectWithSub :: Type -> Map TypeVarID Change -> Change
+tyInjectWithSub :: Type -> Map TypeVarID (String /\ Change) -> Change
 tyInjectWithSub (Arrow _ ty1 ty2) sub = CArrow (tyInjectWithSub ty1 sub) (tyInjectWithSub ty2 sub)
  -- TODO: do I need to do something with TVarContextBoundary here? (Later: I don't know what this comment means)
-tyInjectWithSub (TNeu _ (TypeVar x) Nil) sub | Map.member x sub = lookup' x sub
+tyInjectWithSub (TNeu _ (TypeVar x) Nil) sub | Map.member x sub = snd $ lookup' x sub
 tyInjectWithSub (TNeu _ x args) sub = CNeu (tyVarInject x) (map (case _ of TypeArg _ t -> ChangeParam (tyInjectWithSub t sub)) args)
-tyInjectWithSub (THole _ id w s) sub = CHole id w (union' (map (\ty -> SubTypeChange (tyInjectWithSub ty sub)) s) (map SubTypeChange sub))
+tyInjectWithSub (THole _ id w s) sub = CHole id w (union' (map (\(name /\ ty) -> SubTypeChange name name (tyInjectWithSub ty sub)) s)
+                                                    (map (\(name /\ ch) -> SubTypeChange name name ch) sub))
 
 -- Assumption: the first typechange is from A to B, and the second is from B to C. If the B's don't line up,
 -- then this function will throw an exception
@@ -99,18 +100,18 @@ I will have to write a separate renaming function if I need it.
 -}
 composePolyChangeImpl :: PolyChange -> PolyChange -> PolyChange
 composePolyChangeImpl (PChange c1) (PChange c2) = PChange (composeChange c1 c2)
-composePolyChangeImpl (CForall x pc1) (CForall y pc2) | x == y =
-    CForall x (composePolyChangeImpl pc1 pc2)
-composePolyChangeImpl (PPlus x pc1) (PMinus y pc2) | x == y=
+composePolyChangeImpl (CForall x xname1 xname2 pc1) (CForall y yname1 yname2 pc2) | x == y && xname1 == yname1 && xname2 == yname2 =
+    CForall x xname1 xname2 (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl (PPlus x xname pc1) (PMinus y yname pc2) | x == y && xname == yname =
     (composePolyChangeImpl pc1 pc2)
-composePolyChangeImpl (PMinus x pc1) (PPlus y pc2) | x == y =
-    CForall x (composePolyChangeImpl pc1 pc2)
-composePolyChangeImpl (CForall x pc1) (PMinus y pc2) | x == y =
-    PMinus x (composePolyChangeImpl pc1 pc2)
-composePolyChangeImpl (PPlus x pc1) (CForall y pc2) | x == y =
-    PPlus x (composePolyChangeImpl pc1 pc2)
-composePolyChangeImpl (PMinus x pc1) pc2 = PMinus x (composePolyChangeImpl pc1 pc2)
-composePolyChangeImpl pc1 (PPlus x pc2) = PPlus x (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl (PMinus x xname pc1) (PPlus y yname pc2) | x == y =
+    CForall x xname yname (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl (CForall x xname1 xname2 pc1) (PMinus y yname pc2) | x == y && xname2 == yname =
+    PMinus x xname1 (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl (PPlus x xname pc1) (CForall y yname1 yname2 pc2) | x == y && xname == yname1 =
+    PPlus x yname2 (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl (PMinus x xname pc1) pc2 = PMinus x xname (composePolyChangeImpl pc1 pc2)
+composePolyChangeImpl pc1 (PPlus x xname pc2) = PPlus x xname (composePolyChangeImpl pc1 pc2)
 composePolyChangeImpl _ _ = unsafeThrow "I'm hoping that this doesn't happen"
 
 --composePolyChangeImpl :: TyVarEquiv -> PolyChange -> PolyChange -> PolyChange
@@ -157,9 +158,9 @@ invert (CNeu varId params) = CNeu (invertTypeVar varId) (map invertParam params)
 
 invertPolyChange :: PolyChange -> PolyChange
 invertPolyChange (PChange c) = PChange (invert c)
-invertPolyChange (CForall tyBind c) = CForall tyBind (invertPolyChange c)
-invertPolyChange (PPlus tyBind c) = PMinus tyBind (invertPolyChange c)
-invertPolyChange (PMinus tyBind c) = PPlus tyBind (invertPolyChange c)
+invertPolyChange (CForall tyBind name1 name2 c) = CForall tyBind name2 name1 (invertPolyChange c)
+invertPolyChange (PPlus tyBind name c) = PMinus tyBind name (invertPolyChange c)
+invertPolyChange (PMinus tyBind name c) = PPlus tyBind name (invertPolyChange c)
 
 invertParam :: ChangeParam -> ChangeParam
 invertParam (ChangeParam change) = ChangeParam (invert change)
@@ -167,9 +168,9 @@ invertParam (PlusParam t) = MinusParam t
 invertParam (MinusParam t) = PlusParam t
 
 invertSubChange :: SubChange -> SubChange
-invertSubChange (SubTypeChange ch) = SubTypeChange (invert ch)
-invertSubChange (SubDelete ty) = SubInsert ty
-invertSubChange (SubInsert ty) = SubDelete ty
+invertSubChange (SubTypeChange name1 name2 ch) = SubTypeChange name2 name1 (invert ch)
+invertSubChange (SubDelete name ty) = SubInsert name ty
+invertSubChange (SubInsert name ty) = SubDelete name ty
 
 invertVarChange :: VarChange -> VarChange
 invertVarChange (VarTypeChange pch) = VarTypeChange (invertPolyChange pch)
@@ -215,9 +216,9 @@ chIsId (CNeu varId params) =
 chIsId _ = false
 
 pChIsId :: PolyChange -> Boolean
-pChIsId (CForall _ c) = pChIsId c
-pChIsId (PPlus _ _) = false
-pChIsId (PMinus _ _) = false
+pChIsId (CForall _ name1 name2 c) = pChIsId c && name1 == name2
+pChIsId (PPlus _ _ _) = false
+pChIsId (PMinus _ _ _) = false
 pChIsId (PChange c) = chIsId c
 
 tVarChIsId :: TVarChange -> Boolean
@@ -239,9 +240,9 @@ kChIsId (KCArrow ch) = kChIsId ch
 kChIsId _ = false
 
 subChIsId :: SubChange -> Boolean
-subChIsId (SubTypeChange ch) = chIsId ch
-subChIsId (SubInsert _) = false
-subChIsId (SubDelete _) = false
+subChIsId (SubTypeChange name1 name2 ch) = chIsId ch && name1 == name2
+subChIsId (SubInsert _ _) = false
+subChIsId (SubDelete _ _) = false
 
 invertKindChange :: KindChange -> KindChange
 invertKindChange (KCArrow kc) = invertKindChange (KCArrow (invertKindChange kc))
@@ -493,11 +494,11 @@ getChangeCtx ctx1 ctx2 = threeCaseUnion VarDelete VarInsert (\t1 t2 -> VarTypeCh
 
 -- This is extermely janky because I'm just making a random guess as to how the parameters changed, but its the simplest thing to implement without changing a lot of other stuff. It will very rarely come up in practice.
 polyReplace :: PolyType -> PolyType -> PolyChange
-polyReplace (Forall x pt1) (Forall y pt2) = CForall x (polyReplace pt1 (subPolyType (convertSub (Map.insert x y Map.empty)) pt2))
+polyReplace (Forall x xname pt1) (Forall y yname pt2) = CForall x xname yname (polyReplace pt1 (subPolyType (convertSub (Map.insert x y Map.empty)) pt2))
 polyReplace (PType t1) (PType t2) | t1 == t2 = PChange (tyInject t1)
 polyReplace (PType t1) (PType t2) = PChange (Replace t1 t2)
-polyReplace (Forall x pt1) pt2 = PMinus x (polyReplace pt1 pt2)
-polyReplace pt1 (Forall x pt2) = PPlus x (polyReplace pt1 pt2)
+polyReplace (Forall x name pt1) pt2 = PMinus x name (polyReplace pt1 pt2)
+polyReplace pt1 (Forall x name pt2) = PPlus x name (polyReplace pt1 pt2)
 
 --type TypeAliasContext = Map TypeVarID (List TypeBind /\ Type) -- The array is the free variables in the Type.
 --type KindChangeCtx = Map TypeVarID TVarChange

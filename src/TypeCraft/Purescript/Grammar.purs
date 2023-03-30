@@ -56,7 +56,7 @@ data CTypeVar = CTypeVar TypeVarID | CCtxBoundaryTypeVar Kind (Maybe TypeDefVal)
 
 data Type
   = Arrow ArrowMD Type Type
-  | THole THoleMD TypeHoleID {-Weakenings-} (Set TypeVarID) {-Substitutions-} (Map TypeVarID Type)
+  | THole THoleMD TypeHoleID {-Weakenings-} (Set TypeVarID) {-Substitutions-} (Map TypeVarID (String /\ Type))
   | TNeu TNeuMD TypeVar (List TypeArg)
 
 freshTHole :: Unit -> Type
@@ -65,7 +65,7 @@ freshTHole _ = THole defaultTHoleMD (freshTypeHoleID unit) Set.empty Map.empty
 makeTHole :: TypeHoleID -> Type
 makeTHole id = THole defaultTHoleMD id Set.empty Map.empty
 
-data PolyType = Forall TypeVarID PolyType | PType Type -- doesn't appear in source code. Instead, source code has lists of type parameters.
+data PolyType = Forall TypeVarID String PolyType | PType Type -- doesn't appear in source code. Instead, source code has lists of type parameters.
 
 data TypeArg = TypeArg TypeArgMD Type
 
@@ -107,10 +107,11 @@ data Constructor = Constructor CtrMD TermBind (List CtrParam)
 
 data Kind = KArrow Kind | Type
 
+
 data PolyChange
-  = CForall TypeVarID PolyChange
-  | PPlus TypeVarID PolyChange
-  | PMinus TypeVarID PolyChange
+  = CForall TypeVarID String String PolyChange -- the name before and after
+  | PPlus TypeVarID String PolyChange
+  | PMinus TypeVarID String PolyChange
   | PChange Change
 
 data Change
@@ -243,15 +244,15 @@ tyVarInject (CtxBoundaryTypeVar pt mtv name x) = CCtxBoundaryTypeVar pt mtv name
 tyInject :: Type -> Change
 tyInject (Arrow _ ty1 ty2) = CArrow (tyInject ty1) (tyInject ty2)
 tyInject (TNeu _ x args) = CNeu (tyVarInject x) (map (case _ of TypeArg _ t -> ChangeParam (tyInject t)) args)
-tyInject (THole _ id w s) = CHole id w (map (\ty -> SubTypeChange (tyInject ty)) s)
+tyInject (THole _ id w s) = CHole id w (map (\(name /\ ty) -> SubTypeChange name name (tyInject ty)) s)
 
 data SubChange
-  = SubTypeChange Change
-  | SubDelete Type
-  | SubInsert Type
+  = SubTypeChange String String Change -- The string before and after the change
+  | SubDelete String Type
+  | SubInsert String Type
 
 pTyInject :: PolyType -> PolyChange
-pTyInject (Forall x t) = CForall x (pTyInject t)
+pTyInject (Forall x name t) = CForall x name name (pTyInject t)
 pTyInject (PType t) = PChange (tyInject t)
 
 --tyInject (TLambda _ x k ty) = CLambda x (tyInject ty)
