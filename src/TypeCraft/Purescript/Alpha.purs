@@ -343,6 +343,37 @@ checkWeakeningViolationTermPath subIWantToMake path1 =
                             go badHoles' teeth
     in go Set.empty path1
 
+-- returns true if sub shouldn't be allowed
+checkWeakeningViolationTypePath :: Map.Map TypeHoleID Type -> List.List Tooth -> Boolean
+checkWeakeningViolationTypePath _subIWantToMake List.Nil = false
+checkWeakeningViolationTypePath subIWantToMake (tooth : teeth) =
+    case tooth of
+        Lambda2 md tBind {--} body bodyTy -> checkWeakeningViolationTermPath subIWantToMake teeth
+        Let4 md tBind tyBinds def {-defTy-} body bodyTy -> checkWeakeningViolationTermPath subIWantToMake teeth
+        Buffer2 md def {-defTy-} body bodyTy -> checkWeakeningViolationTermPath subIWantToMake teeth
+        TLet3 md tyBind tyBinds {-def-} body bodyTy -> checkWeakeningViolationTermPath subIWantToMake teeth
+        Arrow1 md {--} ty2 -> checkWeakeningViolationTermPath subIWantToMake teeth
+        Arrow2 md ty1 {--} -> checkWeakeningViolationTermPath subIWantToMake teeth
+        TypeArg1 md {--} -> checkWeakeningViolationTypeArgPath subIWantToMake teeth
+        _ -> unsafeThrow "Either wasn't a type path, or I forgot a case in checkWeakeningViolationTermPath"
+
+checkWeakeningViolationTypeArgPath :: Map.Map TypeHoleID Type -> UpPath -> Boolean
+checkWeakeningViolationTypeArgPath _subIWantToMake List.Nil = false
+checkWeakeningViolationTypeArgPath subIWantToMake (tooth : teeth) =
+    case tooth of
+        TypeArgListCons1 {--} tyArgs -> checkWeakeningViolationTypeArgListPath subIWantToMake teeth
+        _ -> unsafeThrow "Either wasn't a TypeArg path, or I forgot a case in checkWeakeningViolationTypeArgPath"
+
+checkWeakeningViolationTypeArgListPath :: Map.Map TypeHoleID Type -> UpPath -> Boolean
+checkWeakeningViolationTypeArgListPath sub List.Nil = false
+checkWeakeningViolationTypeArgListPath sub (tooth : teeth) =
+    case tooth of
+        TypeArgListCons2 tyArg -> checkWeakeningViolationTypeArgListPath sub teeth
+        TNeu1 md x {--} -> checkWeakeningViolationTypeArgListPath sub teeth
+        Var1 md x {-List TypeArg-} -> checkWeakeningViolationTermPath sub teeth
+        _ -> unsafeThrow ("Either wasn't a TypeArgList path, or I forgot a case in checkWeakeningViolationTypeArgListPath. tooth was: " <> show tooth)
+
+
 checkHoleUsageTooth :: Set.Set TypeHoleID -> Tooth -> Maybe (Set.Set TypeVarID)
 checkHoleUsageTooth holes tooth =
     let term = termContainsHoles holes in

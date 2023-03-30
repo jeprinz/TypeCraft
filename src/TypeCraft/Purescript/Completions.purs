@@ -26,7 +26,7 @@ import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMod
 import TypeCraft.Purescript.Unification (fillNeutral, runUnify, unify)
 import Debug (trace)
 import TypeCraft.Purescript.Unification (normThenUnify)
-import TypeCraft.Purescript.Alpha (checkWeakeningViolationTermPath)
+import TypeCraft.Purescript.Alpha (checkWeakeningViolationTermPath, checkWeakeningViolationTypePath)
 import TypeCraft.Purescript.PathRec (recInsideHolePath)
 
 type CompletionGroup
@@ -185,7 +185,7 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
               ]
           }
         ]
-  TypeCursor ctxs _path ty ->
+  TypeCursor ctxs path ty ->
     Writer.execWriter do
       traverse_
         ( \(id /\ tyName) -> case Map.lookup id ctxs.kctx of
@@ -193,11 +193,14 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
             Just kind -> case ty of
               THole _md x _weakenings _ -> do
                 let cTy = makeEmptyTNeu id kind
-                Writer.tell <<< List.fromFoldable $
-                  [ { filterLabel: (_ `kindaStartsWithAny` [ tyName ])
-                    , completions: [ const $ CompletionType cTy { subTypeVars: Map.empty, subTHoles: Map.insert x cTy Map.empty } ]
-                    }
-                  ]
+--checkWeakeningViolationTypePath :: Map.Map TypeHoleID Type -> List.List Tooth -> Boolean
+                let sub = Map.insert x cTy Map.empty
+                if checkWeakeningViolationTypePath sub path then pure unit else -- TODO: When I move this code to InsideTypeHoleCursor, I will have to make sure to pass the right path
+                    Writer.tell <<< List.fromFoldable $
+                      [ { filterLabel: (_ `kindaStartsWithAny` [ tyName ])
+                        , completions: [ const $ CompletionType cTy { subTypeVars: Map.empty, subTHoles: sub} ]
+                        }
+                      ]
               _ -> pure unit
         )
         (Map.toUnfoldable ctxs.mdkctx :: Array (_ /\ _))
