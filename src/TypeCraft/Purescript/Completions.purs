@@ -26,6 +26,8 @@ import TypeCraft.Purescript.State (Completion(..), CursorLocation(..), CursorMod
 import TypeCraft.Purescript.Unification (fillNeutral, runUnify, unify)
 import Debug (trace)
 import TypeCraft.Purescript.Unification (normThenUnify)
+import TypeCraft.Purescript.Alpha (checkWeakeningViolationTermPath)
+import TypeCraft.Purescript.PathRec (recInsideHolePath)
 
 type CompletionGroup
   = { filterLabel :: String -> Boolean
@@ -34,7 +36,7 @@ type CompletionGroup
 
 calculateCompletionGroups :: State -> CursorMode -> List CompletionGroup
 calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
-  InsideHoleCursor ctxs ty _path -> 
+  InsideHoleCursor ctxs ty path ->
     Writer.execWriter do
       -- fill with neutral form
       traverse_
@@ -46,6 +48,10 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
                 Left _msg -> pure unit
                 -- TODO: Jacob: why would there be subTypeVars here anyway? I'm confused about that. Isn't unification for holes?
                 Right (tm' /\ sub) ->
+                  let termPath = recInsideHolePath ({
+                            hole1 : \termPath -> termPath.termPath
+                      }) {insideHolePath: path , ctxs, ty} in
+                  if checkWeakeningViolationTermPath sub.subTHoles termPath then pure unit else
                   Writer.tell <<< List.fromFoldable $
                     [ { filterLabel: (_ `kindaStartsWithAny` [ varName ])
                       , completions: [ const $ CompletionTerm tm' sub ]
@@ -186,8 +192,7 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
             Nothing -> unsafeThrow $ "the entry '" <> show (id /\ tyName) <> "' was found in the ctxs.mdkctx, but not in the ctxs.kctx: '" <> show ctxs.ctx <> "'"
             Just kind -> case ty of
               THole _md x _weakenings _ -> do
-                let
-                  cTy = makeEmptyTNeu id kind
+                let cTy = makeEmptyTNeu id kind
                 Writer.tell <<< List.fromFoldable $
                   [ { filterLabel: (_ `kindaStartsWithAny` [ tyName ])
                     , completions: [ const $ CompletionType cTy { subTypeVars: Map.empty, subTHoles: Map.insert x cTy Map.empty } ]

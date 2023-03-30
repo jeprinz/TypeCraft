@@ -8,6 +8,7 @@ import Prim hiding (Type)
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.Util (lookup')
 import Data.Map as Map
+import Data.Set as Set
 import Data.List as List
 import Data.List ((:))
 import TypeCraft.Purescript.MD (defaultTNeuMD)
@@ -20,6 +21,7 @@ import TypeCraft.Purescript.TypeChangeAlgebra2
 import Data.Tuple (fst, snd)
 import Data.Maybe (Maybe(..))
 import Debug (trace)
+import Data.Foldable (foldl)
 
 {-
 This file deals with issues of alpha-equivalence.
@@ -68,17 +70,6 @@ renChange ren (Replace t1 t2) = Replace (renType ren t1) (renType ren t2)
 renChange ren (Plus t c) = Plus (renType ren t) (renChange ren c)
 renChange ren (Minus t c) = Minus (renType ren t) (renChange ren c)
 renChange ren (CNeu tv chParams) = CNeu tv (map (renChangeParam ren) chParams)
---data Change
---  = CArrow Change Change
---  | CHole TypeHoleID (Set TypeVarID) (Map TypeVarID SubChange)
---  | Replace Type Type
---  | Plus Type Change
---  | Minus Type Change
---  | CNeu CTypeVar (List ChangeParam)
---data Type
---  = Arrow ArrowMD Type Type
---  | THole THoleMD TypeHoleID {-Weakenings-} (Set TypeVarID) {-Substitutions-} (Map TypeVarID Type)
---  | TNeu TNeuMD TypeVar (List TypeArg)
 
 renChangeParam :: TyVarEquiv -> ChangeParam -> ChangeParam
 renChangeParam ren (ChangeParam c) = ChangeParam (renChange ren c)
@@ -113,6 +104,13 @@ type Sub
 subFromVars :: Map.Map TypeVarID Type -> Sub
 subFromVars m = {subTypeVars: m, subTHoles: Map.empty}
 
+{-
+The input Sub goes from a starting context to an ending context. We need the output type to be in that ending context.
+When we apply to sub to a hole, we need to add the sub to the subs on that hole, because the hole is a metavariable that lives
+in a different context.
+We can assume that everything in the input Type is in the starting context.
+But the subs in the holes are themselves
+-}
 applySubType :: Sub -> Type -> Type
 applySubType sub = case _ of
   Arrow md ty1 ty2 -> Arrow md (applySubType sub ty1) (applySubType sub ty2)
@@ -200,9 +198,9 @@ applySubChangeParamGen sub = case _ of
 -- But I kind of want to wait until we have some unit tests before I do that...
 applySubChange :: Sub -> Change -> Change
 applySubChange sub ch =
-    trace ("in applySubChange, sub is: " <> show sub <> " and ch is: " <> show ch) \_ ->
+--    trace ("in applySubChange, sub is: " <> show sub <> " and ch is: " <> show ch) \_ ->
     let res = applySubChangeGen {subTypeVars: map (SubTypeChange <<< tyInject) sub.subTypeVars, subTHoles: map tyInject sub.subTHoles} ch in
-    trace ("and now were done with applySubChange") \_ ->
+--    trace ("and now were done with applySubChange") \_ ->
     res
 --applySubChange sub = case _ of
 --  CArrow ty1 ty2 -> CArrow (applySubChange sub ty1) (applySubChange sub ty2)
@@ -241,6 +239,130 @@ subTerm sub term =
     ContextBoundary md x ch body -> ContextBoundary md x (subVarChange sub ch) (rec body)
     Hole md -> Hole md
     Buffer md def defTy body bodyTy -> Buffer md (rec def) (st defTy) (rec body) (st bodyTy)
+
+typeContainsVar :: Set.Set TypeVarID -> Type -> Boolean
+typeContainsVar vars (Arrow md t1 t2) = (typeContainsVar vars t1) || (typeContainsVar vars t2)
+typeContainsVar vars (THole md x w s) = (List.any (typeContainsVar vars) s)
+typeContainsVar vars (TNeu md tv tyArgs) = typeVarContainsVar vars tv || (List.any (\(TypeArg md ty) -> (typeContainsVar vars ty)) tyArgs)
+
+typeVarContainsVar :: Set.Set TypeVarID -> TypeVar -> Boolean
+typeVarContainsVar vars (TypeVar x) = Set.member x vars
+typeVarContainsVar vars (CtxBoundaryTypeVar _ _ _ x) = Set.member x vars
+
+typeContainsHoles :: Set.Set TypeHoleID -> Type -> Boolean
+typeContainsHoles holes (Arrow md t1 t2) = (typeContainsHoles holes t1) || (typeContainsHoles holes t2)
+typeContainsHoles holes (THole md x w s) = (Set.member x holes) || (List.any (typeContainsHoles holes) s)
+typeContainsHoles holes (TNeu md tv tyArgs) = (List.any (\(TypeArg md ty) -> (typeContainsHoles holes ty)) tyArgs)
+
+tyVarsUsedInType :: Type -> Set.Set TypeVarID
+tyVarsUsedInType (Arrow md t1 t2) = Set.union (tyVarsUsedInType t1) (tyVarsUsedInType t2)
+tyVarsUsedInType (THole md x w s) = List.foldl (\holes ty -> Set.union holes (tyVarsUsedInType ty)) Set.empty s
+tyVarsUsedInType (TNeu md tv tyArgs) = Set.insert (tyVarGetID tv) (List.foldl (\holes (TypeArg md ty) -> Set.union holes (tyVarsUsedInType ty)) Set.empty tyArgs)
+
+tyVarGetID :: TypeVar -> TypeVarID
+tyVarGetID (TypeVar x) = x
+tyVarGetID (CtxBoundaryTypeVar _ _ _ x) = x
+
+subChangeContainsHoles :: Set.Set TypeHoleID -> SubChange -> Boolean
+subChangeContainsHoles holes (SubTypeChange ch) = changeContainsHoles holes ch
+subChangeContainsHoles holes (SubInsert ty) = typeContainsHoles holes ty
+subChangeContainsHoles holes (SubDelete ty) = typeContainsHoles holes ty
+
+changeContainsHoles :: Set.Set TypeHoleID -> Change -> Boolean
+changeContainsHoles holes (CArrow c1 c2) = changeContainsHoles holes c1 || changeContainsHoles holes c2
+changeContainsHoles holes (CHole x w s) = Set.member x holes || List.any (subChangeContainsHoles holes) s
+changeContainsHoles holes (Replace t1 t2) = typeContainsHoles holes t1 || typeContainsHoles holes t2
+changeContainsHoles holes (Plus t c) = typeContainsHoles holes t || changeContainsHoles holes c
+changeContainsHoles holes (Minus t c) = typeContainsHoles holes t || changeContainsHoles holes c
+changeContainsHoles holes (CNeu tv chParams) = List.any (changeParamContainsHoles holes) chParams
+
+polyChangeContainsHoles :: Set.Set TypeHoleID -> PolyChange -> Boolean
+polyChangeContainsHoles holes (CForall _ pc) = polyChangeContainsHoles holes pc
+polyChangeContainsHoles holes (PPlus _ pc) = polyChangeContainsHoles holes pc
+polyChangeContainsHoles holes (PMinus _ pc) = polyChangeContainsHoles holes pc
+polyChangeContainsHoles holes (PChange ch) = changeContainsHoles holes ch
+polyTypeContainsHoles :: Set.Set TypeHoleID -> PolyType -> Boolean
+polyTypeContainsHoles holes (Forall _ pt) = polyTypeContainsHoles holes pt
+polyTypeContainsHoles holes (PType ch) = typeContainsHoles holes ch
+varChangeContainsHoles :: Set.Set TypeHoleID -> VarChange -> Boolean
+varChangeContainsHoles holes (VarTypeChange pc) = polyChangeContainsHoles holes pc
+varChangeContainsHoles holes (VarDelete pt) = polyTypeContainsHoles holes pt
+varChangeContainsHoles holes (VarInsert pt) = polyTypeContainsHoles holes pt
+
+changeParamContainsHoles :: Set.Set TypeHoleID -> ChangeParam -> Boolean
+changeParamContainsHoles holes (ChangeParam c) = changeContainsHoles holes c
+changeParamContainsHoles holes (PlusParam t) = typeContainsHoles holes t
+changeParamContainsHoles holes (MinusParam t) = typeContainsHoles holes t
+
+ctrContainsHoles :: Set.Set TypeHoleID -> Constructor -> Boolean
+ctrContainsHoles holes (Constructor _ _ ctrParams) = List.any (ctrParamContainsHoles holes) ctrParams
+
+ctrParamContainsHoles :: Set.Set TypeHoleID -> CtrParam -> Boolean
+ctrParamContainsHoles holes (CtrParam _ ty) = typeContainsHoles holes ty
+
+termContainsHoles :: Set.Set TypeHoleID -> Term -> Boolean
+termContainsHoles holes term =
+    let rec = termContainsHoles holes in
+    let st = typeContainsHoles holes in
+    case term of
+    App md t1 t2 argTy outTy -> rec t1 || rec t2 || st argTy || st outTy
+    Lambda md tBind argTy body bodyTy -> st argTy || rec body || st bodyTy
+    Var md x tyArgs -> (List.any (\(TypeArg md ty) -> st ty) tyArgs)
+    Let md tBind tyBinds def defTy body bodyTy -> rec def || st defTy || rec body || st bodyTy
+    Data md tyBind tyBinds ctrs body bodyTy -> (List.any (ctrContainsHoles holes) ctrs) || rec body || st bodyTy
+    TLet md tyBind tyBinds def body bodyTy -> st def || rec body || st bodyTy
+    TypeBoundary md ch body -> changeContainsHoles holes ch || rec body
+    ContextBoundary md x ch body -> varChangeContainsHoles holes ch || rec body
+    Hole md -> false
+    Buffer md def defTy body bodyTy -> rec def || st defTy || rec body || st bodyTy
+
+-- outputs true if substitution shouldn't' be allowed
+{-
+We need to check that no instance of the hole to be substituted appears above a binder of a TypeVarID appearing in that hole.
+So we need to keep a running total of the set of typevars whose binders we have passed, and also a set of typevars which appear
+in each hole.
+- Each tooth we pass, we need to add to our set of out of scope typevars
+- From our set of out of scope term holes, we compute a set of disallowed holes - those which reference typevars from that first set
+- Each tooth, we need to check that no hole in that tooth is in that second set
+-}
+checkWeakeningViolationTermPath :: Map.Map TypeHoleID Type -> List.List Tooth -> Boolean
+checkWeakeningViolationTermPath subIWantToMake path1 =
+    let tyVarsEachHoleReferences = map tyVarsUsedInType subIWantToMake in
+    let go :: Set.Set TypeHoleID -> List.List Tooth -> Boolean
+        go badHoles path =
+            case path of
+                List.Nil -> false
+                List.Cons tooth teeth ->
+                    case checkHoleUsageTooth badHoles tooth of
+                        Nothing -> true
+                        Just newOutOfScopeTypeVars ->
+                            let badHoles' = Set.union badHoles (Map.keys
+                                (Map.filter
+                                    (\refdVars -> not (Set.isEmpty (Set.intersection refdVars newOutOfScopeTypeVars))) -- check if set of vars has intersection with newOutOfScopeTypeVars
+                                    tyVarsEachHoleReferences)) in
+                            go badHoles' teeth
+    in go Set.empty path1
+
+checkHoleUsageTooth :: Set.Set TypeHoleID -> Tooth -> Maybe (Set.Set TypeVarID)
+checkHoleUsageTooth holes tooth =
+    let term = termContainsHoles holes in
+    let ty = typeContainsHoles holes in
+    case tooth of
+        App1 md {-Term-} t2 argTy bodyTy -> if term t2 || ty argTy || ty bodyTy then Nothing else Just Set.empty
+        App2 md t1 {-Term-} argTy bodyTy -> if term t1 || ty argTy || ty bodyTy then Nothing else Just Set.empty
+        Lambda3 md tBind argTy {-Term-} bodyTy -> if ty argTy || ty bodyTy then Nothing else Just Set.empty
+        Let3 md tBind tyBinds {-Term-} defTy body bodyTy ->
+            if ty defTy || term body || ty bodyTy then Nothing else
+            Just (Set.fromFoldable (map (\(TypeBind _ ty) -> ty) tyBinds))
+        Let5 md tBind tyBinds def defTy {-Term-} bodyTy -> if term def || ty defTy || ty bodyTy then Nothing else Just Set.empty
+        Buffer1 md {-Term-} defTy body bodyTy -> if ty defTy || term body || ty bodyTy then Nothing else Just Set.empty
+        Buffer3 md def defTy {-Term-} bodyTy -> if term def || ty defTy || ty bodyTy then Nothing else Just Set.empty
+        TypeBoundary1 md ch {-Term-} -> if changeContainsHoles holes ch then Nothing else Just Set.empty
+        ContextBoundary1 md x vch {-Term-} -> if varChangeContainsHoles holes vch then Nothing else Just Set.empty
+        TLet4 md tyBind tyBinds def {-Term-} bodyTy -> unsafeThrow "no"
+        Data4 md (TypeBind _ x) tyBinds ctrs {-Term-} bodyTy -> if List.any (ctrContainsHoles holes) ctrs || ty bodyTy then Nothing else Just
+            (Set.singleton x)
+        _ -> unsafeThrow "Either wasn't a term tooth, or I forgot a case in checkHoleUsageTooth"
 
 subTermPath :: Sub -> UpPath -> UpPath
 subTermPath sub List.Nil = List.Nil
