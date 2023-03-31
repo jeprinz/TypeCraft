@@ -180,9 +180,9 @@ termPathToNode isActive abovePath belowInfo termPath innerNode =
 makeTermArgs :: Boolean -> UpPath -> BelowInfo Term Type -> TermPathRecValue -> TermNodeCursorInfo
 makeTermArgs isActive abovePath belowInfo upRecVal =
   { isActive
-  , makeCursor: \_ -> Just $ TermCursor upRecVal.ctxs upRecVal.ty (upRecVal.termPath <> abovePath) upRecVal.term
+  , makeCursor: Just $ TermCursor upRecVal.ctxs upRecVal.ty (upRecVal.termPath <> abovePath) upRecVal.term
   , makeSelect:
-      \_ -> case belowInfo of
+      case belowInfo of
         BITerm -> Nothing
         BISelect middlePath term ctxs ty -> Just $ TermSelect (upRecVal.termPath <> abovePath) upRecVal.ctxs upRecVal.ty upRecVal.term middlePath ctxs ty term botSelectOrientation
   , term: { ctxs: upRecVal.ctxs, term: upRecVal.term, ty: upRecVal.ty }
@@ -191,9 +191,9 @@ makeTermArgs isActive abovePath belowInfo upRecVal =
 makeTypeArgs :: Boolean -> UpPath -> BelowInfo Type Unit -> TypePathRecValue -> TypeNodeCursorInfo
 makeTypeArgs isActive abovePath belowInfo urv =
   { isActive
-  , makeCursor: \_ -> Just $ TypeCursor urv.ctxs (urv.typePath <> abovePath) urv.ty
+  , makeCursor: Just $ TypeCursor urv.ctxs (urv.typePath <> abovePath) urv.ty
   , makeSelect:
-      \_ -> case belowInfo of
+      case belowInfo of
         BITerm -> Nothing
         BISelect middlePath ty ctxs _ -> Just $ TypeSelect (urv.typePath <> abovePath) urv.ctxs urv.ty middlePath ctxs ty botSelectOrientation
   , ty: { ctxs: urv.ctxs, ty: urv.ty }
@@ -299,8 +299,8 @@ typePathToNode isActive abovePath belowInfo typePath innerNode =
 makeCtrArgs :: Boolean -> CtrPathRecValue -> CtrNodeCursorInfo
 makeCtrArgs isActive ctr =
   { isActive
-  , makeCursor: \_ -> Nothing
-  , makeSelect: \_ -> Nothing
+  , makeCursor: Nothing
+  , makeSelect: Nothing
   , ctr: { ctxs: ctr.ctxs, ctr: ctr.ctr }
   }
 
@@ -477,9 +477,9 @@ termBindPathToNode isActive abovePath termBindPath innerNode =
 makeCtrListArgs :: Boolean -> UpPath -> BelowInfo (List Constructor) Unit -> ListCtrPathRecValue -> CtrListNodeCursorInfo
 makeCtrListArgs isActive abovePath belowInfo upRecVal =
   { isActive
-  , makeCursor: \_ -> Just $ CtrListCursor upRecVal.ctxs (upRecVal.listCtrPath <> abovePath) upRecVal.ctrs
+  , makeCursor: Just $ CtrListCursor upRecVal.ctxs (upRecVal.listCtrPath <> abovePath) upRecVal.ctrs
   , makeSelect:
-      \_ -> case belowInfo of
+      case belowInfo of
         BITerm -> Nothing
         BISelect middlePath ctrs ctxs unit -> Just $ CtrListSelect (upRecVal.listCtrPath <> abovePath) upRecVal.ctxs upRecVal.ctrs middlePath ctxs ctrs botSelectOrientation
   , ctrs: { ctxs: upRecVal.ctxs, ctrs: upRecVal.ctrs }
@@ -488,9 +488,9 @@ makeCtrListArgs isActive abovePath belowInfo upRecVal =
 makeCtrParamListArgs :: Boolean -> UpPath -> BelowInfo (List CtrParam) Unit -> ListCtrParamPathRecValue -> CtrParamListNodeCursorInfo
 makeCtrParamListArgs isActive abovePath belowInfo upRecVal =
   { isActive
-  , makeCursor: \_ -> Just $ CtrParamListCursor upRecVal.ctxs (upRecVal.listCtrParamPath <> abovePath) upRecVal.ctrParams
+  , makeCursor: Just $ CtrParamListCursor upRecVal.ctxs (upRecVal.listCtrParamPath <> abovePath) upRecVal.ctrParams
   , makeSelect:
-      \_ -> case belowInfo of
+      case belowInfo of
         BITerm -> Nothing
         BISelect middlePath ctrParams ctxs unit -> Just $ CtrParamListSelect (upRecVal.listCtrParamPath <> abovePath) upRecVal.ctxs upRecVal.ctrParams middlePath ctxs ctrParams botSelectOrientation
   , ctrParams: { ctxs: upRecVal.ctxs, ctrParams: upRecVal.ctrParams }
@@ -563,8 +563,8 @@ ctrParamListPathToNode isActive abovePath belowInfo listCtrParamPath innerNode =
 makeTypeArgListArgs :: Boolean -> UpPath -> BelowInfo (List TypeArg) Unit -> ListTypeArgPathRecValue -> TypeArgListNodeCursorInfo
 makeTypeArgListArgs isActive abovePath belowInfo upRecVal =
   { isActive
-  , makeCursor: \_ -> Nothing
-  , makeSelect: \_ -> Nothing
+  , makeCursor: Nothing
+  , makeSelect: Nothing
   , tyArgs: { ctxs: upRecVal.ctxs, tyArgs: upRecVal.tyArgs }
   }
 
@@ -612,9 +612,9 @@ typeArgListPathToNode isActive abovePath belowInfo listTypeArgPath innerNode =
 makeTypeBindListArgs :: Boolean -> UpPath -> BelowInfo (List TypeBind) Unit -> ListTypeBindPathRecValue -> TypeBindListNodeCursorInfo
 makeTypeBindListArgs isActive abovePath belowInfo upRecVal =
   { isActive
-  , makeCursor: \_ -> Just $ TypeBindListCursor upRecVal.ctxs (upRecVal.listTypeBindPath <> abovePath) upRecVal.tyBinds
+  , makeCursor: Just $ TypeBindListCursor upRecVal.ctxs (upRecVal.listTypeBindPath <> abovePath) upRecVal.tyBinds
   , makeSelect:
-      \_ -> case belowInfo of
+      case belowInfo of
         BITerm -> Nothing
         BISelect middlePath tyBinds ctxs unit -> Just $ TypeBindListSelect (upRecVal.listTypeBindPath <> abovePath) upRecVal.ctxs upRecVal.tyBinds middlePath ctxs tyBinds botSelectOrientation
   , tyBinds: { ctxs: upRecVal.ctxs, tyBinds: upRecVal.tyBinds }

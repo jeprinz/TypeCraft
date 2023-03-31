@@ -64,8 +64,8 @@ type PreNode
 arrangeNodeKids ::
   { isActive :: Boolean
   , tag :: NodeTag
-  , makeCursor :: Unit -> Maybe CursorLocation
-  , makeSelect :: Unit -> Maybe Select
+  , makeCursor :: Maybe CursorLocation
+  , makeSelect :: Maybe Select
   , stepKids :: Array PreNode -> Array Node
   } ->
   Array PreNode ->
@@ -76,7 +76,7 @@ arrangeNodeKids args kids =
       join
         $ justWhen args.isActive \_ -> do
             traceM "getCursor [purs]"
-            cursorLocation <- args.makeCursor unit
+            cursorLocation <- args.makeCursor
             Just (_ { mode = makeCursorMode cursorLocation })
   in
     makeNode
@@ -85,7 +85,7 @@ arrangeNodeKids args kids =
       , getSelect:
           join
             $ justWhen args.isActive \_ -> do
-                select <- args.makeSelect unit
+                select <- args.makeSelect
                 if List.null (getMiddlePath select) then
                   getCursor
                 else
@@ -155,8 +155,8 @@ stepKidsTerm isActive term kids = case term of
 
 type TermNodeCursorInfo
   = { isActive :: Boolean
-    , makeCursor :: Unit -> Maybe CursorLocation
-    , makeSelect :: Unit -> Maybe Select
+    , makeCursor :: Maybe CursorLocation
+    , makeSelect :: Maybe Select
     , term :: TermRecValue
     }
 
@@ -279,11 +279,11 @@ termToNode isActive aboveInfo term =
   where
   args =
     { isActive
-    , makeCursor: \_ -> Just $ TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
-    , makeSelect:
-        \_ -> case aboveInfo of
+    , makeCursor: justWhen isActive \_ -> TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
+    , makeSelect:  
+        case aboveInfo of
           AICursor _path -> Nothing
-          AISelect topPath topCtx (topTerm /\ topTy) midPath -> Just $ TermSelect topPath topCtx topTy topTerm midPath args.term.ctxs args.term.ty args.term.term topSelectOrientation
+          AISelect topPath topCtx (topTerm /\ topTy) midPath -> justWhen isActive \_ -> TermSelect topPath topCtx topTy topTerm midPath term.ctxs term.ty term.term topSelectOrientation
           AINothing -> Nothing
     , term
     }
@@ -309,8 +309,8 @@ stepKidsType isActive ty kids = case ty of
 type TypeNodeCursorInfo
   = { isActive :: Boolean
     , ty :: TypeRecValue
-    , makeCursor :: Unit -> Maybe CursorLocation
-    , makeSelect :: Unit -> Maybe Select
+    , makeCursor :: Maybe CursorLocation
+    , makeSelect :: Maybe Select
     }
 
 arrangeType ::
@@ -371,11 +371,11 @@ typeToNode isActive aboveInfo ty =
   where
   args =
     { isActive
-    , makeCursor: \_ -> Just $ TypeCursor args.ty.ctxs (aIGetPath aboveInfo) ty.ty
+    , makeCursor: justWhen isActive \_ -> TypeCursor ty.ctxs (aIGetPath aboveInfo) ty.ty
     , makeSelect:
-        \_ -> case aboveInfo of
+        case aboveInfo of
           AICursor _path -> Nothing
-          AISelect topPath topCtx topTy midPath -> Just $ TypeSelect topPath topCtx topTy midPath ty.ctxs ty.ty topSelectOrientation
+          AISelect topPath topCtx topTy midPath -> justWhen isActive \_ -> TypeSelect topPath topCtx topTy midPath ty.ctxs ty.ty topSelectOrientation
           AINothing -> Nothing
     , ty
     }
@@ -394,8 +394,8 @@ stepKidsCtr _ _ _ = unsafeThrow "stepKidsCtr: wrong number of kids"
 type CtrNodeCursorInfo
   = { isActive :: Boolean
     , ctr :: CtrRecValue
-    , makeCursor :: Unit -> Maybe CursorLocation
-    , makeSelect :: Unit -> Maybe Select
+    , makeCursor :: Maybe CursorLocation
+    , makeSelect :: Maybe Select
     }
 
 arrangeCtr ::
@@ -419,8 +419,8 @@ ctrToNode isActive aboveInfo ctr =
         \md tBind ctrParams ->
           arrangeCtr
             { isActive
-            , makeCursor: \_ -> Nothing
-            , makeSelect: \_ -> Nothing
+            , makeCursor: Nothing
+            , makeSelect: Nothing
             , ctr
             }
             [ arrangeKidAI cursorOnlyAI (termBindToNode isActive) tBind
@@ -455,8 +455,8 @@ arrangeCtrParam args =
     { isActive: args.isActive
     , tag: CtrParamNodeTag
     , stepKids: stepKidsCtrParam args.isActive args.ctrParam.ctrParam
-    , makeCursor: \_ -> Nothing
-    , makeSelect: \_ -> Nothing
+    , makeCursor: Nothing
+    , makeSelect: Nothing
     }
 
 ctrParamToNode :: Boolean -> AboveInfo CtrParam -> CtrParamRecValue -> Node
@@ -490,8 +490,8 @@ arrangeTypeArg args =
     { isActive: args.isActive
     , tag: TypeArgNodeTag
     , stepKids: stepKidsTypeArg args.isActive args.tyArg.tyArg
-    , makeCursor: \_ -> Nothing
-    , makeSelect: \_ -> Nothing
+    , makeCursor: Nothing
+    , makeSelect: Nothing
     }
 
 typeArgToNode :: Boolean -> AboveInfo TypeArg -> TypeArgRecValue -> Node
@@ -532,8 +532,8 @@ stepKidsTypeBindList isActive tyBinds kids = case tyBinds of
 
 type TypeBindListNodeCursorInfo
   = { isActive :: Boolean
-    , makeCursor :: Unit -> Maybe CursorLocation
-    , makeSelect :: Unit -> Maybe Select
+    , makeCursor :: Maybe CursorLocation
+    , makeSelect :: Maybe Select
     , tyBinds :: ListTypeBindRecValue
     }
 
@@ -563,11 +563,11 @@ typeBindListToNode isActive aboveInfo tyBinds =
   where
   args =
     { isActive
-    , makeCursor: \_ -> Just $ TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
+    , makeCursor: justWhen isActive \_ ->  TypeBindListCursor tyBinds.ctxs (aIGetPath aboveInfo) tyBinds.tyBinds
     , makeSelect:
-        \_ -> case aboveInfo of
+        case aboveInfo of
           AICursor _path -> Nothing
-          AISelect topPath topCtx topTyBinds midPath -> Just $ TypeBindListSelect topPath topCtx topTyBinds midPath tyBinds.ctxs tyBinds.tyBinds topSelectOrientation
+          AISelect topPath topCtx topTyBinds midPath -> justWhen isActive \_ ->  TypeBindListSelect topPath topCtx topTyBinds midPath tyBinds.ctxs tyBinds.tyBinds topSelectOrientation
           AINothing -> Nothing
     , tyBinds
     }
@@ -586,8 +586,8 @@ termBindToNode isActive aboveInfo { ctxs, tBind: tBind@(TermBind md x) } =
 
 type CtrParamListNodeCursorInfo
   = { isActive :: Boolean
-    , makeCursor :: Unit -> Maybe CursorLocation
-    , makeSelect :: Unit -> Maybe Select
+    , makeCursor :: Maybe CursorLocation
+    , makeSelect :: Maybe Select
     , ctrParams :: ListCtrParamRecValue
     }
 
@@ -628,11 +628,11 @@ ctrParamListToNode isActive aboveInfo ctrParams =
   where
   args =
     { isActive
-    , makeCursor: \_ -> Just $ CtrParamListCursor ctrParams.ctxs (aIGetPath aboveInfo) ctrParams.ctrParams
+    , makeCursor: justWhen isActive \_ ->  CtrParamListCursor ctrParams.ctxs (aIGetPath aboveInfo) ctrParams.ctrParams
     , makeSelect:
-        \_ -> case aboveInfo of
+        case aboveInfo of
           AICursor _path -> Nothing
-          AISelect topPath topCtx topCtrParams midPath -> Just $ CtrParamListSelect topPath topCtx topCtrParams midPath ctrParams.ctxs ctrParams.ctrParams topSelectOrientation
+          AISelect topPath topCtx topCtrParams midPath -> justWhen isActive \_ ->  CtrParamListSelect topPath topCtx topCtrParams midPath ctrParams.ctxs ctrParams.ctrParams topSelectOrientation
           AINothing -> Nothing
     , ctrParams
     }
@@ -650,8 +650,8 @@ stepKidsTypeArgList isActive tyArgs kids = case tyArgs of
 
 type TypeArgListNodeCursorInfo
   = { isActive :: Boolean
-    , makeCursor :: Unit -> Maybe CursorLocation
-    , makeSelect :: Unit -> Maybe Select
+    , makeCursor :: Maybe CursorLocation
+    , makeSelect :: Maybe Select
     , tyArgs :: ListTypeArgRecValue
     }
 
@@ -681,8 +681,8 @@ typeArgListToNode isActive aboveInfo tyArgs =
   where
   args =
     { isActive
-    , makeCursor: \_ -> Nothing -- \_ -> Just $ TypeArgListCursor tyArgs.ctxs (aIGetPath aboveInfo) tyArgs.tyArgs
-    , makeSelect: \_ -> Nothing
+    , makeCursor: Nothing -- \_ -> Just $ TypeArgListCursor tyArgs.ctxs (aIGetPath aboveInfo) tyArgs.tyArgs
+    , makeSelect: Nothing
     --            \_ -> case aboveInfo of
     --                AICursor _path -> Nothing
     --                AISelect topPath topCtx topTypeArgs midPath -> Just $ TypeArgListSelect topPath topCtx topTypeArgs midPath tyArgs.ctxs tyArgs.tyArgs topSelectOrientation
@@ -703,8 +703,8 @@ stepKidsCtrList isActive ctrs kids = case ctrs of
 
 type CtrListNodeCursorInfo
   = { isActive :: Boolean
-    , makeCursor :: Unit -> Maybe CursorLocation
-    , makeSelect :: Unit -> Maybe Select
+    , makeCursor :: Maybe CursorLocation
+    , makeSelect :: Maybe Select
     , ctrs :: ListCtrRecValue
     }
 
@@ -734,11 +734,11 @@ ctrListToNode isActive aboveInfo ctrs =
   where
   args =
     { isActive
-    , makeCursor: \_ -> Just $ CtrListCursor ctrs.ctxs (aIGetPath aboveInfo) ctrs.ctrs
+    , makeCursor: justWhen isActive \_ ->  CtrListCursor ctrs.ctxs (aIGetPath aboveInfo) ctrs.ctrs
     , makeSelect:
-        \_ -> case aboveInfo of
+        case aboveInfo of
           AICursor _path -> Nothing
-          AISelect topPath topCtx topCtrs midPath -> Just $ CtrListSelect topPath topCtx topCtrs midPath ctrs.ctxs ctrs.ctrs topSelectOrientation
+          AISelect topPath topCtx topCtrs midPath -> justWhen isActive \_ ->  CtrListSelect topPath topCtx topCtrs midPath ctrs.ctxs ctrs.ctrs topSelectOrientation
           AINothing -> Nothing
     , ctrs
     }
@@ -750,8 +750,8 @@ stepInsideHoleKids _ = unsafeThrow "insideHole doesn't have kids"
 
 type InsideHoleCursorInfo
   = { isActive :: Boolean
-    , makeCursor :: Unit -> Maybe CursorLocation
-    , makeSelect :: Unit -> Maybe Select
+    , makeCursor :: Maybe CursorLocation
+    , makeSelect :: Maybe Select
     }
 
 arrangeInsideHole :: InsideHoleCursorInfo -> Node
@@ -769,8 +769,8 @@ insideHoleToNode :: Boolean -> AboveInfo Unit -> InsideHoleRecValue -> Node
 insideHoleToNode isActive aboveInfo inside =
   arrangeInsideHole
     { isActive
-    , makeCursor: \_ -> Just $ InsideHoleCursor inside.ctxs inside.ty (aIGetPath aboveInfo)
-    , makeSelect: \_ -> Nothing
+    , makeCursor: justWhen isActive \_ ->  InsideHoleCursor inside.ctxs inside.ty (aIGetPath aboveInfo)
+    , makeSelect: Nothing
     }
 
 -- | Change
