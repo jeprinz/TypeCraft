@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Backend } from '../Backend';
 import Editor, { setHoverId, HoverId, setMouseDown, freshHoverId, unsetHoverId, isMouseDown } from "../Editor";
-import { Node } from "../Node";
+import { Node, NodeMetadata } from "../Node";
 import * as Punc from './Punctuation';
 import assert from 'assert';
 import { fromBackendState, toBackendState } from '../../../TypeCraft/Typescript/State';
@@ -155,9 +155,13 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         )
       }
 
+      // lists 
+
       if ((node.styles.includes('list-head') || node.styles.includes('list-head-var')) && node.tag.includes("list nil")) {
         kids = ([] as JSX.Element[]).concat([Punc.angleL], kids)
       }
+
+      // holes
 
       // if cursoring at the hole-inner, instead of showing normal stuff inside
       // hole (e.g. "?"), show a vertical line cursor and the query string
@@ -166,8 +170,28 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           kids = [<span className="hole-inner-cursor">|</span>]
         else
           kids = [
-            <span className="hole-innner-query-string">{node.queryString}<span className="hole-inner-cursor">|</span></span>,
+            <span className="hole-inner-query-string">{node.queryString}<span className="hole-inner-cursor">|</span></span>,
           ]
+      }
+
+      // labels
+
+      let md = node.metadata
+      if (md !== undefined) {
+        let isBind = false
+        let label: string | undefined
+
+        switch (md.case) {
+          case 'tm-bnd': isBind = true; label = md.label; break
+          case 'ty-bnd': isBind = true; label = md.label; break
+          default: break
+        }
+
+        if (isBind && label !== undefined) {
+          kids = [
+            <span className="bnd-inner">{label}<span className="bnd-cursor">|</span></span>
+          ]
+        }
       }
 
       kids = [
@@ -283,7 +307,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         return elems.flat()
       }
 
-      // const showLabel = (label: string | undefined) => label !== undefined ? (label.length > 0 ? label : "~") : "<undefined>"
       const renderLabel = (label: string | undefined): JSX.Element[] => {
         if (label !== undefined) {
           if (label.length > 0)
@@ -304,6 +327,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         }
       }
 
+      let classNames: string[] = []
       switch (node.tag) {
         case 'ty arr': return go(node, rndCtx, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat(), indentationLevel)
         case 'ty hol':
@@ -335,13 +359,13 @@ export default function makeFrontend(backend: Backend): JSX.Element {
               </span>
           ].flat(), indentationLevel)
         case 'ty neu':
-//           assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)
-//           assert(node.metadata !== undefined, 'bla bla bla')
+          //           assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)
+          //           assert(node.metadata !== undefined, 'bla bla bla')
           // TODO: Note from jacob: I put this if statement because the code was crashing when it was displaying a CNeu. This case at least makes it not crash. We should make it display the right thing in the future.
-          if (node.metadata === undefined || node.metadata.case !== 'ty neu'){
-            return go (node, rndCtx, ["ty_neu"], [[Punc.braceL], [Punc.braceL], [Punc.braceR], [Punc.braceR]].flat(), indentationLevel)
-          }{
-              return go(node, rndCtx, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
+          if (node.metadata === undefined || node.metadata.case !== 'ty neu') {
+            return go(node, rndCtx, ["ty_neu"], [[Punc.braceL], [Punc.braceL], [Punc.braceR], [Punc.braceR]].flat(), indentationLevel)
+          } {
+            return go(node, rndCtx, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
           }
         case 'ty cx-boundary': return go(node, rndCtx, ["ty_cx-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel)
         case 'poly-ty forall': return go(node, rndCtx, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
@@ -355,7 +379,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm let': return go(node, rndCtx, ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm dat': return go(node, rndCtx, ["tm_dat"], [[Punc.data], kid(), kid(), [Punc.assign_shortFront], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-let': return go(node, rndCtx, ["tm_ty-let"], [[Punc.let_], kid(), kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
-//         case 'tm ty-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat(), indentationLevel) // TODO: render typechange
+        //         case 'tm ty-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR], <div className="node tm_ty-boundary-change">{kid()}</div>].flat(), indentationLevel) // TODO: render typechange
         // Jacob note: I removed the part that displays the typechange because displaying typechanges is completely broken and just crashes
         case 'tm ty-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render typechange
         case 'tm cx-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
@@ -371,10 +395,14 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm buf': return go(node, rndCtx, ["tm_buf"], [[Punc.buffer], kid(), [Punc.colon], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'ty-bnd':
           assert(node.metadata !== undefined && node.metadata.case === 'ty-bnd', `node.metadata.case was expected to be 'ty-bnd', but it actually was ${node.metadata?.case}`)
-          return go(node, rndCtx, ["ty-bnd"], renderLabel(node.metadata.label), indentationLevel)
+          classNames = ["ty-bnd"]
+          if (node.metadata.label.length === 0) classNames.push("bnd-empty")
+          return go(node, rndCtx, classNames, renderLabel(node.metadata.label), indentationLevel)
         case 'tm-bnd':
           assert(node.metadata !== undefined && node.metadata.case === 'tm-bnd', `node.metadata.case was expected to be 'tm-bnd', but it actually was ${node.metadata?.case}`)
-          return go(node, rndCtx, ["tm-bnd"], renderLabel(node.metadata.label), indentationLevel)
+          classNames = ["tm-bnd"]
+          if (node.metadata.label.length === 0) classNames.push("bnd-empty")
+          return go(node, rndCtx, classNames, renderLabel(node.metadata.label), indentationLevel)
         case 'ctr-prm':
           // TODO: label
           assert(node.metadata !== undefined && node.metadata.case === 'ctr-prm', `node.metadata.case was expected to be 'ctr-prm', but it actually was ${node.metadata?.case}`)
