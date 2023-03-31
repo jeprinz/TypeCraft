@@ -1,5 +1,5 @@
 :root {
-  --node-box-shadow-thickness: 0.2rem;
+  --node-box-shadow-thickness: 0.3rem;
   --node-box-shadow-thickness-neg: calc(-1 * var(--node-box-shadow-thickness));
 
   --cursor-background-color: rgb(244, 244, 244);
@@ -34,51 +34,24 @@
   display: inline-block;
   margin: 0 0;
   padding: 0 0.2rem;
+  min-width: 0.5rem;
   border-radius: 0;
 }
 
 .node.hole-inner.cursor {
   box-shadow: none;
   border-radius: 0;
-  /* box-shadow: 2px 0 0 0 black; */
+  background-color: unset;
 }
 
 .node.hole-inner.cursor .hole-inner-cursor {
-  animation: blink-animation 1s steps(2, start) infinite;
-  -webkit-animation: blink-animation 1s steps(2, start) infinite;
+  animation: blink-visibility-animation 1s steps(2, start) infinite;
+  -webkit-animation: blink-visibility-animation 1s steps(2, start) infinite;
 }
 
-@keyframes blink-animation {
-  to {
-    visibility: hidden;
-  }
+.node.hole-inner:hover {
+  background-color: unset;
 }
-
-@-webkit-keyframes blink-animation {
-  to {
-    visibility: hidden;
-  }
-}
-
-
-/* 
-TODO: old style, with just "?" inside hole
-.node.hole-inner {
-  margin: 0 0;
-
-  transition-property: margin;
-  transition-duration: 0.2s;
-  transition-timing-function: linear;
-}
-
-.node.hole-inner.cursor {
-  margin: 0 0.4rem;
-
-  transition-property: margin;
-  transition-duration: 0.2s;
-  transition-timing-function: linear;
-} 
-*/
 
 /* ty_hol */
 
@@ -86,9 +59,7 @@ TODO: old style, with just "?" inside hole
   border: 2px dotted black;
 }
 
-.ty_hol-substitution {
-
-}
+.ty_hol-substitution {}
 
 .ty_hol-inner {
   display: inline-block;
@@ -103,10 +74,6 @@ TODO: old style, with just "?" inside hole
 .node.cursorable>.ty_hol-inner:hover {
   /* background-color: rgba(255, 174, 193, 0.5); */
 }
-
-/* tm_ty-boundary */
-
-.node.tm_ty-boundary-change {}
 
 /* query */
 
@@ -266,23 +233,6 @@ TODO: old style, with just "?" inside hole
   width: 1rem;
 }
 
-/* label */
-
-.label {}
-
-.label-empty {
-  border-radius: 0.2rem;
-  padding: 0 0.2rem;
-  display: inline-block;
-  white-space: pre;
-  /* background-color: rgb(255, 214, 157); */
-  box-shadow: 0 0 0 1px rgb(255, 182, 80) inset, 0 0 2px 1px black inset;
-}
-
-.node.cursorable>.label-empty:hover {
-  /* background-color: rgb(255, 231, 198); */
-}
-
 /* cursor, select, etc. */
 
 
@@ -293,6 +243,10 @@ TODO: old style, with just "?" inside hole
 
 .node.cursor {
   box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue, var(--node-box-shadow-thickness) 0 0 0 blue;
+  background-color: var(--cursor-background-color);
+
+  animation: blink-box-shadow-animation 1s steps(2, start) infinite;
+  -webkit-animation: blink-box-shadow-animation 1s steps(2, start) infinite;
 }
 
 .node.selectable {
@@ -302,14 +256,14 @@ TODO: old style, with just "?" inside hole
 
 .node.select-top {
   border-radius: 0.2rem;
-  box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue, var(--node-box-shadow-thickness) 0 0 0 blue;
+  box-shadow: calc(0.5*var(--node-box-shadow-thickness-neg)) 0 0 0 blue, calc(0.5 * var(--node-box-shadow-thickness)) 0 0 0 blue;
   background-color: var(--select-background-color)
 }
 
 .node.select-bot {
   border-radius: 0.2rem;
-  box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue, var(--node-box-shadow-thickness) 0 0 0 blue;
-  background-color: white;
+  box-shadow: calc(0.5*var(--node-box-shadow-thickness-neg)) 0 0 0 blue, calc(0.5*var(--node-box-shadow-thickness)) 0 0 0 blue;
+  background-color: var(--cursor-background-color)
 }
 
 .node.query-replace-new {
@@ -324,6 +278,59 @@ TODO: old style, with just "?" inside hole
   padding: 0 0.2rem;
   background-color: rgb(205, 205, 205);
   box-shadow: 0 0 0 1px black;
+}
+
+
+
+/* binds and labels */
+
+.label {
+  display: inline-block;
+  border-radius: 0.2rem;
+}
+
+.label-empty {
+  /* border: 1px dotted red; */
+  /* background-color: orange; */
+  /* box-shadow: 0 0 0 1px orange; */
+  box-shadow: 0 0 0 1px rgb(255, 182, 80) inset, 0 0 2px 1px black inset;
+  padding: 0 0.2rem;
+}
+
+.node .bnd-inner {
+  display: inline-block;
+  margin: 0 0;
+  padding: 0 0.2rem;
+  min-width: 0.4rem;
+}
+
+.bnd-cursor {
+  visibility: hidden;
+  animation: blink-visibility-animation 1s steps(2, start) infinite;
+  -webkit-animation: blink-visibility-animation 1s steps(2, start) infinite;
+}
+
+.node.cursor>.bnd-inner>.bnd-cursor {
+  visibility: visible;
+}
+
+.node.tm-bnd.cursor,
+.node.ty-bnd.cursor {
+  box-shadow: none;
+}
+
+.node.tm-bnd.bnd-empty,
+.node.tm-bnd.cursor.bnd-empty {
+  display: inline-block;
+
+  animation: none;
+  -webkit-animation: none;
+
+  border-radius: 0.2rem;
+  /* padding: 0 0.2rem; */
+  white-space: pre;
+  /* background-color: rgb(255, 214, 157); */
+  box-shadow: 0 0 0 1px rgb(255, 182, 80) inset, 0 0 2px 1px black inset;
 }
 
 /* lists */
@@ -349,7 +356,7 @@ TODO: old style, with just "?" inside hole
 
 .punctuation.listNil {
   display: inline-block;
-  width: var(--node-box-shadow-thickness);
+  width: calc(0.5*var(--node-box-shadow-thickness));
   margin-left: 0.1rem;
 }
 
@@ -372,17 +379,19 @@ TODO: old style, with just "?" inside hole
 
 .node.list.nil.cursor>.listNil {
   background-color: blue;
+  animation: blink-background-color-animation 1s steps(2, start) infinite;
+  -webkit-animation: blink-background-color-animation 1s steps(2, start) infinite;
 }
 
 .node.list.cons.select-top {
   border-radius: 0;
-  box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
+  box-shadow: inset calc(0.5 * var(--node-box-shadow-thickness)) 0 0 0 blue;
   background-color: var(--select-background-color)
 }
 
 .node.list.cons.select-bot {
   border-radius: 0;
-  box-shadow: inset var(--node-box-shadow-thickness) 0 0 0 blue;
+  box-shadow: inset calc(0.5 * var(--node-box-shadow-thickness)) 0 0 0 blue;
   background-color: white;
 }
 
@@ -539,6 +548,42 @@ TODO: old style, with just "?" inside hole
   margin-right: 1rem;
 } */
 
+/* hover:cursor: */
+
+.hole-inner.cursorable {
+  cursor: text;
+}
+
+.cursorable > .bnd-inner {
+  cursor: text;
+}
+
+/* tm_ty-boundary */
+
+.tm_ty-boundary-inner {
+  display: inline-block;
+  border-radius: 0.2rem;
+  padding: 0 0.1rem;
+  /* padding: 0 0.2rem; */
+  /* background-color: rgb(255, 211, 192); */
+  /* box-shadow: 0 0 0 4px rgb(255, 211, 192) inset; */
+}
+
+.node.tm_ty-boundary-term {
+  display: inline-block;
+  margin-right: 0.1rem;
+}
+
+.node.tm_ty-boundary-change {
+  display: inline-block;
+  margin-left: 0.1rem;
+  padding: 0 0.2rem;
+  box-shadow: 
+    0 0 0 2px purple inset, 
+    0 0 2px 1px black inset,
+    0 0 5px 0 rgb(93, 93, 93);
+}
+
 /* misc */
 
 .apologize {
@@ -568,4 +613,42 @@ TODO: old style, with just "?" inside hole
 
   position: absolute;
   bottom: 0;
+}
+
+/* animations */
+
+@keyframes blink-visibility-animation {
+  to {
+    visibility: hidden;
+  }
+}
+
+@-webkit-keyframes blink-visibility-animation {
+  to {
+    visibility: hidden;
+  }
+}
+
+@keyframes blink-box-shadow-animation {
+  to {
+    box-shadow: none;
+  }
+}
+
+@-webkit-keyframes blink-box-shadow-animation {
+  to {
+    box-shadow: none;
+  }
+}
+
+@keyframes blink-background-color-animation {
+  to {
+    background-color: unset;
+  }
+}
+
+@-webkit-keyframes blink-background-color-animation {
+  to {
+    background-color: unset;
+  }
 }
