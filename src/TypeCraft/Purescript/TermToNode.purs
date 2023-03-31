@@ -17,7 +17,7 @@ import Debug (trace, traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext, typeVarGetName)
 import TypeCraft.Purescript.CursorMovement (getMiddlePath)
-import TypeCraft.Purescript.Grammar (Change(..), Constructor(..), CtrParam(..), SubChange(..), Term(..), TermBind(..), Tooth(..), Type(..), TypeArg(..), TypeBind(..), TypeVar(..), TypeVarID(..), UpPath)
+import TypeCraft.Purescript.Grammar (CTypeVar(..), Change(..), Constructor(..), CtrParam(..), SubChange(..), Term(..), TermBind(..), Tooth(..), Type(..), TypeArg(..), TypeBind(..), TypeVar(..), TypeVarID(..), UpPath)
 import TypeCraft.Purescript.MD (defaultTHoleMD)
 import TypeCraft.Purescript.Util (justWhen, lookup')
 
@@ -786,8 +786,8 @@ changeToNode val = case val.ch of
     makeChangeNode
       { tag: ArrowNodeTag
       , kids:
-          [ changeToNode val { ch = ch1 }
-          , changeToNode val { ch = ch2 }
+          [ parenthesizeChangeChildNode ch1 $ changeToNode val { ch = ch1 }
+          , parenthesizeChangeChildNode ch2 $ changeToNode val { ch = ch2 }
           ]
       }
   CHole holeId wkn sigma ->
@@ -807,20 +807,19 @@ changeToNode val = case val.ch of
           , kids: []
           }
   Replace ty1 ty2 ->
-    setNodeIsParenthesized true
-      $ makeChangeNode
-          { tag: ReplaceNodeTag
-          , kids:
-              [ typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty: ty1 }
-              , typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty: ty2 }
-              ]
-          }
+    makeChangeNode
+      { tag: ReplaceNodeTag
+      , kids:
+          [ typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty: ty1 }
+          , typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty: ty2 }
+          ]
+      }
   Plus ty ch ->
     makeChangeNode
       { tag: PlusNodeTag
       , kids:
           [ typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty }
-          , changeToNode val { ch = ch }
+          , parenthesizeChangeChildNode ch $ changeToNode val { ch = ch }
           ]
       }
   Minus ty ch ->
@@ -828,14 +827,31 @@ changeToNode val = case val.ch of
       { tag: MinusNodeTag
       , kids:
           [ changeToNode val { ch = ch }
-          , typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty }
+          , parenthesizeChangeChildNode ch $ typeToNode false dummyAboveInfo { ctxs: val.ctxs, ty }
           ]
       }
-  CNeu id args ->
-    makeChangeNode
-      { tag: TNeuNodeTag
-      , kids: [] -- TODO: type args 
-      }
+  CNeu cTypeVar _args ->
+    setNodeMetadata
+      ( makeTNeuNodeMetadata case cTypeVar of
+          CTypeVar x -> typeVarGetName val.ctxs.mdkctx (TypeVar x)
+          CCtxBoundaryTypeVar _k _mb_typeDefVal str _typeVarID -> "{{" <> str <> "}}"
+          PlusCtxBoundaryTypeVar _k _mb_typeDefVal str _typeVarID -> "+" <> str
+          MinusCtxBoundaryTypeVar _k _mb_typeDefVal str _typeVarID -> "-" <> str
+      )
+      $ makeChangeNode
+          { tag: TNeuNodeTag
+          , kids: [] -- TODO: type args 
+          }
+
+parenthesizeChangeChildNode :: Change -> Node -> Node
+parenthesizeChangeChildNode ch =
+  setNodeIsParenthesized case ch of
+    CArrow _ _ -> true
+    CHole _ _ _ -> false
+    Replace _ _ -> true
+    Plus _ _ -> true
+    Minus _ _ -> true
+    CNeu _ args -> not $ List.null args
 
 -- since this will never be used for non-cursorable things
 -- TODO: make AboveInfo a Maybe, so that when its nothing covers the false

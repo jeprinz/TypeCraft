@@ -75,15 +75,6 @@
   /* background-color: rgba(255, 174, 193, 0.5); */
 }
 
-/* tm_ty-boundary */
-
-.node.tm_ty-boundary-change {
-  box-shadow: 
-    0 0 0 1px purple inset, 
-    0 0 2px 1px black inset,
-    0 0 5px 0 black;
-}
-
 /* query */
 
 .query {
@@ -288,6 +279,8 @@
   background-color: rgb(205, 205, 205);
   box-shadow: 0 0 0 1px black;
 }
+
+
 
 /* binds and labels */
 
@@ -563,6 +556,32 @@
 
 .cursorable > .bnd-inner {
   cursor: text;
+}
+
+/* tm_ty-boundary */
+
+.tm_ty-boundary-inner {
+  display: inline-block;
+  border-radius: 0.2rem;
+  padding: 0 0.1rem;
+  /* padding: 0 0.2rem; */
+  /* background-color: rgb(255, 211, 192); */
+  /* box-shadow: 0 0 0 4px rgb(255, 211, 192) inset; */
+}
+
+.node.tm_ty-boundary-term {
+  display: inline-block;
+  margin-right: 0.1rem;
+}
+
+.node.tm_ty-boundary-change {
+  display: inline-block;
+  margin-left: 0.1rem;
+  padding: 0 0.2rem;
+  box-shadow: 
+    0 0 0 2px purple inset, 
+    0 0 2px 1px black inset,
+    0 0 5px 0 rgb(93, 93, 93);
 }
 
 /* misc */
