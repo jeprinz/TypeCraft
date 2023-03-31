@@ -49,24 +49,9 @@
   -webkit-animation: blink-visibility-animation 1s steps(2, start) infinite;
 }
 
-/* 
-TODO: old style, with just "?" inside hole
-.node.hole-inner {
-  margin: 0 0;
-
-  transition-property: margin;
-  transition-duration: 0.2s;
-  transition-timing-function: linear;
+.node.hole-inner:hover {
+  background-color: unset;
 }
-
-.node.hole-inner.cursor {
-  margin: 0 0.4rem;
-
-  transition-property: margin;
-  transition-duration: 0.2s;
-  transition-timing-function: linear;
-} 
-*/
 
 /* ty_hol */
 
