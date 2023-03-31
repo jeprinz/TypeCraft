@@ -6,6 +6,18 @@ import * as Punc from './Punctuation';
 import assert from 'assert';
 import { fromBackendState, toBackendState } from '../../../TypeCraft/Typescript/State';
 
+var time_previous: number | undefined = undefined
+function timestamp(label: string) {
+  const time_now = (new Date()).getTime()
+  if (time_previous !== undefined) {
+    const time_diff = time_now - time_previous
+    console.log(`[timestamp | ${label}]`, `${time_now}ms`, `dt = ${time_diff}ms`)
+  } else {
+    console.log(`[timestamp | ${label}]`, `${time_now}ms`)
+  }
+  time_previous = time_now
+}
+
 type RenderContext = { isInsideCursor: boolean, steps: number[] }
 
 const emptyRenderContext: RenderContext = { isInsideCursor: false, steps: [] }
@@ -70,6 +82,8 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       kids: JSX.Element[],
       indentationLevel: number,
     ): JSX.Element[] {
+      timestamp("render")
+
       const hoverId = hoverIdOfRenderContext(rndCtx)
       // TODO: temporarily disabled until this is useful
       // if (rndCtx.isInsideCursor) { classNames.push("insideCursor") }
@@ -124,7 +138,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
-          console.log("onMouseDown on node with tag: " + node.tag)
+          // console.log("onMouseDown on node with tag: " + node.tag)
           editor.setBackendState(toBackendState(getCursor(fromBackendState(editor.state.backendState))))
           event.stopPropagation()
         }
@@ -142,7 +156,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           editor.setBackendState(toBackendState(getSelect(fromBackendState(editor.state.backendState))))
           event.stopPropagation()
         }
-        else console.log(`getSelect is undefined for this '${node.tag}' node`)
+        // else console.log(`getSelect is undefined for this '${node.tag}' node`)
       }
 
       function renderCompletion(node_: Node, i: number) {
@@ -383,7 +397,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         // Jacob note: I removed the part that displays the typechange because displaying typechanges is completely broken and just crashes
         // case 'tm ty-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel)
         case 'tm ty-boundary':
-          console.log("rendering ty-boundary", node)
+          // console.log("rendering ty-boundary", node)
           return go(node, rndCtx, ["tm_ty-boundary"], [<div className="tm_ty-boundary-inner">{[[Punc.braceL], <div className="node tm_ty-boundary-term">{kid()}</div>, [Punc.vertical], <div className="node tm_ty-boundary-change">{kid()}</div>, [Punc.braceR]]}</div>].flat(), indentationLevel)
 
         case 'tm cx-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
@@ -441,14 +455,23 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
+    timestamp("handleKeyboardEvent: event triggered")
+    
     // always capture these events:
     if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter"].includes(event.key) && !(event.metaKey || event.ctrlKey)) event.preventDefault()
     if (event.key == "p" && (event.ctrlKey || event.metaKey)) event.preventDefault()
 
+    timestamp("handleKeyboardEvent: querying to backend")
     const backendState = editor.props.backend.handleKeyboardEvent(event)(editor.state.backendState)
+    timestamp("handleKeyboardEvent: answered by backend")
+
     if (backendState === undefined) {
+      // backend state said that update fails (not an error) e.g. move right when
+      // there's nowhere rightwards to move to
       return
     }
+
+    timestamp("handleKeyboardEvent: updating react state (triggered redraw)")
     editor.setBackendState(backendState)
   }
 
