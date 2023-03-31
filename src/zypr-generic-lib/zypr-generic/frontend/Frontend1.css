@@ -92,7 +92,12 @@ TODO: old style, with just "?" inside hole
 
 /* tm_ty-boundary */
 
-.node.tm_ty-boundary-change {}
+.node.tm_ty-boundary-change {
+  box-shadow: 
+    0 0 0 1px purple inset, 
+    0 0 2px 1px black inset,
+    0 0 5px 0 black;
+}
 
 /* query */
 
@@ -567,14 +572,13 @@ TODO: old style, with just "?" inside hole
 
 /* hover:cursor: */
 
-.hole-inner {
+.hole-inner.cursorable {
   cursor: text;
 }
 
-.bnd-inner {
+.cursorable > .bnd-inner {
   cursor: text;
 }
-
 
 /* misc */
 

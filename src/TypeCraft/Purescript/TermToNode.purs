@@ -17,7 +17,8 @@ import Debug (trace, traceM)
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Context (AllContext, typeVarGetName)
 import TypeCraft.Purescript.CursorMovement (getMiddlePath)
-import TypeCraft.Purescript.Grammar (Change(..), Constructor(..), CtrParam(..), Term(..), TermBind(..), Tooth(..), Type(..), TypeArg(..), TypeBind(..), TypeVar(..), TypeVarID(..), UpPath)
+import TypeCraft.Purescript.Grammar (Change(..), Constructor(..), CtrParam(..), SubChange(..), Term(..), TermBind(..), Tooth(..), Type(..), TypeArg(..), TypeBind(..), TypeVar(..), TypeVarID(..), UpPath)
+import TypeCraft.Purescript.MD (defaultTHoleMD)
 import TypeCraft.Purescript.Util (justWhen, lookup')
 
 data AboveInfo syn
@@ -327,7 +328,7 @@ arrangeType args =
 
 typeToNode :: Boolean -> AboveInfo Type -> TypeRecValue -> Node
 typeToNode isActive aboveInfo ty =
---  trace ("typeToNode called on ty: " <> show ty) \_ ->
+  --  trace ("typeToNode called on ty: " <> show ty) \_ ->
   recType
     { arrow:
         \md ty1 ty2 ->
@@ -337,16 +338,15 @@ typeToNode isActive aboveInfo ty =
             ]
     , tNeu:
         \md x tyArgs ->
-          let wrap =
-                case x of
-                    (CtxBoundaryTypeVar _kind _mtd _name _x) ->
-                        makeWrapperNode TContextBoundaryNodeTag
-                    _ -> \ node -> node
+          let
+            wrap = case x of
+              (CtxBoundaryTypeVar _kind _mtd _name _x) -> makeWrapperNode TContextBoundaryNodeTag
+              _ -> \node -> node
           in
-          wrap $ setNodeMetadata (makeTNeuNodeMetadata (typeVarGetName ty.ctxs.mdkctx x))
-            $ arrangeType args
-                [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
-                ]
+            wrap $ setNodeMetadata (makeTNeuNodeMetadata (typeVarGetName ty.ctxs.mdkctx x))
+              $ arrangeType args
+                  [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
+                  ]
     , tHole:
         \md x weakenings substitutions ->
           setNodeMetadata
@@ -790,11 +790,22 @@ changeToNode val = case val.ch of
           , changeToNode val { ch = ch2 }
           ]
       }
-  CHole _ _ _ ->
-    makeChangeNode
-      { tag: THoleNodeTag
-      , kids: []
-      }
+  CHole holeId wkn sigma ->
+    setNodeMetadata
+      ( makeTHoleNodeMetadata holeId
+          ((typeVarGetName val.ctxs.mdkctx <<< TypeVar) <$> Set.toUnfoldable wkn)
+          ( ( \(_typeVarId /\ subChange) -> case subChange of
+                SubTypeChange ch -> { typeVarID: "TODO", type_: changeToNode { ch, ctxs: val.ctxs } }
+                SubDelete ty -> { typeVarID: "TODO", type_: typeToNode false dummyAboveInfo { ty, ctxs: val.ctxs } }
+                SubInsert ty -> { typeVarID: "TODO", type_: typeToNode false dummyAboveInfo { ty, ctxs: val.ctxs } }
+            )
+              <$> Map.toUnfoldable sigma
+          )
+      )
+      $ makeChangeNode
+          { tag: THoleNodeTag
+          , kids: []
+          }
   Replace ty1 ty2 ->
     setNodeIsParenthesized true
       $ makeChangeNode
