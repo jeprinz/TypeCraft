@@ -139,7 +139,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
           // console.log("onMouseDown on node with tag: " + node.tag)
+          
+          // !TMP temporarily disabled
           editor.setBackendState(toBackendState(getCursor(fromBackendState(editor.state.backendState))))
+          
           event.stopPropagation()
         }
         // else console.log(`getCursor is undefined for this '${node.tag}' node`)
@@ -450,7 +453,15 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       }
     }
 
-    return renderNode(backend.props.format(editor.state.backendState), emptyRenderContext, 0)
+    timestamp("render, call backend State -> Node")
+    const node = backend.props.format(editor.state.backendState)
+    timestamp("render, got Node from backend")
+
+    timestamp("render; call renderNode")
+    const jsx = renderNode(node, emptyRenderContext, 0)
+    timestamp("render; got JSX from renderNode")
+
+    return jsx
   }
 
 
@@ -471,8 +482,9 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       return
     }
 
-    timestamp("handleKeyboardEvent: updating react state (triggered redraw)")
+    timestamp("handleKeyboardEvent: begin setting react state")
     editor.setBackendState(backendState)
+    timestamp("handleKeyboardEvent: finished setting react state (will trigger re-render)")
   }
 
   const initState = backend.state
