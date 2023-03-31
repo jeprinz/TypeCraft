@@ -56,7 +56,6 @@ chTerm kctx ctx c t =
                     let ct2 /\ t2' = chTerm kctx ctx (tyInject argTy) t2 in
                     c1' /\ Buffer defaultBufferMD t2 (snd (getEndpoints ct2)) t1' (snd (getEndpoints c1))
                 (CArrow c1a c1b) ->
-                    trace ("c1b is " <> show c1b) \_ ->
                     let c2 /\ t2' = chTerm kctx ctx c1a t2 in
                     let t2'' = if chIsId c2
                         then t2'
@@ -73,7 +72,7 @@ chTerm kctx ctx c t =
                 -- try the polymorphism case
 --                case getSubstitution cin (lookup x ctx)
                 let xVarCh = lookup' x ctx in
-                trace ("In var case here: cin is" <> show cin <> " and xVarCh is: " <> show xVarCh) \_ ->
+--                trace ("In var case here: cin is" <> show cin <> " and xVarCh is: " <> show xVarCh) \_ ->
                 case xVarCh of
                     -- TODO: CtxBoundary, and still need to change args!
                     VarDelete _ -> tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD -- later use context boundary
@@ -97,7 +96,10 @@ chTerm kctx ctx c t =
                             let ch /\ tyArgs' = chTypeArgs2 kctx tArgs pch in
                             ch /\ Var md x tyArgs'
                         else if pChIsId pch then
-                            tyInject (snd (getEndpoints cin)) /\ Buffer defaultBufferMD (Var md x tArgs) (fst (getEndpoints cin)) (Hole defaultHoleMD) (snd (getEndpoints cin)) -- TODO: shouldn't we call chTypeArgs2???
+                            let ch /\ tyArgs' = chTypeArgs2 kctx tArgs pch in
+                            tyInject (snd (getEndpoints cin)) /\
+--                                Buffer defaultBufferMD (Var md x tyArgs') (fst (getEndpoints cin)) (Hole defaultHoleMD) (snd (getEndpoints cin))
+                                Buffer defaultBufferMD (Var md x tyArgs') (snd (getEndpoints ch)) (Hole defaultHoleMD) (snd (getEndpoints cin))
                         else if null tArgs && pch == PChange cin then
                             (tyInject (snd (getEndpoints cin))) /\ Var md x Nil
                         else unsafeThrow ("I didn't think it was possible to have a non-id, non-equal typechange both from ctx and term in var case! (or equal but with tyArgs)" -- TODO: it is possible, for example id<A -> A> id<A>, and then apply a typechange to the type of id. In this situation, it should just use a TypeBoudnary!
@@ -176,17 +178,22 @@ doInsertArgs c t = c /\ t
 -- here, the output Change is the Change inside the input PolyChange.
 chTypeArgs2 :: KindChangeCtx -> List TypeArg -> PolyChange -> Change /\ (List TypeArg)
 chTypeArgs2 kctx Nil (PChange ch) = ch /\ Nil
-chTypeArgs2 kctx (tyArg@(TypeArg _ ty) : tyArgs) (CForall x pc) =
+chTypeArgs2 kctx ((TypeArg md ty) : tyArgs) (CForall x pc) =
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
-    let ch' = applySubChange { subTypeVars : (insert x ty empty) , subTHoles : empty} ch in -- What is this line doing????
-    ch' /\ tyArg : tyArgsOut
+    let ty' /\ tyCh = chType kctx ty in
+--    trace ("ty is: " <> show ty <> "ty' is: " <> show ty') \_ ->
+    let tyArg' = TypeArg md ty' in
+--applySubChangeGen :: CSub -> Change -> Change
+--    let ch' = applySubChange { subTypeVars : (insert x ty empty) , subTHoles : empty} ch in -- What is this line doing????
+    let ch' = applySubChangeGen { subTypeVars : (insert x (SubTypeChange tyCh) empty) , subTHoles : empty} ch in -- What is this line doing????
+    ch' /\ tyArg' : tyArgsOut
 chTypeArgs2 kctx tyArgs (PPlus x pc) =
     -- TODO: Here is where we need to deal with ADDING subs to holes!
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
-    trace ("tyArgs is: " <> show tyArgs <> " tyArgsOut is: " <> show tyArgsOut) \_ ->
+--    trace ("tyArgs is: " <> show tyArgs <> " tyArgsOut is: " <> show tyArgsOut) \_ ->
     let ty = (freshTHole unit) in
     let ch' = applySubChangeGen { subTypeVars : (insert x (SubInsert ty) empty) , subTHoles : empty} ch in -- What is this line doing????
-    trace ("the change afeter applying the sub is: " <> show ch') \_ ->
+--    trace ("the change afeter applying the sub is: " <> show ch') \_ ->
     ch' /\ (TypeArg defaultTypeArgMD ty) : tyArgsOut
 chTypeArgs2 kctx ((TypeArg _ ty) : tyArgs) (PMinus x pc) =
     -- TODO: Here is where we need to deal with removing subs from holes
@@ -201,7 +208,12 @@ chType kctx (Arrow md t1 t2) =
     let t1' /\ c1 = chType kctx t1 in
     let t2' /\ c2 = chType kctx t2 in
     Arrow md t1' t2' /\ CArrow c1 c2
-chType kctx (THole md x w s) = THole md x w s /\ CHole x w (subInject s) -- TODO: is this right?
+chType kctx (THole md x w s) =
+    let s'sch = map (chType kctx) s in
+    let s' = map fst s'sch in
+    let sch = map (SubTypeChange <<< snd) s'sch in
+--    THole md x w s' /\ CHole x w (subInject s) -- TODO: is this right?
+    THole md x w s' /\ CHole x w sch
 chType kctx (TNeu md tv args) =
     case tv of
         TypeVar x ->
