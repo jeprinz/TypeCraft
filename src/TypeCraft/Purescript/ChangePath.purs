@@ -272,7 +272,12 @@ chTypeArgPath ch tyArgPath =
 chListTypeBindPath :: ListTypeBindChange -> ListTypeBindPathRecValue -> UpPath
 chListTypeBindPath ch listTypeBindPath =
     recListTypeBindPath {
-        data2 : \termPath md tyBind ctrs body bodyTy -> hole'  "chListTypeBindPath"
+        data2 : \termPath md tyBind ctrs body bodyTy ->
+            -- We need to get:
+            -- KindChange for the datatypes itself
+            -- PolyChange for each constructor
+            -- PolyChange for the match function (once I implement that at all... )
+            hole'  "chListTypeBindPath"
         , tLet2 : \termPath md tyBind def body bodyTy -> hole'  "chListTypeBindPath"
         , typeBindListCons2 : \listTypeBindPath tyBind ->
             let listTypeBindPath' = chListTypeBindPath (ListTypeBindChangeCons tyBind.tyBind ch) listTypeBindPath in
