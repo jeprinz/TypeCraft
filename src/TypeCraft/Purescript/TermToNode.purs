@@ -840,7 +840,7 @@ changeToNode val = case val.ch of
       )
       $ makeChangeNode
           { tag: TNeuNodeTag
-          , kids: [] -- TODO: type args 
+          , kids: [] -- TODO: type args  -- Note from Jacob: Having 0 kids caused a crash, so I hacked a temporary solution in Frontend.tsx. When we fix this, remember to remove that temporary fix.
           }
 
 parenthesizeChangeChildNode :: Change -> Node -> Node

@@ -379,11 +379,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
               </span>
           ].flat(), indentationLevel)
         case 'ty neu':
-          //           assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)
-          //           assert(node.metadata !== undefined, 'bla bla bla')
-          // TODO: Note from jacob: I put this if statement because the code was crashing when it was displaying a CNeu. This case at least makes it not crash. We should make it display the right thing in the future.
-          if (node.metadata === undefined || node.metadata.case !== 'ty neu') {
-            return go(node, rndCtx, ["ty_neu"], [[Punc.braceL], [Punc.braceL], [Punc.braceR], [Punc.braceR]].flat(), indentationLevel)
+           assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)
+          // TODO: Note from jacob: I put this if statement because the code was crashing when it was displaying a CNeu (since it gave it no kids). This case at least makes it not crash. We should make it display the right thing in the future.
+          if (node.kids.length === 0) {
+            return go(node, rndCtx, ["ty_neu"], [[Punc.braceL], renderLabel(node.metadata.label), [Punc.braceL], [Punc.braceR], [Punc.braceR]].flat(), indentationLevel)
           } {
             return go(node, rndCtx, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
           }

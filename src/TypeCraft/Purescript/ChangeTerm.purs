@@ -183,14 +183,13 @@ chTypeArgs2 kctx (tyArg@(TypeArg _ ty) : tyArgs) (CForall x pc) =
 chTypeArgs2 kctx tyArgs (PPlus x pc) =
     -- TODO: Here is where we need to deal with ADDING subs to holes!
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
+    trace ("tyArgs is: " <> show tyArgs <> " tyArgsOut is: " <> show tyArgsOut) \_ ->
     let ty = (freshTHole unit) in
-    -- This is not right! applySubChange will put SubTypeChange for that var into each hole sub. But we need SubInsert
     let ch' = applySubChangeGen { subTypeVars : (insert x (SubInsert ty) empty) , subTHoles : empty} ch in -- What is this line doing????
     trace ("the change afeter applying the sub is: " <> show ch') \_ ->
     ch' /\ (TypeArg defaultTypeArgMD ty) : tyArgsOut
 chTypeArgs2 kctx ((TypeArg _ ty) : tyArgs) (PMinus x pc) =
     -- TODO: Here is where we need to deal with removing subs from holes
-    -- Similarly, here we need to place SubDelete for each hole sub
     let ch /\ tyArgsOut = chTypeArgs2 kctx tyArgs pc in
     let ch' = applySubChangeGen { subTypeVars : (insert x (SubDelete ty) empty) , subTHoles : empty} ch in -- What is this line doing????
     ch' /\ tyArgsOut
