@@ -130,7 +130,6 @@ chTerm kctx ctx c t =
 --                let ctx' = addLetToCCtx ctx tBind binds ty' in
                 let ctx' = insert' x (VarTypeChange (tyBindsWrapChange binds tyCh)) ctx in
                 let c2 /\ t2' = chTerm kctx ctx' c t2 in
-                trace ("In Let, tyCH is: " <> show tyCh) \_ ->
                 let t1'= chTermBoundary kctx' ctx' tyCh t1 in -- TODO: is this correct!?! should it first apply the kctx to the type?
                 -- TODO: apply change to x to the let itself!
                 c2 /\ Let md tBind binds t1' ty' t2' (snd (getEndpoints c2)) -- TODO: certianly, this will be a bug if a type is deleted for example. ty needs to get updated somehow!

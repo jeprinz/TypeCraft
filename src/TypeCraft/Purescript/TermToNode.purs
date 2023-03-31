@@ -75,7 +75,7 @@ arrangeNodeKids args kids =
     getCursor =
       join
         $ justWhen args.isActive \_ -> do
-            traceM "getCursor [purs]"
+--            traceM "getCursor [purs]"
             cursorLocation <- args.makeCursor
             Just (_ { mode = makeCursorMode cursorLocation })
   in

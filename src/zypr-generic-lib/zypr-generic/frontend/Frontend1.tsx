@@ -8,14 +8,17 @@ import { fromBackendState, toBackendState } from '../../../TypeCraft/Typescript/
 
 var time_previous: number | undefined = undefined
 function timestamp(label: string) {
-  const time_now = (new Date()).getTime()
-  if (time_previous !== undefined) {
-    const time_diff = time_now - time_previous
-    console.log(`[timestamp | ${label}]`, `${time_now}ms`, `dt = ${time_diff}ms`)
-  } else {
-    console.log(`[timestamp | ${label}]`, `${time_now}ms`)
+  const do_timestamps = false; // change to true to enable timestamps
+  if (do_timestamps){
+      const time_now = (new Date()).getTime()
+      if (time_previous !== undefined) {
+        const time_diff = time_now - time_previous
+        console.log(`[timestamp | ${label}]`, `${time_now}ms`, `dt = ${time_diff}ms`)
+      } else {
+        console.log(`[timestamp | ${label}]`, `${time_now}ms`)
+      }
+      time_previous = time_now
   }
-  time_previous = time_now
 }
 
 type RenderContext = { isInsideCursor: boolean, steps: number[] }

@@ -125,7 +125,7 @@ chTermPath ch termPath =
         --    let defCh /\ def' = chTerm kctx ctx (tyInject defTy) def in -- TODO: why would the def of the buffer ever change anyway?
             (kctx' /\ ctx') /\ Buffer3 md buf.term bufTy.ty {-def' (snd (getEndpoints defCh))-} (snd (getEndpoints ch)) : up'
         , typeBoundary1 : \up md change {-Term-} ->
-            let (kctx' /\ ctx') /\ up' = chTermPath (tyInject (snd (getEndpoints ch))) up in
+            let (kctx' /\ ctx') /\ up' = chTermPath (tyInject (snd (getEndpoints change))) up in
             (kctx' /\ ctx') /\ TypeBoundary1 md (composeChange (invert ch) change) : up'
         , contextBoundary1 : \up md x varCh {-Term-} ->
             let (kctx' /\ ctx'') /\ up' = chTermPath ch up in
