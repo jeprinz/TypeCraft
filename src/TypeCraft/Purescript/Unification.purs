@@ -21,6 +21,7 @@ import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.TypeChangeAlgebra (normalizeType)
 import TypeCraft.Purescript.Util (hole')
+import Data.Traversable (sequence)
 
 -- * unification
 type Unify a
@@ -51,9 +52,25 @@ unify ty1 ty2 = case ty1 /\ ty2 of
   _ /\ THole _ hid _ _ -> unify ty2 ty1
   Arrow md tyA1 tyB1 /\ Arrow _ tyA2 tyB2 -> Arrow md <$> unify tyA1 tyA2 <*> unify tyB1 tyB2
   -- TODO: handle type arguments
+  TNeu md tv1 tyArgs1 /\ TNeu _ tv2 tyArgs2 | tv1 == tv2 -> do
+    tyArgs <- unifyTypeArgs tyArgs1 tyArgs2
+    pure $ TNeu md tv1 tyArgs
+--    sequence ?h ?h
   _
     | ty1 == ty2 -> pure ty1
     | otherwise -> Except.throwError $ "types do not unify: (" <> show ty1 <> ") ~ (" <> show ty2 <> ")"
+
+unifyTypeArgs :: List.List TypeArg -> List.List TypeArg -> Unify (List.List TypeArg)
+unifyTypeArgs List.Nil List.Nil = pure List.Nil
+unifyTypeArgs ((TypeArg md ty1) List.: args1) ((TypeArg _ ty2) List.: args2) =
+    case runUnify (unify ty1 ty2) of
+    Left msg -> Except.throwError msg
+    Right (ty /\ sub) -> do
+        State.modify_ (\_ -> sub)
+        let args2' = map (subTypeArg sub) args2
+        args <- unifyTypeArgs args1 args2'
+        pure $ (TypeArg md ty) : args
+unifyTypeArgs _ _ = unsafeThrow "This really shouldn't happen."
 
 -- throws error if the type hole id appears in the type
 checkOccurs :: TypeHoleID -> Type -> Unify Unit
