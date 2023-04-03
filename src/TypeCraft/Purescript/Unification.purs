@@ -50,7 +50,16 @@ unify ty1 ty2 = case ty1 /\ ty2 of
     State.modify_ (\sub -> sub { subTHoles = Map.insert hid ty2 sub.subTHoles })
     pure ty2
   _ /\ THole _ hid _ _ -> unify ty2 ty1
-  Arrow md tyA1 tyB1 /\ Arrow _ tyA2 tyB2 -> Arrow md <$> unify tyA1 tyA2 <*> unify tyB1 tyB2
+  Arrow md tyA1 tyB1 /\ Arrow _ tyA2 tyB2 ->
+--    Arrow md <$> unify tyA1 tyA2 <*> unify tyB1 tyB2
+        case runUnify (unify tyA1 tyA2) of
+        Left msg -> Except.throwError msg
+        Right (tyA /\ sub) -> do
+            State.modify_ (\_ -> sub)
+            let tyB1' = applySubType sub tyB1
+            let tyB2' = applySubType sub tyB2
+            tyB <- unify tyB1' tyB2'
+            pure $ Arrow md tyA tyB
   -- TODO: handle type arguments
   TNeu md tv1 tyArgs1 /\ TNeu _ tv2 tyArgs2 | tv1 == tv2 -> do
     tyArgs <- unifyTypeArgs tyArgs1 tyArgs2

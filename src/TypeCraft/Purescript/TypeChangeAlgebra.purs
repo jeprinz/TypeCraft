@@ -244,7 +244,7 @@ subChIsId (SubInsert _) = false
 subChIsId (SubDelete _) = false
 
 invertKindChange :: KindChange -> KindChange
-invertKindChange (KCArrow kc) = invertKindChange (KCArrow (invertKindChange kc))
+invertKindChange (KCArrow kc) = KCArrow (invertKindChange kc)
 invertKindChange KCType = KCType
 invertKindChange (KPlus kc) = KMinus (invertKindChange kc)
 invertKindChange (KMinus kc) = KPlus (invertKindChange kc)
