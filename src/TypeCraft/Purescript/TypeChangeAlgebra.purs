@@ -538,3 +538,9 @@ typeAliasReplace ((tyBind@(TypeBind _ x) : tyBinds1) /\ t1) (((TypeBind _ y) : t
 typeAliasReplace (Nil /\ t1) (Nil /\ t2) = TAChange (Replace t1 t2)
 typeAliasReplace ((tyBind : tyBinds) /\ t1) tyDef2 = TAMinus tyBind (typeAliasReplace (tyBinds /\ t1) tyDef2)
 typeAliasReplace tyDef1 ((tyBind : tyBinds) /\ t2) = TAPlus tyBind (typeAliasReplace tyDef1 (tyBinds /\ t2))
+
+listTypeBindChToKindChange :: ListTypeBindChange -> KindChange
+listTypeBindChToKindChange (ListTypeBindChangeCons tyBind@(TypeBind _ x) ch) = KCArrow (listTypeBindChToKindChange ch)
+listTypeBindChToKindChange (ListTypeBindChangePlus tyBind@(TypeBind _ x) ch) = KPlus (listTypeBindChToKindChange ch)
+listTypeBindChToKindChange (ListTypeBindChangeMinus tyBind@(TypeBind _ x) ch) = KMinus (listTypeBindChToKindChange ch)
+listTypeBindChToKindChange ListTypeBindChangeNil = KCType

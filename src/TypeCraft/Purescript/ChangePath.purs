@@ -226,6 +226,7 @@ chListCtrPath ch ctrPath =
     recListCtrPath {
         data3: \termPath md tyBind tyBinds body bodyTy ->
             let (kctx /\ ctx) /\ termPath' = chTermPath (tyInject bodyTy) termPath in
+            -- TODO: Shouldn't this update the context with however the constructors have changed?
             let body' = chTermBoundary kctx ctx (tyInject bodyTy) body.term in
             Data3 md tyBind.tyBind tyBinds.tyBinds {--} body' bodyTy : termPath'
         , ctrListCons2: \listCtrPath ctr@{ctr: (Constructor _ (TermBind _ x) ctrParams)} ->
@@ -272,12 +273,18 @@ chTypeArgPath ch tyArgPath =
 chListTypeBindPath :: ListTypeBindChange -> ListTypeBindPathRecValue -> UpPath
 chListTypeBindPath ch listTypeBindPath =
     recListTypeBindPath {
-        data2 : \termPath md tyBind ctrs body bodyTy ->
+        data2 : \termPath md tyBind@{tyBind: (TypeBind _ x)} {-tyBinds-} ctrs body bodyTy ->
             -- We need to get:
-            -- KindChange for the datatypes itself
+            -- KindChange for the datatype itself
             -- PolyChange for each constructor
             -- PolyChange for the match function (once I implement that at all... )
-            hole'  "chListTypeBindPath"
+            let kch = listTypeBindChToKindChange ch in
+            let (kctx /\ ctx) /\ termPath' = chTermPath (tyInject bodyTy) termPath in
+            if not (kCtxIsId kctx) || not (ctxIsId ctx) then unsafeThrow "ctx id assumption violated chListTypeBindPath" else
+            let kctx' = Map.insert x (TVarKindChange kch Nothing) kctx in
+            let body' = chTermBoundary kctx' ctx (tyInject bodyTy) body.term in
+            -- TODO: didn't do anything with constructors. Would have to update this type recursively in it's constructors, and lots of other stuff.
+            Data2 md tyBind.tyBind {--} ctrs.ctrs body' bodyTy : termPath'
         , tLet2 : \termPath md tyBind def body bodyTy -> hole'  "chListTypeBindPath"
         , typeBindListCons2 : \listTypeBindPath tyBind ->
             let listTypeBindPath' = chListTypeBindPath (ListTypeBindChangeCons tyBind.tyBind ch) listTypeBindPath in
@@ -285,6 +292,7 @@ chListTypeBindPath ch listTypeBindPath =
         , let2 : \termPath md tBind@{tBind: TermBind _ x} def defTy body bodyTy ->
             -- TODO: here I make an assumption that the context hasn't changed above!
             let (kctx /\ ctx) /\ termPath' = chTermPath (tyInject bodyTy) termPath in
+            if not (kCtxIsId kctx) || not (ctxIsId ctx) then unsafeThrow "ctx id assumption violated chListTypeBindPath" else
             let kctx' = addTyBindChsToKCCtx ch kctx in
             let defTy' /\ defCh = chType kctx' defTy.ty in
             let polyTyCh = listTypeBindChWrapPolyChange ch defCh in

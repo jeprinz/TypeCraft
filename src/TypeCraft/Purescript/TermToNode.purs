@@ -180,7 +180,7 @@ arrangeTerm args =
 -- argument here! Problem: what if I really did just have a term, without a
 -- TermPath though? I should still be able to recurse over that. So what is the
 -- right design here?
--- 
+--
 -- TODO: problem is that it doesn't abstract out metadata properly, so its
 -- currently not handling indentation
 termToNode :: Boolean -> AboveInfo (Term /\ Type) -> TermRecValue -> Node
@@ -280,7 +280,7 @@ termToNode isActive aboveInfo term =
   args =
     { isActive
     , makeCursor: justWhen isActive \_ -> TermCursor term.ctxs term.ty (aIGetPath aboveInfo) term.term
-    , makeSelect:  
+    , makeSelect:
         case aboveInfo of
           AICursor _path -> Nothing
           AISelect topPath topCtx (topTerm /\ topTy) midPath -> justWhen isActive \_ -> TermSelect topPath topCtx topTy topTerm midPath term.ctxs term.ty term.term topSelectOrientation
@@ -326,6 +326,10 @@ arrangeType args =
     , makeSelect: args.makeSelect
     }
 
+wrapTNeu :: TypeVar -> Node -> Node
+wrapTNeu (CtxBoundaryTypeVar _kind _mtd _name _x) node = makeWrapperNode TContextBoundaryNodeTag node
+wrapTNeu _ node = node
+
 typeToNode :: Boolean -> AboveInfo Type -> TypeRecValue -> Node
 typeToNode isActive aboveInfo ty =
   --  trace ("typeToNode called on ty: " <> show ty) \_ ->
@@ -338,12 +342,7 @@ typeToNode isActive aboveInfo ty =
             ]
     , tNeu:
         \md x tyArgs ->
-          let
-            wrap = case x of
-              (CtxBoundaryTypeVar _kind _mtd _name _x) -> makeWrapperNode TContextBoundaryNodeTag
-              _ -> \node -> node
-          in
-            wrap $ setNodeMetadata (makeTNeuNodeMetadata (typeVarGetName ty.ctxs.mdkctx x))
+            wrapTNeu x $ setNodeMetadata (makeTNeuNodeMetadata (typeVarGetName ty.ctxs.mdkctx x))
               $ arrangeType args
                   [ arrangeKidAI ai (typeArgListToNode isActive) tyArgs
                   ]

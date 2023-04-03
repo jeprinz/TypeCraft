@@ -360,6 +360,7 @@ checkWeakeningViolationTypePath subIWantToMake (tooth : teeth) =
 checkWeakeningViolationTypeArgPath :: Map.Map TypeHoleID Type -> UpPath -> Boolean
 checkWeakeningViolationTypeArgPath _subIWantToMake List.Nil = false
 checkWeakeningViolationTypeArgPath subIWantToMake (tooth : teeth) =
+--    trace ("Here I am. tooth is:" <> show tooth <> "\n and teeth is: " <> show teeth) \_ ->
     case tooth of
         TypeArgListCons1 {--} tyArgs -> checkWeakeningViolationTypeArgListPath subIWantToMake teeth
         _ -> unsafeThrow ("Either wasn't a TypeArg path, or I forgot a case in checkWeakeningViolationTypeArgPath. tooth was: " <> show tooth)
@@ -369,7 +370,7 @@ checkWeakeningViolationTypeArgListPath sub List.Nil = false
 checkWeakeningViolationTypeArgListPath sub (tooth : teeth) =
     case tooth of
         TypeArgListCons2 tyArg -> checkWeakeningViolationTypeArgListPath sub teeth
-        TNeu1 md x {--} -> checkWeakeningViolationTypeArgListPath sub teeth
+        TNeu1 md x {--} -> checkWeakeningViolationTypePath sub teeth
         Var1 md x {-List TypeArg-} -> checkWeakeningViolationTermPath sub teeth
         _ -> unsafeThrow ("Either wasn't a TypeArgList path, or I forgot a case in checkWeakeningViolationTypeArgListPath. tooth was: " <> show tooth)
 
@@ -465,7 +466,7 @@ subTypeArgListPath sub List.Nil = List.Nil
 subTypeArgListPath sub (tooth : teeth) =
     case tooth of
         TypeArgListCons2 tyArg -> TypeArgListCons2 (subTypeArg sub tyArg) : subTypeArgListPath sub teeth
-        TNeu1 md x {--} -> TNeu1 md x : subTypeArgListPath sub teeth
+        TNeu1 md x {--} -> TNeu1 md x : subTypePath sub teeth
         Var1 md x {-List TypeArg-} -> Var1 md x : subTermPath sub teeth
         _ -> unsafeThrow ("Either wasn't a TypeArgList path, or I forgot a case in subTypeArgListPath. tooth was: " <> show tooth)
 

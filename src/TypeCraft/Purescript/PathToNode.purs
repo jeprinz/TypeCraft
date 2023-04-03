@@ -14,6 +14,7 @@ import TypeCraft.Purescript.Util (hole', justWhen)
 import TypeCraft.Purescript.Util (lookup')
 import Debug (trace)
 import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.Context (typeVarGetName)
 
 data BelowInfo term ty -- NOTE: a possible refactor is to combine term and ty into syn like in TermToNode. On the other hand, I'll probably never bother.
   = BITerm
@@ -582,7 +583,8 @@ typeArgListPathToNode isActive abovePath belowInfo listTypeArgPath innerNode =
               newBI = BITerm
             in
               -- setNodeLabel (x `lookup'` listTypeArgPath.ctxs.mdkctx) $
-              typePathToNode isActive abovePath newBI typePath
+              typePathToNode isActive abovePath newBI typePath $
+                wrapTNeu x $ setNodeMetadata (makeTNeuNodeMetadata (typeVarGetName typePath.ctxs.mdkctx x))
                 $ arrangeType (makeTypeArgs isActive abovePath newBI typePath)
                     [ arrangeKid typePath.typePath abovePath (\_ _ -> innerNode) tyArgs
                     ]
