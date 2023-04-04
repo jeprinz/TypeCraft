@@ -53,7 +53,7 @@ type TermPathRec a = {
 
 recTermPath :: forall a. TermPathRec a -> TermPathRecValue -> a
 recTermPath args {ctxs, ty, term, termPath: (Let3 md tBind@(TermBind xmd x) tyBinds {-Term-} defTy body bodyTy) : up} =
-    if not (ty == defTy) then unsafeThrow "dynamic type error detected 1" else
+    if not (ty == defTy) then unsafeThrow ("dynamic type error detected 1: defTy !== ty in Let3. ty is: " <> show ty <> " and defTy is: " <> show defTy) else
     let ctxs' = ctxs{mdctx = delete' x ctxs.mdctx, ctx = delete' x ctxs.ctx} in
     let ctxs'' = removeLetTypeFromCtx ctxs' tyBinds in
     args.let3 {ctxs: ctxs'', ty: bodyTy, term: Let md tBind tyBinds term defTy body bodyTy, termPath: up} md
@@ -81,7 +81,7 @@ recTermPath args {ctxs, ty, term, termPath: (App2 md t1 {-Term-} argTy outTy) : 
         {ctxs, ty: Arrow defaultArrowMD argTy outTy, term: t1}
         argTy outTy
 recTermPath args {ctxs, ty, term, termPath: (Lambda3 md tBind@(TermBind _ x) argTy {-Term-} bodyTy) : up} =
-    if not (bodyTy == ty) then unsafeThrow "dynamic type error detected 4" else
+    if not (bodyTy == ty) then unsafeThrow ("dynamic type error detected 4; bodyTy !== ty in Lambda3. bodyTy is: " <> show bodyTy <> " and ty is: " <> show ty) else
     let ctxs' = ctxs{mdctx= delete' x ctxs.mdctx, ctx= delete' x ctxs.ctx} in
     args.lambda3 {ctxs: ctxs', ty: Arrow defaultArrowMD argTy bodyTy, term: Lambda md tBind argTy term bodyTy, termPath: up}
         md {ctxs: ctxs', tBind} {ctxs: ctxs', ty: argTy}

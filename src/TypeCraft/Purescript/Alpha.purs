@@ -505,5 +505,6 @@ subCtx sub ctx = map (subPolyType sub) ctx
 subTACtx :: Sub -> TypeAliasContext -> TypeAliasContext
 subTACtx sub actx = map (\(tyBinds /\ ty) -> tyBinds /\ applySubType sub ty) actx
 
+-- Warning: this function doesn't map the keys!
 subAllCtx :: Sub -> AllContext -> AllContext
 subAllCtx sub ctxs = ctxs{ctx = subCtx sub ctxs.ctx, actx = subTACtx sub ctxs.actx}
