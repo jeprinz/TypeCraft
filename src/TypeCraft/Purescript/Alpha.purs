@@ -281,13 +281,15 @@ polyChangeContainsHoles holes (CForall _ pc) = polyChangeContainsHoles holes pc
 polyChangeContainsHoles holes (PPlus _ pc) = polyChangeContainsHoles holes pc
 polyChangeContainsHoles holes (PMinus _ pc) = polyChangeContainsHoles holes pc
 polyChangeContainsHoles holes (PChange ch) = changeContainsHoles holes ch
+
 polyTypeContainsHoles :: Set.Set TypeHoleID -> PolyType -> Boolean
 polyTypeContainsHoles holes (Forall _ pt) = polyTypeContainsHoles holes pt
 polyTypeContainsHoles holes (PType ch) = typeContainsHoles holes ch
+
 varChangeContainsHoles :: Set.Set TypeHoleID -> VarChange -> Boolean
 varChangeContainsHoles holes (VarTypeChange pc) = polyChangeContainsHoles holes pc
-varChangeContainsHoles holes (VarDelete pt) = polyTypeContainsHoles holes pt
-varChangeContainsHoles holes (VarInsert pt) = polyTypeContainsHoles holes pt
+varChangeContainsHoles holes (VarDelete _ pt) = polyTypeContainsHoles holes pt
+varChangeContainsHoles holes (VarInsert _ pt) = polyTypeContainsHoles holes pt
 
 changeParamContainsHoles :: Set.Set TypeHoleID -> ChangeParam -> Boolean
 changeParamContainsHoles holes (ChangeParam c) = changeContainsHoles holes c
@@ -490,8 +492,8 @@ subVarChange :: Sub -> VarChange -> VarChange
 subVarChange sub varChange =
     case varChange of
         VarTypeChange pc -> VarTypeChange (subPolyChange sub pc)
-        VarDelete pt -> VarDelete (subPolyType sub pt)
-        VarInsert pt -> VarInsert (subPolyType sub pt)
+        VarDelete name pt -> VarDelete name (subPolyType sub pt)
+        VarInsert name pt -> VarInsert name (subPolyType sub pt)
 
 subConstructor :: Sub -> Constructor -> Constructor
 subConstructor sub (Constructor md x ctrParams) = Constructor md x (map (subCtrParam sub) ctrParams)

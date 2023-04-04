@@ -17,7 +17,7 @@ import Data.List (List(..), (:))
 import Data.Tuple (fst)
 import TypeCraft.Purescript.Context
 import TypeCraft.Purescript.Kinds (bindsToKind)
-import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange)
+import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange, alterMDCtxVarChange)
 import Debug (trace)
 import TypeCraft.Purescript.Util
 
@@ -104,8 +104,8 @@ recTerm args {ctxs, ty, term : TypeBoundary md c body} =
     if not (ty == snd (getEndpoints c)) then unsafeThrow ("shouldn't happen recTerm typebound. c is: " <> show c <> "and ty is: " <> show ty) else
     args.typeBoundary md c {ctxs, ty: fst (getEndpoints c), term: body}
 recTerm args {ctxs, ty, term : ContextBoundary md x c body} =
-    let ctxs' = ctxs{ctx = alterCtxVarChange ctxs.ctx x c} in
-    args.contextBoundary md x c {ctxs, ty: ty, term: body}
+    let ctxs' = ctxs{ctx = alterCtxVarChange ctxs.ctx x c, mdctx = alterMDCtxVarChange ctxs.mdctx x c} in
+    args.contextBoundary md x c {ctxs: ctxs', ty: ty, term: body}
 recTerm args {term : Hole md} = args.hole md
 recTerm args {ctxs, ty, term : Buffer md def defTy body bodyTy} =
     args.buffer md

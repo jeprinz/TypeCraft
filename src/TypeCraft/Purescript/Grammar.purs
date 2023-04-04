@@ -191,8 +191,8 @@ type DownPath = List Tooth
 -- Some additional Changes grammars. These don't appear in the program, but are used in the TypeChange logic.
 data VarChange
   = VarTypeChange PolyChange
-  | VarDelete PolyType
-  | VarInsert PolyType
+  | VarDelete String PolyType
+  | VarInsert String PolyType
 
 data ChangeParam
   = ChangeParam Change

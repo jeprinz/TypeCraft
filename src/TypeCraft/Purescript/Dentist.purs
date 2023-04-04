@@ -89,12 +89,12 @@ termToothCtxChange kctx ctx actx mdkctx mdctx tooth =
         App2 md t1 {-Term-} argTy outTy ->
             ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
         Lambda3 md tBind@(TermBind xmd x) argTy {-Term-} bodyTy ->
-            insert x (VarInsert (PType argTy)) (ctxInject ctx) /\ kCtxInject kctx actx /\ insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
+            insert x (VarInsert xmd.varName (PType argTy)) (ctxInject ctx) /\ kCtxInject kctx actx /\ insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
         Let3 md tBind@(TermBind xmd x) tyBinds {-Term-} defTy body bodyTy
-            -> insert x (VarInsert (tyBindsWrapType tyBinds defTy)) (ctxInject ctx) /\ kCtxInject kctx actx /\
+            -> insert x (VarInsert xmd.varName (tyBindsWrapType tyBinds defTy)) (ctxInject ctx) /\ kCtxInject kctx actx /\
                 insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
         Let5 md tBind@(TermBind xmd x) tyBinds def defTy {-Term-} bodyTy
-            -> insert x (VarInsert (tyBindsWrapType tyBinds defTy)) (ctxInject ctx) /\ kCtxInject kctx actx /\ insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
+            -> insert x (VarInsert xmd.varName (tyBindsWrapType tyBinds defTy)) (ctxInject ctx) /\ kCtxInject kctx actx /\ insert x (NameChangeInsert xmd.varName) (mdctxInject mdctx) /\ mdkctxInject mdkctx
         Buffer1 md {-Term-} defTy body bodyTy -> ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
         Buffer3 md def defTy {-Term-} bodyTy -> ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
         TypeBoundary1 md ch {-Term-} -> ctxInject ctx /\ kCtxInject kctx actx /\ mdctxInject mdctx /\ mdkctxInject mdkctx
@@ -102,8 +102,9 @@ termToothCtxChange kctx ctx actx mdkctx mdctx tooth =
         TLet4 md tyBind tyBinds def {-Term-} bodyTy -> hole' "termToothCtxChange"
         Data4 md tyBind@(TypeBind xmd x) tyBinds ctrs {-Term-} bodyTy ->
             let ctrTypes = constructorTypes tyBind tyBinds ctrs in
+            let ctrNames = constructorNames ctrs in
                let startingCtx = ctxInject ctx in
-               let ctrTypeChanges = map (\pt -> VarInsert pt) ctrTypes in
+               let ctrTypeChanges = VarInsert <$> ctrNames <*> ctrTypes in
                union startingCtx ctrTypeChanges
                 -- TODO: Also introduce the recursor into the context here
                 -- TODO: If I forget this, it will create bugs where the recursor doesn't go in scope after you make a data!!!!

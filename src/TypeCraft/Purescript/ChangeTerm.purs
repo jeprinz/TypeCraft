@@ -75,7 +75,13 @@ chTerm kctx ctx c t =
 --                trace ("In var case here: cin is" <> show cin <> " and xVarCh is: " <> show xVarCh) \_ ->
                 case xVarCh of
                     -- TODO: CtxBoundary, and still need to change args!
-                    VarDelete _ -> tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD -- later use context boundary
+                    VarDelete name pt ->
+                        let ch /\ tyArgs' = chTypeArgs2 kctx tArgs (pTyInject pt) in
+                        let inOldCtx = Var md x tyArgs' in
+                        let inNewCtx = ContextBoundary defaultCtxBoundaryMD x (VarInsert name pt) inOldCtx in
+                        let andNewType = if chIsId cin then inNewCtx else
+                                (TypeBoundary defaultTypeBoundaryMD cin inNewCtx) in
+                        tyInject (snd (getEndpoints cin)) /\ andNewType
 --                    VarTypeChange xChange ->
 --                        let tryPolymorhpismCase =
 ----                                do _ <- (if pChIsId xChange then Just xChange else Nothing) -- (for now at least), polymorphism thing only works if variable type is unchanged in context
@@ -90,7 +96,7 @@ chTerm kctx ctx c t =
 --                    VarTypeChange (PChange cVar) ->
 --                        if not (chIsId cin) then tyInject (snd (getEndpoints cin)) /\ Hole defaultHoleMD
 --                        else cVar /\ Var md x tArgs
-                    VarInsert _ -> unsafeThrow "shouldn't get here"
+                    VarInsert _name _pty -> unsafeThrow "shouldn't get here"
                     VarTypeChange pch ->
                         if chIsId cin then
                             let ch /\ tyArgs' = chTypeArgs2 kctx tArgs pch in
@@ -111,17 +117,17 @@ chTerm kctx ctx c t =
                 let c2' /\ t' = chTerm kctx (insert x (VarTypeChange (PChange c1)) ctx) c2 t in
                 let ty' = snd (getEndpoints c1) in
                 (CArrow (tyInject ty') c2') /\ Lambda md tBind ty' t' (snd (getEndpoints c2'))
-            (Minus ty1 c) /\ (Lambda md tBind@(TermBind _ x) ty2 t bodyTy) ->
+            (Minus ty1 c) /\ (Lambda md tBind@(TermBind {varName} x) ty2 t bodyTy) ->
                 if not (ty1 == ty2) then unsafeThrow "shouldn't happen 3" else
                 if not (bodyTy == fst (getEndpoints c)) then unsafeThrow "shouldn't happen 4" else
-                let c2' /\ t' = chTerm kctx (insert x (VarDelete (PType ty2)) ctx) c t in
+                let c2' /\ t' = chTerm kctx (insert x (VarDelete varName (PType ty2)) ctx) c t in
                 c2' /\ t'
             (Minus ty c) /\ t ->
                 let c' /\ t' = chTerm kctx ctx c t in
                 (CArrow (tyInject ty) c') /\ App defaultAppMD t' (Hole defaultHoleMD) ty (snd (getEndpoints c))
             (Plus ty c) /\ t ->
-                let tBind@(TermBind _ x) = (freshTermBind Nothing) in
-                let ctx' = insert x (VarInsert (PType ty)) ctx in
+                let tBind@(TermBind {varName} x) = (freshTermBind Nothing) in
+                let ctx' = insert x (VarInsert varName (PType ty)) ctx in
                 let c' /\ t' = chTerm kctx ctx' c t in
                 (CArrow (tyInject ty) c') /\ Lambda defaultLambdaMD tBind ty t' (snd (getEndpoints c'))
             c /\ Let md tBind@(TermBind _ x) binds t1 ty t2 tyBody ->
@@ -158,10 +164,14 @@ chTerm kctx ctx c t =
                 let chBackUp /\ body' = chTerm kctx ctx tyChInside body in
                 tyChInside /\ TypeBoundary md (composeChange (invert chBackUp) ch') body'
             c /\ ContextBoundary md x vCh body ->
-                -- case lookup x ?kctx of
-                --     Just xChInCtx -> hole' "chTerm"
-                --     Nothing -> hole' "chTerm"
-                hole' "chTerm" -- TODO: jacob
+                 case vCh /\ (lookup x ctx) of
+                     (VarInsert _name1 ty1) /\ (Just (VarInsert _name2 ty2)) ->
+                        let ch = polyReplace ty2 ty1 in
+                        let c' /\ body' = chTerm kctx (insert x (VarTypeChange ch) ctx) c body in
+                        c' /\ body'
+                     (VarInsert _name ty) /\ Nothing -> let c' /\ body' = chTerm kctx (insert x (VarTypeChange (pTyInject ty)) ctx) c body in
+                                c' /\ ContextBoundary md x vCh body'
+                     _ -> unsafeThrow "I don't think this should happen in ContextBoundary case of chTerm (or I need to support things other than VarInsert in ContextBoundary)"
             cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
         )
     in
@@ -324,12 +334,12 @@ adjustCtxByCtrChanges dataType tyVarIds ctrsCh ctx = case ctrsCh of
     ListCtrChangeCons ctrId ctrParamsCh ctrsCh' ->
         let ch = ctrParamsChangeToChange dataType tyVarIds ctrParamsCh in
         insert ctrId (VarTypeChange ch) ctx
-    ListCtrChangePlus (Constructor _ (TermBind _ ctrId) ctrParams) ctrsCh' ->
+    ListCtrChangePlus (Constructor _ (TermBind {varName} ctrId) ctrParams) ctrsCh' ->
         let ty = ctrParamsToType dataType tyVarIds ctrParams in
-        insert ctrId (VarInsert ty) ctx
-    ListCtrChangeMinus (Constructor _ (TermBind _ ctrId) ctrParams) ctrsCh' ->
+        insert ctrId (VarInsert varName ty) ctx
+    ListCtrChangeMinus (Constructor _ (TermBind {varName} ctrId) ctrParams) ctrsCh' ->
         let ty = ctrParamsToType dataType tyVarIds ctrParams in
-        insert ctrId (VarDelete ty) ctx
+        insert ctrId (VarDelete varName ty) ctx
 
 ctrParamsChangeToChange :: {-datatype-}TypeVarID -> {-datatype params-}List TypeVarID -> ListCtrParamChange -> PolyChange
 ctrParamsChangeToChange dataType tyVarIds ctrParamsCh =

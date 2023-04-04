@@ -109,14 +109,14 @@ taChGetEndpoints tac = case tac of
 getCtxEndpoints :: ChangeCtx -> TermContext /\ TermContext
 getCtxEndpoints ctx =
     mapMaybe (case _ of
-        VarInsert _ -> Nothing
+        VarInsert _ _ -> Nothing
         VarTypeChange pc -> Just (fst (pGetEndpoints pc))
-        VarDelete pt -> Just pt) ctx
+        VarDelete _name pt -> Just pt) ctx
     /\
     mapMaybe (case _ of
-        VarInsert pt -> Just pt
+        VarInsert _ pt -> Just pt
         VarTypeChange pc -> Just (snd (pGetEndpoints pc))
-        VarDelete _ -> Nothing) ctx
+        VarDelete _ _ -> Nothing) ctx
 
 getSubEndpoints :: Map TypeVarID SubChange -> Map TypeVarID Type /\ Map TypeVarID Type
 getSubEndpoints ctx =

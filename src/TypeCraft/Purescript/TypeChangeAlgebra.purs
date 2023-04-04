@@ -173,8 +173,8 @@ invertSubChange (SubInsert ty) = SubDelete ty
 
 invertVarChange :: VarChange -> VarChange
 invertVarChange (VarTypeChange pch) = VarTypeChange (invertPolyChange pch)
-invertVarChange (VarDelete ty) = VarInsert ty
-invertVarChange (VarInsert ty) = VarDelete ty
+invertVarChange (VarDelete name ty) = VarInsert name ty
+invertVarChange (VarInsert name ty) = VarDelete name ty
 
 invertTypeAliasChange :: TypeAliasChange -> TypeAliasChange
 invertTypeAliasChange (TAForall tyBind tac) = TAForall tyBind (invertTypeAliasChange tac)
@@ -366,10 +366,10 @@ tacInject ((tyBind : tyBinds) /\ ty) = TAForall tyBind (tacInject (tyBinds /\ ty
 
 composeVarChange :: VarChange -> VarChange -> Maybe VarChange
 composeVarChange (VarTypeChange pc1) (VarTypeChange pc2) = Just $ VarTypeChange (composePolyChange pc1 pc2)
-composeVarChange (VarInsert pt) (VarTypeChange pc) = Just $ VarInsert (snd (pGetEndpoints pc))
-composeVarChange (VarTypeChange pc) (VarDelete pt) = Just $ VarInsert (fst (pGetEndpoints pc))
-composeVarChange (VarInsert t1) (VarDelete t2) | polyTypeEq t1 t2 = Nothing
-composeVarChange (VarDelete t1) (VarInsert t2) | polyTypeEq t1 t2 = Just $ VarTypeChange (pTyInject t1)
+composeVarChange (VarInsert name pt) (VarTypeChange pc) = Just $ VarInsert name (snd (pGetEndpoints pc))
+composeVarChange (VarTypeChange pc) (VarDelete name pt) = Just $ VarInsert name (fst (pGetEndpoints pc))
+composeVarChange (VarInsert _name1 t1) (VarDelete _name2 t2) | polyTypeEq t1 t2 = Nothing
+composeVarChange (VarDelete _name1 t1) (VarInsert _name2 t2) | polyTypeEq t1 t2 = Just $ VarTypeChange (pTyInject t1)
 composeVarChange _ _ = unsafeThrow "VarChanges composed in a way that doesn't make sense, or I wrote a bug into the function"
 
 composeTypeAliasChange :: TypeAliasChange -> TypeAliasChange -> TypeAliasChange
@@ -401,9 +401,14 @@ composeNameChange (NameChangeDelete s1) (NameChangeInsert s2) | s1 == s2 = Just 
 composeNameChange _ _ = unsafeThrow "Error in composeNameChange: either changess can't compose, or I forgot a case!"
 
 alterCtxVarChange :: TermContext -> TermVarID -> VarChange -> TermContext
-alterCtxVarChange ctx x (VarInsert pty) = insert x pty ctx
-alterCtxVarChange ctx x (VarDelete pty) = delete x ctx
+alterCtxVarChange ctx x (VarInsert _name pty) = insert' x pty ctx
+alterCtxVarChange ctx x (VarDelete _name _pty) = delete' x ctx
 alterCtxVarChange ctx x (VarTypeChange pch) = insert x (snd (pGetEndpoints pch)) ctx
+
+alterMDCtxVarChange :: MDTermContext -> TermVarID -> VarChange -> MDTermContext
+alterMDCtxVarChange ctx x (VarInsert name _pty) = insert x name ctx
+alterMDCtxVarChange ctx x (VarDelete _name _pty) = delete x ctx
+alterMDCtxVarChange ctx _x (VarTypeChange _pch) = ctx
 
 alterCCtxVarChange :: ChangeCtx -> TermVarID -> VarChange -> ChangeCtx
 alterCCtxVarChange ctx x vch = case lookup x ctx of
@@ -411,7 +416,7 @@ alterCCtxVarChange ctx x vch = case lookup x ctx of
         Just newVarChange -> insert x newVarChange ctx
         Nothing -> delete x ctx
     Nothing -> case vch of
-               VarInsert pty -> insert x (VarInsert pty) ctx
+               VarInsert name pty -> insert x (VarInsert name pty) ctx
                _ -> unsafeThrow "Shouldn't happen"
 
 -- Context endpoints
@@ -489,8 +494,12 @@ For any variables who'se type has changed, just fully delete and insert a comple
 -}
 
 --type AllChangeContexts = ChangeCtx /\ KindChangeCtx /\ MDTermChangeCtx /\ MDTypeChangeCtx
-getChangeCtx :: TermContext -> TermContext -> ChangeCtx
-getChangeCtx ctx1 ctx2 = threeCaseUnion VarDelete VarInsert (\t1 t2 -> VarTypeChange $ polyReplace t1 t2) ctx1 ctx2
+getChangeCtx :: TermContext -> TermContext -> MDTermContext -> MDTermContext -> ChangeCtx
+getChangeCtx ctx1 ctx2 mdctx1 mdctx2 =
+    let ctxs1 = (\t name -> t /\ name) <$> ctx1 <*> mdctx1 in
+    let ctxs2 = (\t name -> t /\ name) <$> ctx2 <*> mdctx2 in
+    threeCaseUnion (\(t /\ name) -> VarDelete name t) (\(t /\ name) -> VarInsert name t)
+        (\(t1 /\ _) (t2 /\ _) -> VarTypeChange $ polyReplace t1 t2) ctxs1 ctxs2
 
 -- This is extermely janky because I'm just making a random guess as to how the parameters changed, but its the simplest thing to implement without changing a lot of other stuff. It will very rarely come up in practice.
 polyReplace :: PolyType -> PolyType -> PolyChange

@@ -332,7 +332,7 @@ pasteImpl st = do
 --            TermCursor ctxs ty tmPath _tm -> pure $ st { mode = makeCursorMode $ TermCursor ctxs ty (TypeBoundary1 defaultTypeBoundaryMD (Replace ty' ty) List.: tmPath) tm' }
             InsideHoleCursor ctxs ty insideHolePath ->
                 let kctxDiff = getKindChangeCtx ctxs'.kctx ctxs.kctx ctxs'.actx ctxs.actx ctxs'.mdkctx ctxs.mdkctx in
-                let ctxDiff = getChangeCtx ctxs'.ctx ctxs.ctx in
+                let ctxDiff = getChangeCtx ctxs'.ctx ctxs.ctx ctxs'.mdctx ctxs.mdctx in
                 let _ /\ chIn = chType kctxDiff ty' in -- ??????
                 let ch /\ tm'Diff = chTerm kctxDiff ctxDiff chIn tm' in
                 let ty'Diff = snd (getEndpoints ch) in
@@ -360,7 +360,7 @@ pasteImpl st = do
                       -- STEP 2: get the ctx changes describing what variables have been removed or changed, and apply them to tmPath'Changed
                       trace "STEP 2 of termPath paste: get context diff" \_ ->
                       let kctxDiff1 = getKindChangeCtx ctxs1'.kctx ctxs.kctx ctxs1'.actx ctxs.actx ctxs1'.mdkctx ctxs.mdkctx in -- first get the diff to the top context
-                      let ctxDiff1 = getChangeCtx ctxs1'.ctx ctxs.ctx in
+                      let ctxDiff1 = getChangeCtx ctxs1'.ctx ctxs.ctx ctxs1'.mdctx ctxs.mdctx in
                       -- STEP 3: given a specific instantiation of the inner type that will fit at the term, we need to change tmPath' so that it has this type inside
                       trace "STEP 3 of termPath paste: adjust path to be pasted" \_ ->
                       -- Also, apply the context changes while were at it:
