@@ -309,6 +309,7 @@ combineParams _ _ = Nothing
 mapMap2 :: forall k v1 v2 v3. Ord k => (v1 -> v2 -> v3) -> Map k v1 -> Map k v2 -> Map k v3
 mapMap2 f m1 m2 = f <$> m1 <*> m2
 
+-- TODO: What will this do if an element is in one map but not the other? What we want is to throw an error in that case!
 mmapMap2 :: forall k v1 v2 v3. Ord k => (v1 -> v2 -> Maybe v3) -> Map k v1 -> Map k v2 -> Map k v3
 mmapMap2 f m1 m2 = mapMaybe (\(x /\ y) -> f x y) ((\x y -> x /\ y) <$> m1 <*> m2)
 

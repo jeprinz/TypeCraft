@@ -46,15 +46,17 @@ D1 o D2 |- path1 --[C] --> path2
 -}
 -- TODO: why does chTermPath even output a KindChangeContext at all!?!??
 chTermPath :: Change -> TermPathRecValue -> Maybe CAllContext -> CAllContext /\ UpPath
-chTermPath _ {ctxs, termPath: Nil} topCtxCh = (kCtxInject ctxs.kctx ctxs.actx /\ ctxInject ctxs.ctx) /\ Nil
+chTermPath _ {ctxs, termPath: Nil} Nothing = (kCtxInject ctxs.kctx ctxs.actx /\ ctxInject ctxs.ctx) /\ Nil
+chTermPath _ {ctxs, termPath: Nil} (Just chCtxs) = chCtxs /\ Nil
 chTermPath ch termPath topCtxCh =
     let kctx = termPath.ctxs.kctx in
     let actx = termPath.ctxs.actx in
     let ctx = termPath.ctxs.ctx in
-    let idChkctx /\ idChCtx =
-            case topCtxCh of
-            Just ctxs -> ctxs
-            Nothing -> kCtxInject kctx actx /\ ctxInject ctx in
+    let idChkctx /\ idChCtx = kCtxInject kctx actx /\ ctxInject ctx in -- TODO: what are these being used for?
+--            case topCtxCh of
+--            Just ctxs -> ctxs
+--            Nothing -> kCtxInject kctx actx /\ ctxInject ctx in
+--    trace (" is: " <> show ctxCh2bottom) \_ ->
     recTermPath {
         let3: \up md tBind@{tBind: TermBind _ x} tyBinds defTy body bodyTy ->
             if not (defTy.ty == fst (getEndpoints ch)) then unsafeThrow ("shouldn't happen chPath 3: defTy.ty is: " <> show defTy.ty <> "and thing is: " <> show (fst (getEndpoints ch))) else

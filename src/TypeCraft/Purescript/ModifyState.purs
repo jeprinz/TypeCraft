@@ -364,21 +364,29 @@ pasteImpl st = do
                       -- STEP 3: given a specific instantiation of the inner type that will fit at the term, we need to change tmPath' so that it has this type inside
                       trace "STEP 3 of termPath paste: adjust path to be pasted" \_ ->
                       -- Also, apply the context changes while were at it:
-                      let ctxs' /\ pastePath2 = chTermPath (Replace (fst (getEndpoints originalCh)) newTy) {ctxs: ctxs2', ty: ty2', term: Hole defaultHoleMD, termPath: pastePath}
+                      let (kctx' /\ ctx') /\ pastePath2 = chTermPath (Replace (fst (getEndpoints originalCh)) newTy) {ctxs: ctxs2', ty: ty2', term: Hole defaultHoleMD, termPath: pastePath}
                             (Just (kctxDiff1 /\ ctxDiff1)) in
 --                      let ctxs''' /\ tmPath'Changed' = chTermPath (tyInject ?h)
                       -- STEP 4: we need to get the typechange going up and ctx change going down and apply them to the term and path in the cursor
                       trace "STEP 4 of termPath paste: get changes and apply to program" \_ ->
-                      let ctxsCh@(ctxCh /\ kctxCh /\ _ /\ _) = downPathToCtxChange ctxs (List.reverse pastePath2) in
-                      let tm' = chTermBoundary kctxCh ctxCh (tyInject newTy) tm in
+                      let (ctxCh /\ kctxCh /\ mdctxCh /\ mdkctxCh) = downPathToCtxChange ctxs (List.reverse pastePath2) in
                       let finalCh = termPathToChange newTy pastePath2 in
                       trace ("finalCh is: " <> show finalCh) \_ ->
-                      let ctxs'' /\ termPathChanged = chTermPath finalCh {ctxs: ctxs, ty: ty, term: tm', termPath: tmPath} Nothing in
-                      -- TODO TODO TODO TODO: I need to take the final context changes here and apply then to pastePath2 and tm!
+                      -- These changes are at the top of the path to be pasted
+                      let (kctxCh2 /\ ctxCh2) /\ termPathChanged = chTermPath finalCh {ctxs: ctxs, ty: ty, term: Hole defaultHoleMD, termPath: tmPath} Nothing in
+--                      let tm' = chTermBoundary kctxCh ctxCh (tyInject newTy) tm in
+                      trace ("ctxCh2 is: " <> show ctxCh2) \_ ->
+                      trace "STEP 4.5" \_ ->
+                      let (kctxCh2bottom /\ ctxCh2bottom) /\ pastePath3 = chTermPath (tyInject newTy) {ctxs: ctxs2', ty: newTy, term: Hole defaultHoleMD, termPath: pastePath2} (Just (kctxCh2 /\ ctxCh2)) in
+                      trace ("ctxCh2bottom is: " <> show ctxCh2bottom) \_ ->
+                      let fullKCtxCh = (composeKCtx kctxCh kctxCh2bottom) in
+                      let fullCtxCh = (composeCtxs ctxCh ctxCh2bottom) in
+                      let tm' = chTermBoundary fullKCtxCh fullCtxCh (tyInject newTy) tm in
+--                      if not (kCtxIsId kctxShouldBeId) || not (ctxIsId ctxShouldBeId) then unsafeThrow "shouldn't happen in termPath paste" else
                       --- Also, I still need to apply the context change from the path downwards!
-                      let ctxs' = snd (getAllEndpoints ctxsCh) in
+                      let ctxs' = snd (getAllEndpoints (fullCtxCh /\ fullKCtxCh /\ mdctxCh /\ mdkctxCh)) in
                       trace ("Made it to the end of termpath paste stuff") \_ ->
-                      pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty (pastePath2 <> termPathChanged) tm'}
+                      pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty (pastePath3 <> termPathChanged) tm'}
             _ -> Nothing
           SelectMode selectMode -> case selectMode.select of
 --            TermSelect tmPath1 ctxs1 ty1 _tm1 tmPath2 _ctxs2 ty2 tm2 _ori ->
