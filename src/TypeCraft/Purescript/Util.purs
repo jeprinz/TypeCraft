@@ -73,3 +73,10 @@ threeCaseUnion onlyLeft onlyRight both m1 m2 =
     union'
         (union' (map onlyLeft mLeft) (map onlyRight mRight))
         (Map.mapMaybeWithKey (\k v -> maybe Nothing (\v2 -> Just $ both v v2) (Map.lookup k m2)) m1)
+
+threeCaseUnionMaybe :: forall v1 v2 v3 k . Ord k =>
+    (Maybe v1 -> Maybe v2 -> Maybe v3)
+    -> Map k v1 -> Map k v2 -> Map k v3
+threeCaseUnionMaybe join m1 m2 = Map.mapMaybe (\x -> x) $ threeCaseUnion (\x -> join (Just x) Nothing) (\y -> join Nothing (Just y))
+    (\x y -> join (Just x) (Just y)) m1 m2
+

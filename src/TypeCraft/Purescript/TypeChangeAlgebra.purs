@@ -364,12 +364,14 @@ tacInject ((tyBind : tyBinds) /\ ty) = TAForall tyBind (tacInject (tyBinds /\ ty
 --------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------
 
-composeVarChange :: VarChange -> VarChange -> Maybe VarChange
-composeVarChange (VarTypeChange pc1) (VarTypeChange pc2) = Just $ VarTypeChange (composePolyChange pc1 pc2)
-composeVarChange (VarInsert name pt) (VarTypeChange pc) = Just $ VarInsert name (snd (pGetEndpoints pc))
-composeVarChange (VarTypeChange pc) (VarDelete name pt) = Just $ VarInsert name (fst (pGetEndpoints pc))
-composeVarChange (VarInsert _name1 t1) (VarDelete _name2 t2) | polyTypeEq t1 t2 = Nothing
-composeVarChange (VarDelete _name1 t1) (VarInsert _name2 t2) | polyTypeEq t1 t2 = Just $ VarTypeChange (pTyInject t1)
+composeVarChange :: Maybe VarChange -> Maybe VarChange -> Maybe VarChange
+composeVarChange (Just (VarTypeChange pc1)) (Just (VarTypeChange pc2)) = Just $ VarTypeChange (composePolyChange pc1 pc2)
+composeVarChange (Just (VarInsert name pt)) (Just (VarTypeChange pc)) = Just $ VarInsert name (snd (pGetEndpoints pc))
+composeVarChange (Just (VarTypeChange pc)) (Just (VarDelete name pt)) = Just $ VarInsert name (fst (pGetEndpoints pc))
+composeVarChange (Just (VarInsert _name1 t1)) (Just (VarDelete _name2 t2)) | polyTypeEq t1 t2 = Nothing
+composeVarChange (Just (VarDelete _name1 t1)) (Just (VarInsert _name2 t2)) | polyTypeEq t1 t2 = Just $ VarTypeChange (pTyInject t1)
+composeVarChange (Just (VarDelete name t)) Nothing = Just (VarDelete name t)
+composeVarChange Nothing (Just (VarInsert name t)) = Just (VarInsert name t)
 composeVarChange _ _ = unsafeThrow "VarChanges composed in a way that doesn't make sense, or I wrote a bug into the function"
 
 composeTypeAliasChange :: TypeAliasChange -> TypeAliasChange -> TypeAliasChange
@@ -384,20 +386,24 @@ composeTypeAliasChange tac1 tac2 = case tac1 /\ tac2 of
     tac1 /\ TAPlus tyBind2 tac2 -> TAForall tyBind2 (composeTypeAliasChange tac1 tac2)
     _ /\ _ -> unsafeThrow "Either forgot a case in composeTypeAliasChange or a guard failed or tac's weren't composable"
 
-composeTVarChange :: TVarChange -> TVarChange -> Maybe TVarChange
-composeTVarChange (TVarKindChange kc1 mtac1) (TVarKindChange kc2 mtac2) = Just $ TVarKindChange (composeKindChange kc1 kc2) (composeTypeAliasChange <$> mtac1 <*> mtac2)
-composeTVarChange (TVarInsert tHole k ta) (TVarKindChange kc tac) = Just $ TVarInsert tHole (snd (kChGetEndpoints kc)) ((snd <$> (taChGetEndpoints <$> tac)))
-composeTVarChange (TVarKindChange kc tac) (TVarDelete tHole k ta) = Just $ TVarDelete tHole (fst (kChGetEndpoints kc)) ((fst <$> (taChGetEndpoints <$> tac)))
-composeTVarChange (TVarInsert tHole1 kc1 ta1) (TVarDelete tHole2 kc2 ta2) = Nothing
-composeTVarChange (TVarDelete tHole1 k1 ta1) (TVarInsert tHole2 k2 ta2) | tHole1 == tHole2 && k1 == k2 && ta1 == ta2 = Just $ TVarKindChange (kindInject k1) (tacInject <$> ta1)
+composeTVarChange :: Maybe TVarChange -> Maybe TVarChange -> Maybe TVarChange
+composeTVarChange (Just (TVarKindChange kc1 mtac1)) (Just (TVarKindChange kc2 mtac2)) = Just $ TVarKindChange (composeKindChange kc1 kc2) (composeTypeAliasChange <$> mtac1 <*> mtac2)
+composeTVarChange (Just (TVarInsert tHole k ta)) (Just (TVarKindChange kc tac)) = Just $ TVarInsert tHole (snd (kChGetEndpoints kc)) ((snd <$> (taChGetEndpoints <$> tac)))
+composeTVarChange (Just (TVarKindChange kc tac)) (Just (TVarDelete tHole k ta)) = Just $ TVarDelete tHole (fst (kChGetEndpoints kc)) ((fst <$> (taChGetEndpoints <$> tac)))
+composeTVarChange (Just (TVarInsert tHole1 kc1 ta1)) (Just (TVarDelete tHole2 kc2 ta2)) = Nothing
+composeTVarChange (Just (TVarDelete tHole1 k1 ta1)) (Just (TVarInsert tHole2 k2 ta2)) | tHole1 == tHole2 && k1 == k2 && ta1 == ta2 = Just $ TVarKindChange (kindInject k1) (tacInject <$> ta1)
+composeTVarChange (Just (TVarDelete tHole k ta)) Nothing = Just (TVarDelete tHole k ta)
+composeTVarChange Nothing (Just (TVarInsert tHole k ta)) = Just (TVarInsert tHole k ta)
 composeTVarChange _ _ = unsafeThrow "TVarChanges composed in a way that doesn't make sense, or I wrote a bug into the function"
 
-composeNameChange :: NameChange -> NameChange -> Maybe NameChange
-composeNameChange (NameChangeSame s1) (NameChangeSame s2) | s1 == s2 = Just $ NameChangeSame s1
-composeNameChange (NameChangeInsert s1) (NameChangeSame s2) | s1 == s2 = Just $ NameChangeInsert s1
-composeNameChange (NameChangeSame s1) (NameChangeDelete s2) | s1 == s2 = Just $ NameChangeDelete s1
-composeNameChange (NameChangeInsert s1) (NameChangeDelete s2) | s1 == s2 = Nothing
-composeNameChange (NameChangeDelete s1) (NameChangeInsert s2) | s1 == s2 = Just $ NameChangeSame s1
+composeNameChange :: Maybe NameChange -> Maybe NameChange -> Maybe NameChange
+composeNameChange (Just (NameChangeSame s1)) (Just (NameChangeSame s2)) | s1 == s2 = Just $ NameChangeSame s1
+composeNameChange (Just (NameChangeInsert s1)) (Just (NameChangeSame s2)) | s1 == s2 = Just $ NameChangeInsert s1
+composeNameChange (Just (NameChangeSame s1)) (Just (NameChangeDelete s2)) | s1 == s2 = Just $ NameChangeDelete s1
+composeNameChange (Just (NameChangeInsert s1)) (Just (NameChangeDelete s2)) | s1 == s2 = Nothing
+composeNameChange (Just (NameChangeDelete s1)) (Just (NameChangeInsert s2)) | s1 == s2 = Just $ NameChangeSame s1
+composeNameChange (Just (NameChangeDelete s)) Nothing = Just (NameChangeDelete s)
+composeNameChange Nothing (Just (NameChangeInsert s)) = Just (NameChangeInsert s)
 composeNameChange _ _ = unsafeThrow "Error in composeNameChange: either changess can't compose, or I forgot a case!"
 
 alterCtxVarChange :: TermContext -> TermVarID -> VarChange -> TermContext
@@ -411,28 +417,30 @@ alterMDCtxVarChange ctx x (VarDelete _name _pty) = delete x ctx
 alterMDCtxVarChange ctx _x (VarTypeChange _pch) = ctx
 
 alterCCtxVarChange :: ChangeCtx -> TermVarID -> VarChange -> ChangeCtx
-alterCCtxVarChange ctx x vch = case lookup x ctx of
-    Just vchStart -> case composeVarChange vchStart vch of
-        Just newVarChange -> insert x newVarChange ctx
-        Nothing -> delete x ctx
-    Nothing -> case vch of
-               VarInsert name pty -> insert x (VarInsert name pty) ctx
-               _ -> unsafeThrow "Shouldn't happen"
+--alterCCtxVarChange ctx x vch = case lookup x ctx of
+--    Just vchStart -> case composeVarChange vchStart vch of
+--        Just newVarChange -> insert x newVarChange ctx
+--        Nothing -> delete x ctx
+--    Nothing -> case vch of
+--               VarInsert name pty -> insert x (VarInsert name pty) ctx
+--               _ -> unsafeThrow "Shouldn't happen"
+alterCCtxVarChange ctx x vch = case composeVarChange (Just vch) (lookup x ctx) of
+    Just vch' -> insert x vch' ctx
+    Nothing -> delete x ctx
 
 -- Context endpoints
 
-
 composeCtxs :: ChangeCtx -> ChangeCtx -> ChangeCtx
-composeCtxs ctx1 ctx2 = mmapMap2 composeVarChange ctx1 ctx2
+composeCtxs ctx1 ctx2 = threeCaseUnionMaybe composeVarChange ctx1 ctx2
 
 composeKCtx :: KindChangeCtx -> KindChangeCtx -> KindChangeCtx
-composeKCtx kctx1 kctx2 = mmapMap2 composeTVarChange kctx1 kctx2
+composeKCtx kctx1 kctx2 = threeCaseUnionMaybe composeTVarChange kctx1 kctx2
 
 composeMDTypeChangeCtx :: MDTypeChangeCtx -> MDTypeChangeCtx -> MDTypeChangeCtx
-composeMDTypeChangeCtx mdkctx1 mdkctx2 = mmapMap2 composeNameChange mdkctx1 mdkctx2
+composeMDTypeChangeCtx mdkctx1 mdkctx2 = threeCaseUnionMaybe composeNameChange mdkctx1 mdkctx2
 
 composeMDTermChangeCtx :: MDTermChangeCtx -> MDTermChangeCtx -> MDTermChangeCtx
-composeMDTermChangeCtx mdctx1 mdctx2 = mmapMap2 composeNameChange mdctx1 mdctx2
+composeMDTermChangeCtx mdctx1 mdctx2 = threeCaseUnionMaybe composeNameChange mdctx1 mdctx2
 
 composeAllChCtxs :: AllChangeContexts -> AllChangeContexts -> AllChangeContexts
 composeAllChCtxs (ctx1 /\ kctx1 /\ mdctx1 /\ mdkctx1) (ctx2 /\ kctx2 /\ mdctx2 /\ mdkctx2) =

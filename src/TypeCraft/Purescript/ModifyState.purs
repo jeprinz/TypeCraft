@@ -369,13 +369,15 @@ pasteImpl st = do
 --                      let ctxs''' /\ tmPath'Changed' = chTermPath (tyInject ?h)
                       -- STEP 4: we need to get the typechange going up and ctx change going down and apply them to the term and path in the cursor
                       trace "STEP 4 of termPath paste: get changes and apply to program" \_ ->
+                      trace ("reverse pastePath2 is: " <> show (List.reverse pastePath2)) \_ ->
                       let (ctxCh /\ kctxCh /\ mdctxCh /\ mdkctxCh) = downPathToCtxChange ctxs (List.reverse pastePath2) in
+                      trace ("ctxCh is: " <> show ctxCh) \_ ->
                       let finalCh = termPathToChange newTy pastePath2 in
-                      trace ("finalCh is: " <> show finalCh) \_ ->
+--                      trace ("finalCh is: " <> show finalCh) \_ ->
                       -- These changes are at the top of the path to be pasted
                       let (kctxCh2 /\ ctxCh2) /\ termPathChanged = chTermPath finalCh {ctxs: ctxs, ty: ty, term: Hole defaultHoleMD, termPath: tmPath} Nothing in
 --                      let tm' = chTermBoundary kctxCh ctxCh (tyInject newTy) tm in
-                      trace ("ctxCh2 is: " <> show ctxCh2) \_ ->
+--                      trace ("ctxCh2 is: " <> show ctxCh2) \_ ->
                       trace "STEP 4.5" \_ ->
                       let (kctxCh2bottom /\ ctxCh2bottom) /\ pastePath3 = chTermPath (tyInject newTy) {ctxs: ctxs2', ty: newTy, term: Hole defaultHoleMD, termPath: pastePath2} (Just (kctxCh2 /\ ctxCh2)) in
                       trace ("ctxCh2bottom is: " <> show ctxCh2bottom) \_ ->
@@ -385,6 +387,7 @@ pasteImpl st = do
 --                      if not (kCtxIsId kctxShouldBeId) || not (ctxIsId ctxShouldBeId) then unsafeThrow "shouldn't happen in termPath paste" else
                       --- Also, I still need to apply the context change from the path downwards!
                       let ctxs' = snd (getAllEndpoints (fullCtxCh /\ fullKCtxCh /\ mdctxCh /\ mdkctxCh)) in
+                      trace ("ctxs'.ctx is: " <> show ctxs'.ctx) \_ ->
                       trace ("Made it to the end of termpath paste stuff") \_ ->
                       pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty (pastePath3 <> termPathChanged) tm'}
             _ -> Nothing
