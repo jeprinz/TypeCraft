@@ -5,21 +5,7 @@ import { Node, NodeMetadata } from "../Node";
 import * as Punc from './Punctuation';
 import assert from 'assert';
 import { fromBackendState, toBackendState } from '../../../TypeCraft/Typescript/State';
-
-var time_previous: number | undefined = undefined
-function timestamp(label: string) {
-  const do_timestamps = true; // change to true to enable timestamps
-  if (do_timestamps){
-      const time_now = (new Date()).getTime()
-      if (time_previous !== undefined) {
-        const time_diff = time_now - time_previous
-        console.log(`[timestamp | ${label}]`, `${time_now}ms`, `dt = ${time_diff}ms`)
-      } else {
-        console.log(`[timestamp | ${label}]`, `${time_now}ms`)
-      }
-      time_previous = time_now
-  }
-}
+import { logTimeDiffs, timestampBegin, timestampEnd } from '../../Timestamp';
 
 type RenderContext = { isInsideCursor: boolean, steps: number[] }
 
@@ -142,10 +128,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         let getCursor = node.getCursor
         if (getCursor !== undefined) {
           // console.log("onMouseDown on node with tag: " + node.tag)
-          
+
           // !TMP temporarily disabled
           editor.setBackendState(toBackendState(getCursor(fromBackendState(editor.state.backendState))))
-          
+
           event.stopPropagation()
         }
         // else console.log(`getCursor is undefined for this '${node.tag}' node`)
@@ -379,7 +365,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
               </span>
           ].flat(), indentationLevel)
         case 'ty neu':
-           assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)
+          assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)
           // TODO: Note from jacob: I put this if statement because the code was crashing when it was displaying a CNeu (since it gave it no kids). This case at least makes it not crash. We should make it display the right thing in the future.
           if (node.kids.length === 0) {
             return go(node, rndCtx, ["ty_neu"], [[Punc.braceL], renderLabel(node.metadata.label), [Punc.braceL], [Punc.braceR], [Punc.braceR]].flat(), indentationLevel)
@@ -455,9 +441,11 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       }
     }
 
-    timestamp("render, call backend State -> Node")
+    // timestampBegin("render, call backend State -> Node")
+    timestampBegin()
     const node = backend.props.format(editor.state.backendState)
-    timestamp("render, got Node from backend")
+    // timestamp("render, got Node from backend")
+    timestampEnd()
 
     // timestamp("render; call renderNode")
     const jsx = renderNode(node, emptyRenderContext, 0)
@@ -469,10 +457,16 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
     // timestamp("handleKeyboardEvent: event triggered")
-    
+
     // always capture these events:
     if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter"].includes(event.key) && !(event.metaKey || event.ctrlKey)) event.preventDefault()
     if (event.key == "p" && (event.ctrlKey || event.metaKey)) event.preventDefault()
+
+    // log timediffs
+    if (event.key == "t" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault()
+      logTimeDiffs()
+    }
 
     // timestamp("handleKeyboardEvent: querying to backend")
     const backendState = editor.props.backend.handleKeyboardEvent(event)(editor.state.backendState)
