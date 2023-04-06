@@ -8,7 +8,7 @@ import { fromBackendState, toBackendState } from '../../../TypeCraft/Typescript/
 
 var time_previous: number | undefined = undefined
 function timestamp(label: string) {
-  const do_timestamps = false; // change to true to enable timestamps
+  const do_timestamps = true; // change to true to enable timestamps
   if (do_timestamps){
       const time_now = (new Date()).getTime()
       if (time_previous !== undefined) {
@@ -85,7 +85,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       kids: JSX.Element[],
       indentationLevel: number,
     ): JSX.Element[] {
-      timestamp("render")
+      // timestamp("render")
 
       const hoverId = hoverIdOfRenderContext(rndCtx)
       // TODO: temporarily disabled until this is useful
@@ -459,24 +459,24 @@ export default function makeFrontend(backend: Backend): JSX.Element {
     const node = backend.props.format(editor.state.backendState)
     timestamp("render, got Node from backend")
 
-    timestamp("render; call renderNode")
+    // timestamp("render; call renderNode")
     const jsx = renderNode(node, emptyRenderContext, 0)
-    timestamp("render; got JSX from renderNode")
+    // timestamp("render; got JSX from renderNode")
 
     return jsx
   }
 
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
-    timestamp("handleKeyboardEvent: event triggered")
+    // timestamp("handleKeyboardEvent: event triggered")
     
     // always capture these events:
     if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter"].includes(event.key) && !(event.metaKey || event.ctrlKey)) event.preventDefault()
     if (event.key == "p" && (event.ctrlKey || event.metaKey)) event.preventDefault()
 
-    timestamp("handleKeyboardEvent: querying to backend")
+    // timestamp("handleKeyboardEvent: querying to backend")
     const backendState = editor.props.backend.handleKeyboardEvent(event)(editor.state.backendState)
-    timestamp("handleKeyboardEvent: answered by backend")
+    // timestamp("handleKeyboardEvent: answered by backend")
 
     if (backendState === undefined) {
       // backend state said that update fails (not an error) e.g. move right when
@@ -484,9 +484,9 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       return
     }
 
-    timestamp("handleKeyboardEvent: begin setting react state")
+    // timestamp("handleKeyboardEvent: begin setting react state")
     editor.setBackendState(backendState)
-    timestamp("handleKeyboardEvent: finished setting react state (will trigger re-render)")
+    // timestamp("handleKeyboardEvent: finished setting react state (will trigger re-render)")
   }
 
   const initState = backend.state
