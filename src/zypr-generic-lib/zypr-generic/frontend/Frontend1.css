@@ -245,8 +245,8 @@
   box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue, var(--node-box-shadow-thickness) 0 0 0 blue;
   background-color: var(--cursor-background-color);
 
-  animation: blink-box-shadow-animation 1s steps(2, start) infinite;
-  -webkit-animation: blink-box-shadow-animation 1s steps(2, start) infinite;
+  /* animation: blink-box-shadow-animation 1s steps(2, start) infinite;
+  -webkit-animation: blink-box-shadow-animation 1s steps(2, start) infinite; */
 }
 
 .node.selectable {
@@ -319,8 +319,8 @@
   box-shadow: none;
 }
 
-.node.tm-bnd.bnd-empty,
-.node.tm-bnd.cursor.bnd-empty {
+.node.bnd-empty,
+.node.bnd-empty.cursor {
   display: inline-block;
 
   animation: none;
@@ -379,8 +379,8 @@
 
 .node.list.nil.cursor>.listNil {
   background-color: blue;
-  animation: blink-background-color-animation 1s steps(2, start) infinite;
-  -webkit-animation: blink-background-color-animation 1s steps(2, start) infinite;
+  /* animation: blink-background-color-animation 1s steps(2, start) infinite;
+  -webkit-animation: blink-background-color-animation 1s steps(2, start) infinite; */
 }
 
 .node.list.cons.select-top {
