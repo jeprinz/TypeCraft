@@ -247,26 +247,6 @@ termToNode isActive aboveInfo term =
             $ arrangeTerm args
                 [ arrangeKidAI cursorOnlyInfo (insideHoleToNode isActive) { ctxs: term.ctxs, ty: term.ty }
                 ]
-    --          let
-    --            getCursor =
-    --              join
-    --                $ justWhen args.isActive \_ -> do
-    --                    cursorLocation <- args.makeCursor unit
-    --                    Just (_ { mode = makeCursorMode cursorLocation })
-    --          in
-    --            makeNode
-    --              { kids: [ typeToNode false AINothing { ctxs: term.ctxs, ty: term.ty } ]
-    --              , getCursor: getCursor
-    --              , getSelect:
-    --                  join
-    --                    $ justWhen args.isActive \_ -> do
-    --                        select <- args.makeSelect unit
-    --                        if List.null (getMiddlePath select) then
-    --                          getCursor
-    --                        else
-    --                          Just (_ { mode = makeSelectMode select })
-    --              , tag: termToNodeTag term.term
-    --              }
     , buffer:
         \md def defTy body _bodyTy ->
           arrangeTerm args
@@ -432,14 +412,7 @@ ctrToNode isActive aboveInfo ctr =
   cursorOnlyAI = aIOnlyCursor aboveInfo
 
 -- CtrParam
---
---ctrParamToNode :: AllContext -> AboveInfo -> UpPath -> CtrParam -> Node
---ctrParamToNode ctxs aboveInfo up (CtrParam md ty) = makeNode {
---    dat: makeNodeData {indentation: hole, isParenthesized: false, label: "CtrParam"}
---    , kids: [[typeToNode isActive (stepAI (CtrParam1 md) (aIOnlyCursor aboveInfo)) {ctxs, ty}]]
---    , getCursor: Nothing
---    , getSelect: Nothing
---    , style: makeNormalNodeStyle
+
 stepKidsCtrParam :: Boolean -> CtrParam -> Array PreNode -> Array Node
 stepKidsCtrParam isActive (CtrParam md ty) [ k_ty ] = [ k_ty (CtrParam1 md {--}) ]
 
