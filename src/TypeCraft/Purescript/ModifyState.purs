@@ -57,11 +57,17 @@ handleKey key st
 handleKey key st = case st.mode of
   CursorMode cursorMode -> case cursorMode.cursorLocation of
     TypeBindCursor ctxs path (TypeBind md tyVarId)
+      | key.key == " " -> moveCursorNextHolelike st
       | Just varName <- manipulateString key md.varName -> pure $ st { mode = CursorMode cursorMode { cursorLocation = TypeBindCursor ctxs path (TypeBind md { varName = varName } tyVarId) } }
     TermBindCursor ctxs path (TermBind md tmVarId)
+      | key.key == " " -> moveCursorNextHolelike st
       | Just varName <- manipulateString key md.varName -> pure $ st { mode = CursorMode cursorMode { cursorLocation = TermBindCursor ctxs path (TermBind md { varName = varName } tmVarId) } }
     --    CtrParamListCursor ctxs path ctrs -> hole' "handleKey CtrParamListCursor" -- Jacob Note: why was this line here? I'm not sure.
     _
+      | key.key == " " ->
+        case submitQuery st of
+            Just st' -> Just st'
+            Nothing -> moveCursorNextHolelike st
       | Just query <- manipulateQuery key st cursorMode -> do
         -- note that we don't `checkpoint` here, since every little modification
         -- of the query string and selection shouldn't by undoable
@@ -138,9 +144,10 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
         termPath = case path' of
           (Hole1 _) List.: termPath' -> termPath'
           _ -> unsafeThrow "Shouldn't happen"
+        loc' = stepCursorNextHolelike (TermCursor ctxs' ty' termPath tm)
       in
         pure
-          { cursorLocation: TermCursor ctxs' ty' termPath tm
+          { cursorLocation: loc'
           , query: emptyQuery
           }
     _ -> Nothing
