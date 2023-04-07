@@ -36,6 +36,8 @@ function hoverIdOfRenderContext(rndCtx: RenderContext): HoverId {
   return ({ id: idOfRenderContext(rndCtx) })
 }
 
+const keys_ignore = ["PageUp", "PageDown", "End", "Home", "Insert", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "NumLock", "ScrollLock", "AudioVolumeMute", "AudioVolumeDown", "AudioVolumeUp", "LaunchMediaPlayer", "LaunchApplication1", "LaunchApplication2"]
+
 export default function makeFrontend(backend: Backend): JSX.Element {
   // if catches any exceptions in render, then renders the last undo state
   // instead (if there is one, otherwise renders as a debug elements)
@@ -71,7 +73,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       kids: JSX.Element[],
       indentationLevel: number,
     ): JSX.Element[] {
-      // timestamp("render")
 
       const hoverId = hoverIdOfRenderContext(rndCtx)
       // TODO: temporarily disabled until this is useful
@@ -434,46 +435,38 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       }
     }
 
-    // timestampBegin("render, call backend State -> Node")
     timestampBegin()
     const node = backend.props.format(editor.state.backendState)
-    // timestamp("render, got Node from backend")
     timestampEnd()
 
-    // timestamp("render; call renderNode")
     const jsx = renderNode(node, emptyRenderContext, 0)
-    // timestamp("render; got JSX from renderNode")
 
     return jsx
   }
 
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
-    // timestamp("handleKeyboardEvent: event triggered")
 
-    // always capture these events:
-    if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter"].includes(event.key) && !(event.metaKey || event.ctrlKey)) event.preventDefault()
-    if (event.key == "p" && (event.ctrlKey || event.metaKey)) event.preventDefault()
+    // always capture these events
+    if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter", "p", "t"].includes(event.key) && !(event.metaKey || event.ctrlKey)) event.preventDefault()
+
+    // always ignore these events
+    if (keys_ignore.includes(event.key)) return
 
     // log timediffs
     if (event.key == "t" && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault()
       logTimeDiffs()
     }
 
-    // timestamp("handleKeyboardEvent: querying to backend")
     const backendState = editor.props.backend.handleKeyboardEvent(event)(editor.state.backendState)
-    // timestamp("handleKeyboardEvent: answered by backend")
 
     if (backendState === undefined) {
-      // backend state said that update fails (not an error) e.g. move right when
-      // there's nowhere rightwards to move to
+      // backend state said that update fails (not an error) e.g. move right
+      // when there's nowhere rightwards to move to
       return
     }
 
-    // timestamp("handleKeyboardEvent: begin setting react state")
     editor.setBackendState(backendState)
-    // timestamp("handleKeyboardEvent: finished setting react state (will trigger re-render)")
   }
 
   const initState = backend.state
