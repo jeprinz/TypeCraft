@@ -215,7 +215,7 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
           --      let (kctx' /\ ctx') /\ path' = chTypePath (Replace ty ty') { ctxs, ty, typePath: path } in
           --      let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
           pure
-            { cursorLocation: TypeCursor ctxs' path' ty'
+            { cursorLocation: stepCursorNextHolelike (TypeCursor ctxs' path' ty')
             , query: emptyQuery
             }
     CompletionTypePath pathNew ch ->
@@ -415,7 +415,7 @@ pasteImpl st = case st.clipboard of
             Right (newTy /\ sub) ->
               recInsideHolePath
                 { hole1:
-                    \termPath ->
+                    \_md termPath ->
                       pure $ st { mode = makeCursorMode $ TermCursor (subAllCtx sub ctxs) newTy (subTermPath sub termPath.termPath) (subTerm sub tm'Diff) }
                 }
                 { ctxs, ty, insideHolePath }

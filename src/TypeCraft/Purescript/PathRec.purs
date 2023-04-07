@@ -323,12 +323,12 @@ recListTypeBindPath args {ctxs, tyBinds, listTypeBindPath: TypeBindListCons2 tyB
 recListTypeBindPath _ listTypeBindPath = unsafeThrow ("Either wasn't a ListTypeBindPath or I forgot a case. path is: " <> show listTypeBindPath.listTypeBindPath)
 
 type InnerHolePathRec a = {
-    hole1 :: TermPathRecValue -> a
+    hole1 :: HoleMD -> TermPathRecValue -> a
 }
 
 recInsideHolePath :: forall a . InnerHolePathRec a -> InsideHolePathRecValue -> a
 recInsideHolePath args {ctxs, ty, insideHolePath: Hole1 md : termPath} =
-    args.hole1 {ctxs, ty, termPath, term: Hole md}
+    args.hole1 md {ctxs, ty, termPath, term: Hole md}
 recInsideHolePath _ _ = unsafeThrow "Invalid tooth in recInsideHolePath"
 
 -- List TypeBind

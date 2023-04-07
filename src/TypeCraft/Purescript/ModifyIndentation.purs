@@ -6,6 +6,7 @@ import TypeCraft.Purescript.State
 import Data.List as List
 import Data.Maybe (Maybe(..))
 import Effect.Exception.Unsafe (unsafeThrow)
+import TypeCraft.Purescript.PathRec (recInsideHolePath)
 
 toggleIndentation :: CursorLocation -> Maybe CursorLocation
 toggleIndentation = case _ of
@@ -39,5 +40,12 @@ toggleIndentation = case _ of
         Arrow1 md cod -> Nothing
         Arrow2 md dom -> setTooth (Arrow2 md { codIndented = not md.codIndented } dom)
         _ -> unsafeThrow "malformed TypeCursor"
+  InsideHoleCursor ctxs ty insideHolePath -> recInsideHolePath {
+    hole1 : \ md termPath ->
+        case toggleIndentation (TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term) of
+        Just (TermCursor _ _ termPath _) -> pure $ InsideHoleCursor ctxs ty (Hole1 md List.: termPath)
+        _ -> unsafeThrow "shouldn't happen InsideHoleCursor case of toggle indentation"
+  } {ctxs, ty, insideHolePath}
+
   -- TODO: handle other syntax forms
   _ -> Nothing

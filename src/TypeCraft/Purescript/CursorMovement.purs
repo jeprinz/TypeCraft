@@ -221,7 +221,7 @@ parent (TypeBindListCursor ctxs listTypeBindPath tyBinds) =
     }) {ctxs, listTypeBindPath, tyBinds}
 parent (InsideHoleCursor ctxs ty insideHolePath) =
     recInsideHolePath ({
-        hole1 : \termPath -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (1 - 1)
+        hole1 : \md termPath -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ (1 - 1)
     }) {ctxs, ty, insideHolePath}
 --parent _ = hole' "given an ill-typed upPath to parent function (or I missed a case)"
 

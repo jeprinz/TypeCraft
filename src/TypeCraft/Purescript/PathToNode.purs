@@ -692,7 +692,7 @@ insideHolePathToNode _ _ _ { insideHolePath: Nil } _ = unsafeThrow "I don't thin
 insideHolePathToNode isActive abovePath belowInfo insideHolePath innerNode =
   recInsideHolePath
     { hole1:
-        \termPath ->
+        \md termPath ->
           let
             newBI = BITerm
           in
