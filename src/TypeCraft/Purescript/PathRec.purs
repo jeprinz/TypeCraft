@@ -161,7 +161,7 @@ recTypePath args {ctxs, ty, typePath: (Arrow1 md {-Type-} t2) : typePath} =
 recTypePath args {ctxs, ty, typePath: (Arrow2 md t1 {-Type-}) : typePath} =
     args.arrow2 {ctxs, ty: Arrow md t1 ty, typePath} md
         {ctxs, ty: t1}
-recTypePath _ _ = unsafeThrow "Either wasn't a TypePath or I forgot a case!"
+recTypePath _ typePath = unsafeThrow ("Either wasn't a TypePath or I forgot a case! typePath is: " <> show typePath.typePath)
 
 type CtrPathRec a = {
     ctrListCons1 :: ListCtrPathRecValue -> ListCtrRecValue -> a

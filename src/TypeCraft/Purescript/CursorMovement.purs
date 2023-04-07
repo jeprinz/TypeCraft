@@ -22,6 +22,16 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import TypeCraft.Purescript.Util (fromJust, hole')
 import TypeCraft.Purescript.Util (head')
 
+getTyArgCursors :: ListTypeArgRecValue -> List Tooth -> List (CursorLocation)
+getTyArgCursors listTypeArg up = recListTypeArg {
+    cons : \tyArg tyArgs ->
+        recTypeArg {
+            typeArg : \md ty -> (TypeCursor tyArg.ctxs (TypeArg1 md : TypeArgListCons1 tyArgs.tyArgs : up) ty.ty)
+                : getTyArgCursors tyArgs (TypeArgListCons2 tyArg.tyArg : up)
+        } tyArg
+    , nil : \_ -> Nil
+} listTypeArg
+
 getCursorChildren :: CursorLocation -> List CursorLocation
 getCursorChildren (TermCursor ctxs ty up term) =
     recTerm
@@ -32,7 +42,7 @@ getCursorChildren (TermCursor ctxs ty up term) =
                 TermCursor body.ctxs body.ty (Lambda3 md x.tBind ty.ty bodyTy : up) body.term : Nil
             , app: \md t1 t2 tyArg tyOut -> TermCursor t1.ctxs t1.ty (App1 md t2.term tyArg tyOut : up) t1.term
                 : TermCursor t2.ctxs t2.ty (App2 md t1.term tyArg tyOut : up) t2.term : Nil
-            , var: \_ _ _ -> Nil -- TODO
+            , var: \md x tyArgs -> getTyArgCursors tyArgs (Var1 md x : up)
             , lett: \md tBind tBinds def defTy body bodyTy ->
                 TermBindCursor tBind.ctxs (Let1 md {--} tBinds.tyBinds def.term defTy.ty body.term bodyTy : up) tBind.tBind
                 : TypeBindListCursor tBinds.ctxs (Let2 md tBind.tBind {--} def.term defTy.ty body.term bodyTy : up) tBinds.tyBinds
@@ -66,7 +76,7 @@ getCursorChildren (TypeCursor ctxs up ty) =
         ( { arrow: \md ty1 ty2 -> TypeCursor ty1.ctxs (Arrow1 md {--} ty2.ty : up) ty1.ty
             : TypeCursor ty2.ctxs (Arrow2 md ty1.ty {--} : up) ty2.ty: Nil
           , tHole: \md x _ _ -> Nil
-          , tNeu: \md x tyArgs -> Nil -- TODO: each type argument needs to be a child. --  TypeArgListCursor tyArgs.ctxs (TNeu1 md x {--} : up) tyArgs.tyArgs : Nil
+          , tNeu: \md x tyArgs -> getTyArgCursors tyArgs (TNeu1 md x : up)
           }
         )
         {ctxs, ty}
@@ -168,7 +178,16 @@ parent (TypeCursor ctxs typePath ty) =
             recCtrParamPath ({ -- We skip the CtrParam, and the cursor goes to the CtrParam list above it
                 ctrParamListCons1: \listCtrParamPath ctrParams -> Just $ CtrParamListCursor listCtrParamPath.ctxs listCtrParamPath.listCtrParamPath listCtrParamPath.ctrParams /\ (1 - 1)
             }) ctrParamPath
-        , typeArg1: \tyArgPath md {-Type-} -> hole' "parent" -- TODO: parent should be either the Var or TNeu bove the TypeArg list
+        , typeArg1: \tyArgPath md {-Type-} ->
+            let getTyArgChildren :: ListTypeArgPathRecValue -> Int -> Maybe (CursorLocation /\ Int)
+                getTyArgChildren tyArgListPath childNum = recListTypeArgPath {
+                    tNeu1 : \typePath md tv {-tyArgs-} -> Just $ TypeCursor typePath.ctxs typePath.typePath typePath.ty /\ childNum
+                    , typeArgListCons2 : \listTypeArgPath tyArg {-tyArgs-} -> getTyArgChildren listTypeArgPath (childNum + 1)
+                    , var1 : \termPath md x {-tyArgs-} -> Just $ TermCursor termPath.ctxs termPath.ty termPath.termPath termPath.term /\ childNum
+                } tyArgListPath in
+            recTypeArgPath {
+                typeArgListCons1 : \listTypeArgPath tyArgs -> getTyArgChildren listTypeArgPath 0
+            } tyArgPath
 --            recTypeArgPath ({ -- We skip the TypeArg, and the cursor goes to the TypeArg list above it
 --                typeArgListCons1: \listTypeArgPath tyArgs -> Just $ TypeArgListCursor listTypeArgPath.ctxs listTypeArgPath.listTypeArgPath listTypeArgPath.tyArgs /\ (1 - 1)
 --            }) tyArgPath
