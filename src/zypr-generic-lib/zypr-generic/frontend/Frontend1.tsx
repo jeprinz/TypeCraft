@@ -326,11 +326,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
 
       function renderConsTail(kidNode: Node, kidElems: JSX.Element[], sepElems: JSX.Element[]): JSX.Element[] {
         // only add separator if the tail is not nil
-        if (kidNode.tag.includes('nil')) {
+        if (kidNode.tag.includes('nil'))
           return kidElems;
-        } else {
+        else
           return ([] as JSX.Element[]).concat(sepElems, kidElems)
-        }
       }
 
       let classNames: string[] = []
@@ -366,12 +365,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           ].flat(), indentationLevel)
         case 'ty neu':
           assert(node.metadata !== undefined && node.metadata.case === 'ty neu', `node.metadata.case was expected to be 'ty neu', but it actually was ${node.metadata?.case}`)
-          // TODO: Note from jacob: I put this if statement because the code was crashing when it was displaying a CNeu (since it gave it no kids). This case at least makes it not crash. We should make it display the right thing in the future.
-          if (node.kids.length === 0) {
+          if (node.kids.length === 0)
             return go(node, rndCtx, ["ty_neu"], [[Punc.braceL], renderLabel(node.metadata.label), [Punc.braceL], [Punc.braceR], [Punc.braceR]].flat(), indentationLevel)
-          } {
+          else
             return go(node, rndCtx, ["ty_neu"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
-          }
         case 'ty cx-boundary': return go(node, rndCtx, ["ty_cx-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel)
         case 'poly-ty forall': return go(node, rndCtx, ["poly-ty_forall"], [[Punc.forall], kid()].flat(), indentationLevel)
         case 'poly-ty ty': return go(node, rndCtx, ["poly-ty_ty"], kid(), indentationLevel)
@@ -385,10 +382,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm dat': return go(node, rndCtx, ["tm_dat"], [[Punc.data], kid(), kid(), [Punc.assign_shortFront], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-let': return go(node, rndCtx, ["tm_ty-let"], [[Punc.let_], kid(), kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
 
-        // Jacob note: I removed the part that displays the typechange because displaying typechanges is completely broken and just crashes
-        // case 'tm ty-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel)
         case 'tm ty-boundary':
-          // console.log("rendering ty-boundary", node)
           return go(node, rndCtx, ["tm_ty-boundary"], [<div className="tm_ty-boundary-inner">{[[Punc.braceL], <div className="node tm_ty-boundary-term">{kid()}</div>, [Punc.vertical], <div className="node tm_ty-boundary-change">{kid()}</div>, [Punc.braceR]]}</div>].flat(), indentationLevel)
 
         case 'tm cx-boundary': return go(node, rndCtx, ["tm_ty-boundary"], [[Punc.braceL], kid(), [Punc.braceR]].flat(), indentationLevel) // TODO: render contextchange
@@ -413,7 +407,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           if (node.metadata.label.length === 0) classNames.push("bnd-empty")
           return go(node, rndCtx, classNames, renderLabel(node.metadata.label), indentationLevel)
         case 'ctr-prm':
-          // TODO: label
           assert(node.metadata !== undefined && node.metadata.case === 'ctr-prm', `node.metadata.case was expected to be 'ctr-prm', but it actually was ${node.metadata?.case}`)
           return go(node, rndCtx, ["ctr-prm"], [renderLabel(node.metadata.label), [Punc.colon], kid()].flat(), indentationLevel)
         case 'ctr': return go(node, rndCtx, ["ctr"], [kid(), [Punc.parenL], kid(), [Punc.parenR]].flat(), indentationLevel)
