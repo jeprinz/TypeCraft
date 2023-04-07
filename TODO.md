@@ -1,7 +1,8 @@
 # TODO
 
-- [ ] Relatedly, it would be really helpful for debugging if you did the thing
-  we talked about where it catches exceptions and reverts to the previous undo
-  state, and just prints out the stack trace. (I think it was crashes that
-  happen during termToNode that don't get caught? Crashes when it updates the
-  state are already being caught)
+- [x] investigate improving efficiency (to what extent i can)
+- [x] finish getting "jump to next/prev hole-like" working
+- [ ] make undo work properly
+- [ ] polish some ui stuff
+- [ ] make the cursor stay at top of insertion and then step forwards
+  - [ ] requires that function that wraps a path around a cursor
