@@ -561,7 +561,7 @@
 /* tm_ty-boundary */
 
 .tm_ty-boundary-inner {
-  display: inline-block;
+  display: inline;
   border-radius: 0.2rem;
   padding: 0 0.1rem;
   /* padding: 0 0.2rem; */
@@ -570,12 +570,12 @@
 }
 
 .node.tm_ty-boundary-term {
-  display: inline-block;
+  display: inline;
   margin-right: 0.1rem;
 }
 
 .node.tm_ty-boundary-change {
-  display: inline-block;
+  display: inline;
   margin-left: 0.1rem;
   padding: 0 0.2rem;
   box-shadow: 
