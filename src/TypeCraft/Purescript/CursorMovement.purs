@@ -422,3 +422,10 @@ cursorLocationToSelect :: SelectOrientation -> CursorLocation -> Maybe Select
 cursorLocationToSelect ori cursor = do
     (ctxs /\ up /\ syn) <- getCursorParts cursor
     pure $ partsToSelect (up /\ ctxs /\ syn /\ Nil /\ ctxs /\ syn /\ ori)
+
+goUp_n :: Int -> CursorLocation -> CursorLocation
+goUp_n n loc 
+    | n == 0 = loc 
+    | otherwise = case parent loc of 
+        Nothing -> loc 
+        Just (loc' /\ _) -> goUp_n (n - 1) loc'
