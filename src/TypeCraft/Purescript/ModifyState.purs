@@ -61,7 +61,7 @@ handleKey key st = case st.mode of
     --    CtrParamListCursor ctxs path ctrs -> hole' "handleKey CtrParamListCursor" -- Jacob Note: why was this line here? I'm not sure.
     _
       | Just query <- manipulateQuery key st cursorMode -> do
-        -- not the we don't `checkpoint` here, since every little modification
+        -- note that we don't `checkpoint` here, since every little modification
         -- of the query string and selection shouldn't by undoable
         pure $ st { mode = CursorMode cursorMode { query = query } }
       -- undo/redo
@@ -95,6 +95,9 @@ handleKey key st = case st.mode of
     | key.key == "x" && (key.ctrlKey || key.metaKey) -> cut st
     | key.key == "v" && (key.ctrlKey || key.metaKey) -> paste st
     | otherwise -> Nothing
+
+checkpoint :: State -> State
+checkpoint st = st { history = st.mode : st.history }
 
 submitQuery :: State -> Maybe State
 submitQuery st = case st.mode of
@@ -238,9 +241,6 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
     _ -> unsafeThrow "tried to submit a non-CompletionCursorList at a CtrListCursor"
   _ -> Nothing -- TODO: submit queries at other kinds of cursors?
 
-checkpoint :: State -> State
-checkpoint st = st { history = st.mode : st.history }
-
 -- doesn't `checkpoint`
 moveCursorPrev :: State -> Maybe State
 moveCursorPrev st = case st.mode of
@@ -366,176 +366,171 @@ paste st = do
 
 -- TODO: properly use contexts and freshen variables
 pasteImpl :: State -> Maybe State
-pasteImpl st = do
-  checkpoint -- TODO: is this the right place for a checkpoint to be?
-    <$> case st.clipboard of
-        EmptyClip -> Nothing
-        TermClip ctxs' ty' tm' -> case st.mode of
-          CursorMode cursorMode -> case cursorMode.cursorLocation of
-            TermCursor ctxs ty tmPath _tm -> pure $ st { mode = makeCursorMode $ TermCursor ctxs ty (TypeBoundary1 defaultTypeBoundaryMD (Replace ty' ty) List.: tmPath) tm' }
-            InsideHoleCursor ctxs ty insideHolePath ->
-              let
-                kctxDiff = getKindChangeCtx ctxs'.kctx ctxs.kctx ctxs'.actx ctxs.actx ctxs'.mdkctx ctxs.mdkctx
+pasteImpl st = case st.clipboard of
+  EmptyClip -> Nothing
+  TermClip ctxs' ty' tm' -> case st.mode of
+    CursorMode cursorMode -> case cursorMode.cursorLocation of
+      TermCursor ctxs ty tmPath _tm -> pure $ st { mode = makeCursorMode $ TermCursor ctxs ty (TypeBoundary1 defaultTypeBoundaryMD (Replace ty' ty) List.: tmPath) tm' }
+      InsideHoleCursor ctxs ty insideHolePath ->
+        let
+          kctxDiff = getKindChangeCtx ctxs'.kctx ctxs.kctx ctxs'.actx ctxs.actx ctxs'.mdkctx ctxs.mdkctx
 
-                ctxDiff = getChangeCtx ctxs'.ctx ctxs.ctx ctxs'.mdctx ctxs.mdctx
+          ctxDiff = getChangeCtx ctxs'.ctx ctxs.ctx ctxs'.mdctx ctxs.mdctx
 
-                _ /\ chIn = chType kctxDiff ty'
+          _ /\ chIn = chType kctxDiff ty'
 
-                ch /\ tm'Diff = chTerm kctxDiff ctxDiff chIn tm'
+          ch /\ tm'Diff = chTerm kctxDiff ctxDiff chIn tm'
 
-                ty'Diff = snd (getEndpoints ch)
-              -- TODO: finish this implementation! should chIn be used like this? And how should ty'Diff and tm'Diff be used below?
-              in
-                case runUnify (normThenUnify ctxs.actx ty'Diff ty) of
-                  Left msg -> Nothing
-                  Right (newTy /\ sub) ->
-                    recInsideHolePath
-                      { hole1:
-                          \termPath ->
-                            pure $ st { mode = makeCursorMode $ TermCursor (subAllCtx sub ctxs) newTy (subTermPath sub termPath.termPath) (subTerm sub tm'Diff) }
-                      }
-                      { ctxs, ty, insideHolePath }
-            _ -> Nothing
-          SelectMode _selectMode -> Nothing
-        TermPathClip ctxs1' _ty1' pastePath ctxs2' ty2' -> case st.mode of
-          CursorMode cursorMode -> case cursorMode.cursorLocation of
-            TermCursor ctxs ty tmPath tm -> do
-              -- STEP 1: we need to generalize the inside and outside types of tmPath'
-              traceM "STEP 1 of termPath paste: generalize the path"
-              let
-                originalCh = termPathToChange ty2' pastePath
+          ty'Diff = snd (getEndpoints ch)
+        -- TODO: finish this implementation! should chIn be used like this? And how should ty'Diff and tm'Diff be used below?
+        in
+          case runUnify (normThenUnify ctxs.actx ty'Diff ty) of
+            Left msg -> Nothing
+            Right (newTy /\ sub) ->
+              recInsideHolePath
+                { hole1:
+                    \termPath ->
+                      pure $ st { mode = makeCursorMode $ TermCursor (subAllCtx sub ctxs) newTy (subTermPath sub termPath.termPath) (subTerm sub tm'Diff) }
+                }
+                { ctxs, ty, insideHolePath }
+      _ -> Nothing
+    SelectMode _selectMode -> Nothing
+  TermPathClip ctxs1' _ty1' pastePath ctxs2' ty2' -> case st.mode of
+    CursorMode cursorMode -> case cursorMode.cursorLocation of
+      TermCursor ctxs ty tmPath tm -> do
+        -- STEP 1: we need to generalize the inside and outside types of tmPath'
+        traceM "STEP 1 of termPath paste: generalize the path"
+        let
+          originalCh = termPathToChange ty2' pastePath
 
-                genCh = generalizeChange originalCh
+          genCh = generalizeChange originalCh
 
-                innerGenTy = fst (getEndpoints genCh)
-              -- the inner generalized type is what must unify with the type of the term that the cursor is on
-              case runUnify (normThenUnify ctxs.actx innerGenTy ty) of
-                Left msg -> Nothing
-                -- TODO: this sub needs to be applied to ty, tmPath, and tm. It doesn't need to be applied to tmPath', because that gets changed by a call to chTermPath
-                Right (newTy /\ sub) -> do
-                  -- STEP 2: get the ctx changes describing what variables have been removed or changed, and apply them to tmPath'Changed
-                  traceM "STEP 2 of termPath paste: get context diff"
-                  let
-                    kctxDiff1 = getKindChangeCtx ctxs1'.kctx ctxs.kctx ctxs1'.actx ctxs.actx ctxs1'.mdkctx ctxs.mdkctx
+          innerGenTy = fst (getEndpoints genCh)
+        -- the inner generalized type is what must unify with the type of the term that the cursor is on
+        case runUnify (normThenUnify ctxs.actx innerGenTy ty) of
+          Left msg -> Nothing
+          -- TODO: this sub needs to be applied to ty, tmPath, and tm. It doesn't need to be applied to tmPath', because that gets changed by a call to chTermPath
+          Right (newTy /\ sub) -> do
+            -- STEP 2: get the ctx changes describing what variables have been removed or changed, and apply them to tmPath'Changed
+            traceM "STEP 2 of termPath paste: get context diff"
+            let
+              kctxDiff1 = getKindChangeCtx ctxs1'.kctx ctxs.kctx ctxs1'.actx ctxs.actx ctxs1'.mdkctx ctxs.mdkctx
 
-                    -- first get the diff to the top context
-                    ctxDiff1 = getChangeCtx ctxs1'.ctx ctxs.ctx ctxs1'.mdctx ctxs.mdctx
-                  -- STEP 3: given a specific instantiation of the inner type that will fit at the term, we need to change tmPath' so that it has this type inside
-                  traceM "STEP 3 of termPath paste: adjust path to be pasted"
-                  -- Also, apply the context changes while were at it:
-                  let
-                    (kctx' /\ ctx') /\ pastePath2 =
-                      chTermPath (Replace (fst (getEndpoints originalCh)) newTy) { ctxs: ctxs2', ty: ty2', term: Hole defaultHoleMD, termPath: pastePath }
-                        (Just (kctxDiff1 /\ ctxDiff1))
-                  --                      let ctxs''' /\ tmPath'Changed' = chTermPath (tyInject ?h)
-                  -- STEP 4: we need to get the typechange going up and ctx change going down and apply them to the term and path in the cursor
-                  traceM "STEP 4 of termPath paste: get changes and apply to program"
-                  traceM ("reverse pastePath2 is: " <> show (List.reverse pastePath2))
-                  let
-                    (ctxCh /\ kctxCh /\ mdctxCh /\ mdkctxCh) = downPathToCtxChange ctxs (List.reverse pastePath2)
-                  traceM ("ctxCh is: " <> show ctxCh)
-                  let
-                    finalCh = termPathToChange newTy pastePath2
+              -- first get the diff to the top context
+              ctxDiff1 = getChangeCtx ctxs1'.ctx ctxs.ctx ctxs1'.mdctx ctxs.mdctx
+            -- STEP 3: given a specific instantiation of the inner type that will fit at the term, we need to change tmPath' so that it has this type inside
+            traceM "STEP 3 of termPath paste: adjust path to be pasted"
+            -- Also, apply the context changes while were at it:
+            let
+              (kctx' /\ ctx') /\ pastePath2 =
+                chTermPath (Replace (fst (getEndpoints originalCh)) newTy) { ctxs: ctxs2', ty: ty2', term: Hole defaultHoleMD, termPath: pastePath }
+                  (Just (kctxDiff1 /\ ctxDiff1))
+            --                      let ctxs''' /\ tmPath'Changed' = chTermPath (tyInject ?h)
+            -- STEP 4: we need to get the typechange going up and ctx change going down and apply them to the term and path in the cursor
+            traceM "STEP 4 of termPath paste: get changes and apply to program"
+            traceM ("reverse pastePath2 is: " <> show (List.reverse pastePath2))
+            let
+              (ctxCh /\ kctxCh /\ mdctxCh /\ mdkctxCh) = downPathToCtxChange ctxs (List.reverse pastePath2)
+            traceM ("ctxCh is: " <> show ctxCh)
+            let
+              finalCh = termPathToChange newTy pastePath2
 
-                    --                      trace ("finalCh is: " <> show finalCh) \_ ->
-                    -- These changes are at the top of the path to be pasted
-                    (kctxCh2 /\ ctxCh2) /\ termPathChanged = chTermPath finalCh { ctxs: ctxs, ty: ty, term: Hole defaultHoleMD, termPath: tmPath } Nothing
-                  --                      let tm' = chTermBoundary kctxCh ctxCh (tyInject newTy) tm in
-                  --                      trace ("ctxCh2 is: " <> show ctxCh2) \_ ->
-                  traceM "STEP 4.5"
-                  let
-                    (kctxCh2bottom /\ ctxCh2bottom) /\ pastePath3 = chTermPath (tyInject newTy) { ctxs: ctxs2', ty: newTy, term: Hole defaultHoleMD, termPath: pastePath2 } (Just (kctxCh2 /\ ctxCh2))
-                  traceM ("ctxCh2bottom is: " <> show ctxCh2bottom)
-                  let
-                    fullKCtxCh = (composeKCtx kctxCh kctxCh2bottom)
+              --                      trace ("finalCh is: " <> show finalCh) \_ ->
+              -- These changes are at the top of the path to be pasted
+              (kctxCh2 /\ ctxCh2) /\ termPathChanged = chTermPath finalCh { ctxs: ctxs, ty: ty, term: Hole defaultHoleMD, termPath: tmPath } Nothing
+            --                      let tm' = chTermBoundary kctxCh ctxCh (tyInject newTy) tm in
+            --                      trace ("ctxCh2 is: " <> show ctxCh2) \_ ->
+            traceM "STEP 4.5"
+            let
+              (kctxCh2bottom /\ ctxCh2bottom) /\ pastePath3 = chTermPath (tyInject newTy) { ctxs: ctxs2', ty: newTy, term: Hole defaultHoleMD, termPath: pastePath2 } (Just (kctxCh2 /\ ctxCh2))
+            traceM ("ctxCh2bottom is: " <> show ctxCh2bottom)
+            let
+              fullKCtxCh = (composeKCtx kctxCh kctxCh2bottom)
 
-                    fullCtxCh = (composeCtxs ctxCh ctxCh2bottom)
+              fullCtxCh = (composeCtxs ctxCh ctxCh2bottom)
 
-                    tm' = chTermBoundary fullKCtxCh fullCtxCh (tyInject newTy) tm
+              tm' = chTermBoundary fullKCtxCh fullCtxCh (tyInject newTy) tm
 
-                    --                      if not (kCtxIsId kctxShouldBeId) || not (ctxIsId ctxShouldBeId) then unsafeThrow "shouldn't happen in termPath paste" else
-                    --- Also, I still need to apply the context change from the path downwards!
-                    ctxs' = snd (getAllEndpoints (fullCtxCh /\ fullKCtxCh /\ mdctxCh /\ mdkctxCh))
-                  traceM ("ctxs'.ctx is: " <> show ctxs'.ctx)
-                  traceM ("Made it to the end of termpath paste stuff")
-                  pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty (pastePath3 <> termPathChanged) tm' }
-            _ -> Nothing
-          SelectMode selectMode -> case selectMode.select of
-            --            TermSelect tmPath1 ctxs1 ty1 _tm1 tmPath2 _ctxs2 ty2 tm2 _ori ->
-            --              pure
-            --                $ st
-            --                    { mode =
-            --                      makeCursorMode
-            --                        $ TermCursor ctxs1 ty1
-            --                            ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty2 ty2'))
-            --                                <> tmPath2
-            --                                <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty1))
-            --                                <> tmPath1
-            --                            )
-            --                            tm2
-            --                    }
-            _ -> Nothing
-        _ -> hole' "TODO: do other syntactic cases for paste"
+              --                      if not (kCtxIsId kctxShouldBeId) || not (ctxIsId ctxShouldBeId) then unsafeThrow "shouldn't happen in termPath paste" else
+              --- Also, I still need to apply the context change from the path downwards!
+              ctxs' = snd (getAllEndpoints (fullCtxCh /\ fullKCtxCh /\ mdctxCh /\ mdkctxCh))
+            traceM ("ctxs'.ctx is: " <> show ctxs'.ctx)
+            traceM ("Made it to the end of termpath paste stuff")
+            pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty (pastePath3 <> termPathChanged) tm' }
+      _ -> Nothing
+    SelectMode selectMode -> case selectMode.select of
+      --            TermSelect tmPath1 ctxs1 ty1 _tm1 tmPath2 _ctxs2 ty2 tm2 _ori ->
+      --              pure
+      --                $ st
+      --                    { mode =
+      --                      makeCursorMode
+      --                        $ TermCursor ctxs1 ty1
+      --                            ( (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty2 ty2'))
+      --                                <> tmPath2
+      --                                <> (List.singleton $ TypeBoundary1 defaultTypeBoundaryMD (Replace ty1' ty1))
+      --                                <> tmPath1
+      --                            )
+      --                            tm2
+      --                    }
+      _ -> Nothing
+  _ -> hole' "TODO: do other syntactic cases for paste"
 
 delete :: State -> Maybe State
-delete st = do
-  traceM "delete"
-  checkpoint
-    <$> case st.mode of
-        CursorMode cursorMode -> case cursorMode.cursorLocation of
-          TermCursor ctxs ty path _tm -> do
-            let
-              cursorLocation' = TermCursor ctxs ty path (freshHole unit)
-            pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
-          TypeCursor ctxs path ty -> do
-            let
-              ty' = (freshTHole unit)
+delete st = case st.mode of
+  CursorMode cursorMode -> case cursorMode.cursorLocation of
+    TermCursor ctxs ty path _tm -> do
+      let
+        cursorLocation' = TermCursor ctxs ty path (freshHole unit)
+      pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
+    TypeCursor ctxs path ty -> do
+      let
+        ty' = (freshTHole unit)
 
-              (kctx' /\ ctx') /\ path' = (chTypePath (Replace ty ty') { ctxs, ty, typePath: path })
+        (kctx' /\ ctx') /\ path' = (chTypePath (Replace ty ty') { ctxs, ty, typePath: path })
 
-              ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
+        ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
 
-              cursorLocation' = TypeCursor ctxs' path' ty'
-            pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
-          _ -> hole' "delete: other syntactical kids of cursors"
-        SelectMode selectMode -> case selectMode.select of
-          TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 _ctxs2 ty2 tm2 _ori ->
-            let
-              change = termPathToChange ty2 tmPath2
+        cursorLocation' = TypeCursor ctxs' path' ty'
+      pure $ st { mode = CursorMode cursorMode { cursorLocation = cursorLocation' } }
+    _ -> hole' "delete: other syntactical kids of cursors"
+  SelectMode selectMode -> case selectMode.select of
+    TermSelect tmPath1 ctxs1 ty1 tm1 tmPath2 _ctxs2 ty2 tm2 _ori ->
+      let
+        change = termPathToChange ty2 tmPath2
 
-              (kctx' /\ ctx') /\ tmPath1' = chTermPath (invert change) { term: tm1, ty: ty1, ctxs: ctxs1, termPath: tmPath1 } Nothing
+        (kctx' /\ ctx') /\ tmPath1' = chTermPath (invert change) { term: tm1, ty: ty1, ctxs: ctxs1, termPath: tmPath1 } Nothing
 
-              (ctx /\ kctx /\ _mdctx /\ _mdkctx) = downPathToCtxChange ctxs1 (List.reverse tmPath2)
+        (ctx /\ kctx /\ _mdctx /\ _mdkctx) = downPathToCtxChange ctxs1 (List.reverse tmPath2)
 
-              tm2' = chTermBoundary (invertKCtx kctx) (invertCtx ctx) (tyInject ty2) tm2
+        tm2' = chTermBoundary (invertKCtx kctx) (invertCtx ctx) (tyInject ty2) tm2
 
-              ctxs' = ctxs1 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
-            in
-              pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty2 tmPath1' tm2' }
-          TypeSelect topPath _ctxs1 _ty1 middlePath ctxs2 ty2 _ori ->
-            let
-              change = typePathToChange ty2 middlePath
-            in
-              --chTypePath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> CAllContext /\ UpPath
-              let
-                (kctx' /\ ctx') /\ topPath' = chTypePath (invert change) { ty: ty2, ctxs: ctxs2, typePath: topPath }
-              in
-                let
-                  ctxs' = ctxs2 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
-                in
-                  pure $ st { mode = makeCursorMode $ TypeCursor ctxs' topPath' ty2 }
-          TypeBindListSelect topPath _ctxs1 _tyBinds1 middlePath ctxs2 tyBinds2 _ori ->
-            let
-              innerCh = chTypeBindList tyBinds2
-            in
-              let
-                change = typeBindPathToChange innerCh middlePath
-              in
-                let
-                  topPath' = chListTypeBindPath (invertListTypeBindChange change) { ctxs: ctxs2, tyBinds: tyBinds2, listTypeBindPath: topPath }
-                in
-                  pure $ st { mode = makeCursorMode $ TypeBindListCursor ctxs2 topPath' tyBinds2 }
-          _ -> hole' "delete: other syntactical kinds of selects"
+        ctxs' = ctxs1 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
+      in
+        pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty2 tmPath1' tm2' }
+    TypeSelect topPath _ctxs1 _ty1 middlePath ctxs2 ty2 _ori ->
+      let
+        change = typePathToChange ty2 middlePath
+      in
+        --chTypePath :: KindChangeCtx -> ChangeCtx -> Change -> UpPath -> CAllContext /\ UpPath
+        let
+          (kctx' /\ ctx') /\ topPath' = chTypePath (invert change) { ty: ty2, ctxs: ctxs2, typePath: topPath }
+        in
+          let
+            ctxs' = ctxs2 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
+          in
+            pure $ st { mode = makeCursorMode $ TypeCursor ctxs' topPath' ty2 }
+    TypeBindListSelect topPath _ctxs1 _tyBinds1 middlePath ctxs2 tyBinds2 _ori ->
+      let
+        innerCh = chTypeBindList tyBinds2
+      in
+        let
+          change = typeBindPathToChange innerCh middlePath
+        in
+          let
+            topPath' = chListTypeBindPath (invertListTypeBindChange change) { ctxs: ctxs2, tyBinds: tyBinds2, listTypeBindPath: topPath }
+          in
+            pure $ st { mode = makeCursorMode $ TypeBindListCursor ctxs2 topPath' tyBinds2 }
+    _ -> hole' "delete: other syntactical kinds of selects"
 
 escape :: State -> Maybe State
 escape st = case st.mode of
