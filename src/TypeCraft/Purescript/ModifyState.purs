@@ -7,9 +7,11 @@ import TypeCraft.Purescript.MD
 import TypeCraft.Purescript.TypeChangeAlgebra
 import TypeCraft.Purescript.TypeChangeAlgebra2
 import TypeCraft.Purescript.Util
+
 import Data.Array ((:), uncons)
 import Data.Array as Array
 import Data.Either (Either(..))
+import Data.List (length)
 import Data.List as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
@@ -23,7 +25,7 @@ import TypeCraft.Purescript.Alpha (applySubType, subAllCtx, subTermPath, subInsi
 import TypeCraft.Purescript.Alpha (convertSub)
 import TypeCraft.Purescript.Alpha (subTypePath)
 import TypeCraft.Purescript.ChangePath (chListCtrParamPath, chListCtrPath, chListTypeBindPath, chTermPath, chTypePath)
-import TypeCraft.Purescript.CursorMovement (cursorLocationToSelect, getCursorChildren, moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
+import TypeCraft.Purescript.CursorMovement (cursorLocationToSelect, getCursorChildren, goUp_n, moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
 import TypeCraft.Purescript.CursorMovementHoles (stepCursorNextHolelike, stepCursorPrevHolelike)
 import TypeCraft.Purescript.Dentist (downPathToCtxChange, termPathToChange, typeBindPathToChange, typePathToChange)
 import TypeCraft.Purescript.Key (Key)
@@ -134,7 +136,7 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
         ctxs' = subAllCtx sub ctxs
 
         termPath = case path' of
-          (Hole1 _) List.: termPath -> termPath
+          (Hole1 _) List.: termPath' -> termPath'
           _ -> unsafeThrow "Shouldn't happen"
       in
         pure
@@ -176,9 +178,16 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
         chCtxs = downPathToCtxChange ctxs'' (List.reverse pathNew')
 
         newCtxs = snd (getAllEndpoints chCtxs)
+
+        -- make new cursor
+        loc = TermCursor newCtxs ty' (pathNew' <> path'') tm''
+        -- move to top of cursor 
+        loc' = goUp_n (length pathNew') loc
+        -- move to next hole
+        loc'' = stepCursorNextHolelike loc'
       in
         pure
-          { cursorLocation: TermCursor newCtxs ty' (pathNew' <> path'') tm''
+          { cursorLocation: loc''
           , query: emptyQuery
           }
     -- CompletionTermPath2 _ newState ->
@@ -205,12 +214,17 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
     CompletionTypePath pathNew ch ->
       let
         (kctx' /\ ctx') /\ path' = chTypePath ch { ctxs, ty: ty, typePath: path }
+        ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
+
+        -- make new cursor
+        loc = TypeCursor ctxs' (pathNew <> path') ty
+        -- move to top of cursor 
+        loc' = goUp_n (length pathNew) loc
+        -- move to next hole
+        loc'' = stepCursorNextHolelike loc'
       in
-        let
-          ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
-        in
           pure
-            { cursorLocation: TypeCursor ctxs' (pathNew <> path') ty
+            { cursorLocation: loc''
             , query: emptyQuery
             }
     _ -> unsafeThrow "tried to submit a non-CompletionType* completion at a TypeCursor"
