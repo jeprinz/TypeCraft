@@ -31,7 +31,6 @@ stepBI = hole
 -- TODO: @jacob think about this
 stepBI :: forall syn synty. Tooth -> BelowInfo syn synty -> BelowInfo syn synty
 stepBI _tooth BITerm = BITerm
-
 stepBI tooth (BISelect middle bottom ctxs ty) = BISelect (middle <> (tooth : Nil)) bottom ctxs ty
 
 arrangeKid :: forall a recVal. UpPath -> UpPath -> (AboveInfo a -> recVal -> Node) -> recVal -> PreNode
