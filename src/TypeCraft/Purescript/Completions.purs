@@ -28,6 +28,7 @@ import Debug (trace)
 import TypeCraft.Purescript.Unification (normThenUnify)
 import TypeCraft.Purescript.Alpha (checkWeakeningViolationTermPath, checkWeakeningViolationTypePath)
 import TypeCraft.Purescript.PathRec (recInsideHolePath)
+import TypeCraft.Purescript.MD (defaultHoleMD)
 
 type CompletionGroup
   = { filterLabel :: String -> Boolean
@@ -49,7 +50,7 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
                 -- TODO: Jacob: why would there be subTypeVars here anyway? I'm confused about that. Isn't unification for holes?
                 Right (tm' /\ sub) ->
                   let termPath = recInsideHolePath ({
-                            hole1 : \termPath -> termPath.termPath
+                            hole1 : \_ termPath -> termPath.termPath
                       }) {insideHolePath: path , ctxs, ty} in
                   if checkWeakeningViolationTermPath sub.subTHoles termPath then pure unit else
                   Writer.tell <<< List.fromFoldable $
@@ -77,8 +78,18 @@ calculateCompletionGroups _st cursorMode = case cursorMode.cursorLocation of
                               (Lambda defaultLambdaMD tmBind ty1 (freshHole unit) ty2)
                               sub
                       ]
-                  }
-            ]
+                  } ]
+        Writer.tell <<< List.fromFoldable $
+          [ { filterLabel: (_ `kindaStartsWithAny` [ "let" ])
+            , completions:
+                [ const
+                    let tmBind = freshTermBind Nothing in
+                    let tyHole = freshTHole unit in
+                      CompletionTerm -- lam (~ : alpha) ↦ (? : ty)
+                        (Let defaultLetMD tmBind List.Nil (Hole defaultHoleMD) tyHole (Hole defaultHoleMD) ty)
+                        emptySub
+                ]
+              } ]
   TermCursor _ctxs ty _path _tm ->
     Writer.execWriter do
       -- en-lambda

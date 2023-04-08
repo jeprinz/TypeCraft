@@ -89,12 +89,18 @@ chTermPath ch termPath topCtxCh =
                     let t' = chTermBoundary kctx' ctx' c1 t2.term in
                     -- kctx assumption here
                     (kctx' /\ ctx') /\ App1 md t' (snd (getEndpoints c1)) (snd (getEndpoints c2)) : up'
+                    -- TODO: shoudl that be fst (getEndpoints c1)
                 (Minus t c) ->
                     if not (t == argTy && fst (getEndpoints c) == outTy) then unsafeThrow "shouldn't happen chPath 2" else
                     let argTy'_ /\ chArgTy = chType idChkctx argTy in -- This should never really do anything, but it is in theory correct
                     let (kctx' /\ ctx') /\ up' = chTermPath c up topCtxCh in
                     let argCh /\ t2' = chTerm idChkctx idChCtx chArgTy t2.term in
                     (kctx' /\ ctx') /\ Buffer3 defaultBufferMD t2' (snd (getEndpoints argCh)) {-Term-} outTy : up'
+                (Plus t1 (CArrow c1 c2)) | tyInject t1 == c1 ->
+                    if not (t1 == argTy && (fst (getEndpoints c2)) == outTy) then unsafeThrow "shouldn't happen chPath 200" else
+                    let (kctx' /\ ctx') /\ up' = chTermPath (Plus t1 c2) up topCtxCh in
+                    let t' = chTermBoundary kctx' ctx' (tyInject t1) t2.term in
+                    (kctx' /\ ctx') /\ App1 md t' t1 (snd (getEndpoints (Plus t1 c2))) : up'
                 other ->
                     if not (fst (getEndpoints other) == Arrow defaultArrowMD argTy outTy) then unsafeThrow "shouldn't happen chPath 20" else
                     let (kctx' /\ ctx') /\ up' = chTermPath (tyInject outTy) up topCtxCh in

@@ -31,7 +31,6 @@ stepBI = hole
 -- TODO: @jacob think about this
 stepBI :: forall syn synty. Tooth -> BelowInfo syn synty -> BelowInfo syn synty
 stepBI _tooth BITerm = BITerm
-
 stepBI tooth (BISelect middle bottom ctxs ty) = BISelect (middle <> (tooth : Nil)) bottom ctxs ty
 
 arrangeKid :: forall a recVal. UpPath -> UpPath -> (AboveInfo a -> recVal -> Node) -> recVal -> PreNode
@@ -693,7 +692,7 @@ insideHolePathToNode _ _ _ { insideHolePath: Nil } _ = unsafeThrow "I don't thin
 insideHolePathToNode isActive abovePath belowInfo insideHolePath innerNode =
   recInsideHolePath
     { hole1:
-        \termPath ->
+        \md termPath ->
           let
             newBI = BITerm
           in
