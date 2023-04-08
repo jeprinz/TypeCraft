@@ -54,6 +54,9 @@ handleKey key st
       _ -> Nothing
     Just st
 
+-- !TODO move all the stuff that isnt specific to a specific kind of cursor to
+-- happen just at CursorMode rather htan in each kind of cursor (or, can keep
+-- separate and then have to manage specifically?)
 handleKey key st = case st.mode of
   CursorMode cursorMode -> case cursorMode.cursorLocation of
     TypeBindCursor ctxs path (TypeBind md tyVarId)
