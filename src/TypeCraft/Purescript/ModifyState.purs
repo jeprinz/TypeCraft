@@ -9,7 +9,7 @@ import TypeCraft.Purescript.TypeChangeAlgebra
 import TypeCraft.Purescript.TypeChangeAlgebra2
 import TypeCraft.Purescript.Util
 
-import Data.Argonaut (Json, encodeJson)
+import Data.Argonaut (Json, JsonDecodeError, decodeJson, encodeJson, parseJson)
 import Data.Argonaut.Encode (toJsonString)
 import Data.Array ((:), uncons)
 import Data.Array as Array
@@ -569,3 +569,18 @@ getProgram st = case st.mode of
       _ -> unsafeThrow "saveProgram: after going to top of program, shouldn't still have steps in the path"
   SelectMode _ -> getProgram =<< escape st
 
+setProgramJsonString :: String -> State -> Maybe State 
+setProgramJsonString str st = do
+  let 
+    ei_prog :: Either JsonDecodeError Program
+    ei_prog = do
+      json <- parseJson str
+      decodeJson json
+  case ei_prog of
+    Left err -> unsafeThrow $ "loadProgramJsonString: decoding json error: " <> show err 
+    Right prog -> setProgram prog st
+
+getProgramJsonString :: State -> Maybe String
+getProgramJsonString st = do
+  prog <- getProgram st 
+  pure $ toJsonString $ encodeJson prog
