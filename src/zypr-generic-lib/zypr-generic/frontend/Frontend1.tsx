@@ -282,7 +282,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       // assumes that kids are always rendered in the order of the node's
       // children
       var kid_i = -1
-      function kid(skip=0): JSX.Element[] {
+      function kid(skip = 0): JSX.Element[] {
         kid_i += 1 + skip
         if (!(0 <= kid_i && kid_i < node.kids.length))
           throw new Error(`kid index ${kid_i} out of range for node tag '${node.tag}', which has ${node.kids.length} kids`);
@@ -375,21 +375,29 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'poly-ty ty': return go(node, rndCtx, ["poly-ty_ty"], kid(), indentationLevel)
         case 'ty-arg': return go(node, rndCtx, ["ty-arg"], kid(), indentationLevel)
         case 'tm app': return go(node, rndCtx, ["tm_app"], [kid(), [Punc.space], kid(), [Punc.application]].flat(), indentationLevel)
-        case 'tm lam': 
+        case 'tm lam': {
           let kid_body = node.kids[2]
           switch (kid_body.tag) {
             case 'tm lam':
-                // if kid_body is a lambda, then use space rather than mapsto
-                return go(node, rndCtx, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.space], kid()].flat(), indentationLevel)
+              // if kid_body is a lambda, then use space rather than mapsto
+              return go(node, rndCtx, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.space], kid()].flat(), indentationLevel)
             default:
-                return go(node, rndCtx, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
+              return go(node, rndCtx, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
           }
-          
+        }
+
         case 'tm var':
           assert(node.metadata !== undefined && node.metadata.case === 'tm var', `node.metadata.case was expected to be 'tm var', but it actually was ${node.metadata?.case}`)
           return go(node, rndCtx, ["tm_var"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
-        case 'tm let':
-          return go(node, rndCtx, ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
+        
+          case 'tm let': {
+          let kid_body = node.kids[4]
+          switch (kid_body.indentation) {
+            case 'newline': return go(node, rndCtx, ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), kid()].flat(), indentationLevel)
+            default: return go(node, rndCtx, ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
+          }
+        }
+
         case 'tm dat': return go(node, rndCtx, ["tm_dat"], [[Punc.data], kid(), kid(), [Punc.assign_shortFront], kid(), [Punc.in_], kid()].flat(), indentationLevel)
         case 'tm ty-let': return go(node, rndCtx, ["tm_ty-let"], [[Punc.let_], kid(), kid(), [Punc.assign], kid(), [Punc.in_], kid()].flat(), indentationLevel)
 
