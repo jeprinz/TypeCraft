@@ -459,7 +459,8 @@
 /* mouseDown: hover outside of cursor */
 .mouseDown .hover {
   box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue, var(--node-box-shadow-thickness) 0 0 0 blue;
-  background-color: var(--cursor-background-color);
+  /* background-color: var(--cursor-background-color); */
+  background-color: var(--select-background-color);
 }
 
 /* mouseDown: hover inside of cursor */
@@ -471,7 +472,7 @@
 /* mouseDown: cursor outside of hover */
 .mouseDown .cursor {
   box-shadow: var(--node-box-shadow-thickness-neg) 0 0 0 blue, var(--node-box-shadow-thickness) 0 0 0 blue;
-  background-color: var(--cursor-background-color);
+  background-color: var(--select-background-color);
 }
 
 /* mouseDown: cursor inside of hover */
