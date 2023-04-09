@@ -429,3 +429,9 @@ goUp_n n loc
     | otherwise = case parent loc of 
         Nothing -> loc 
         Just (loc' /\ _) -> goUp_n (n - 1) loc'
+
+goTop :: CursorLocation -> CursorLocation
+goTop loc = case parent loc of
+    Nothing -> loc 
+    Just (loc' /\ _) -> goTop loc'
+

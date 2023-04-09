@@ -1,6 +1,7 @@
 module TypeCraft.Purescript.ModifyState where
 
 import Prelude
+import Prim hiding (Type)
 import TypeCraft.Purescript.ChangeTerm
 import TypeCraft.Purescript.Grammar
 import TypeCraft.Purescript.MD
@@ -8,6 +9,8 @@ import TypeCraft.Purescript.TypeChangeAlgebra
 import TypeCraft.Purescript.TypeChangeAlgebra2
 import TypeCraft.Purescript.Util
 
+import Data.Argonaut (Json, encodeJson)
+import Data.Argonaut.Encode (toJsonString)
 import Data.Array ((:), uncons)
 import Data.Array as Array
 import Data.Either (Either(..))
@@ -17,7 +20,7 @@ import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Maybe (maybe)
 import Data.Tuple (snd, fst)
-import Data.Tuple.Nested ((/\))
+import Data.Tuple.Nested (type (/\), (/\))
 import Debug (trace, traceM)
 import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
@@ -25,7 +28,8 @@ import TypeCraft.Purescript.Alpha (applySubType, subAllCtx, subTermPath, subInsi
 import TypeCraft.Purescript.Alpha (convertSub)
 import TypeCraft.Purescript.Alpha (subTypePath)
 import TypeCraft.Purescript.ChangePath (chListCtrParamPath, chListCtrPath, chListTypeBindPath, chTermPath, chTypePath)
-import TypeCraft.Purescript.CursorMovement (cursorLocationToSelect, getCursorChildren, goUp_n, moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
+import TypeCraft.Purescript.Context (emptyAllContext)
+import TypeCraft.Purescript.CursorMovement (cursorLocationToSelect, getCursorChildren, goTop, goUp_n, moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
 import TypeCraft.Purescript.CursorMovementHoles (stepCursorNextHolelike, stepCursorPrevHolelike)
 import TypeCraft.Purescript.Dentist (downPathToCtxChange, termPathToChange, typeBindPathToChange, typePathToChange)
 import TypeCraft.Purescript.Key (Key)
@@ -34,7 +38,7 @@ import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
 import TypeCraft.Purescript.PathRec (recInsideHolePath)
 import TypeCraft.Purescript.SmallStep.Freshen (freshenTerm, freshenTermPath)
-import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Query, Select(..), State, botSelectOrientation, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
+import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Program(..), Query, Select(..), State, botSelectOrientation, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
 import TypeCraft.Purescript.Unification (runUnify, normThenUnify)
 
 handleKey :: Key -> State -> Maybe State
@@ -550,3 +554,18 @@ escape st = case st.mode of
     pure $ st { mode = CursorMode cursorMode { query = emptyQuery } }
   SelectMode selectMode -> do
     pure $ st { mode = makeCursorMode (selectToCursorLocation selectMode.select) }
+
+setProgram :: Program -> State -> Maybe State
+setProgram (Program ty tm) st = do
+  let loc = TermCursor emptyAllContext ty mempty tm
+  pure st { mode = CursorMode { cursorLocation: loc, query: emptyQuery } }
+
+getProgram :: State -> Maybe Program
+getProgram st = case st.mode of 
+  CursorMode cursorMode -> do
+    case goTop cursorMode.cursorLocation of
+      TermCursor _ctxs ty up tm | List.length up == 0 -> do
+        pure $ Program ty tm
+      _ -> unsafeThrow "saveProgram: after going to top of program, shouldn't still have steps in the path"
+  SelectMode _ -> getProgram =<< escape st
+

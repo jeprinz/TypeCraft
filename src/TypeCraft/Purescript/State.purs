@@ -1,17 +1,21 @@
 module TypeCraft.Purescript.State where
 
-import Data.Tuple.Nested ((/\))
 import Prelude
 import Prim hiding (Type)
-import TypeCraft.Purescript.Grammar (Change, Constructor, CtrParam, ListCtrChange, ListCtrParamChange, ListTypeBindChange, Term, TermBind, Type, TypeBind, UpPath)
+
+import Data.Argonaut (class DecodeJson, class EncodeJson, encodeJson)
+import Data.Argonaut.Decode.Generic (genericDecodeJson)
+import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import Data.Array as Array
 import Data.Generic.Rep (class Generic)
 import Data.List (List(..))
 import Data.Maybe (Maybe)
 import Data.Show.Generic (genericShow)
 import Data.String as String
+import Data.Tuple.Nested ((/\))
 import TypeCraft.Purescript.Alpha (Sub)
 import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
+import TypeCraft.Purescript.Grammar (Change, Constructor, CtrParam, ListCtrChange, ListCtrParamChange, ListTypeBindChange, Term, TermBind, Type, TypeBind, UpPath)
 import TypeCraft.Purescript.ShallowEmbed (exampleProg1)
 
 {-
@@ -211,3 +215,10 @@ selectToCursorLocation = case _ of
       TypeBindListCursor ctxs2 (path2 <> path1) tyBinds2
     else
       TypeBindListCursor ctxs1 path1 tyBinds1
+
+
+data Program = Program Type Term
+
+derive instance genericProgram :: Generic Program _
+instance encodeProgram :: EncodeJson Program where encodeJson x = genericEncodeJson x
+instance decodeProgram :: DecodeJson Program where decodeJson x = genericDecodeJson x
