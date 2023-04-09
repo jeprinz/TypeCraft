@@ -57,3 +57,12 @@ export function undo(st: BackendState): BackendState | undefined {
 // export function escape(st: BackendState): BackendState | undefined {
 //   return toBackendStateNullable(Nullable.fromMaybe(ModifyState.escape(fromBackendState(st))))
 // }
+
+export function getProgramJsonString(st: BackendState): String | undefined {
+  return Nullable.fromMaybe(ModifyState.getProgramJsonString(fromBackendState(st)))
+}
+
+export function setProgramJsonString(str: string, st: BackendState): BackendState | undefined {
+  return toBackendStateNullable(Nullable.fromMaybe(ModifyState.setProgramJsonString(str)(fromBackendState(st))))
+}
+

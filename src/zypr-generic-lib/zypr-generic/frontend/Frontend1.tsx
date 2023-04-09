@@ -6,6 +6,8 @@ import * as Punc from './Punctuation';
 import assert from 'assert';
 import { fromBackendState, toBackendState } from '../../../TypeCraft/Typescript/State';
 import { logTimeDiffs, timestampBegin, timestampEnd } from '../../Timestamp';
+import { saveAs } from 'file-saver';
+import { getProgramJsonString, setProgramJsonString } from '../../../TypeCraft/Typescript/ModifyState';
 
 type RenderContext = { isInsideCursor: boolean, steps: number[] }
 
@@ -389,7 +391,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'tm var':
           assert(node.metadata !== undefined && node.metadata.case === 'tm var', `node.metadata.case was expected to be 'tm var', but it actually was ${node.metadata?.case}`)
           return go(node, rndCtx, ["tm_var"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
-        
+
         case 'tm let': {
           let kid_body = node.kids[4]
           switch (kid_body.indentation) {
@@ -457,11 +459,68 @@ export default function makeFrontend(backend: Backend): JSX.Element {
     const node = backend.props.format(editor.state.backendState)
     timestampEnd()
 
-    const jsx = renderNode(node, emptyRenderContext, 0)
+    const prog_jsx = renderNode(node, emptyRenderContext, 0)
 
-    return jsx
+    // return prog_jsx
+    return [
+      <div className="toolbar">
+        <label className="toolbar-item" htmlFor="open-program">
+          open
+          <input
+            id="open-program"
+            type="file"
+            accept=".pg"
+            onChange={e => {
+              // get file
+              let files = e.target.files
+              if (files === null) throw Error("undefined files")
+              let file: File = files[0]
+
+              // read file
+              const reader = new FileReader();
+              reader.addEventListener('load', (event) => {
+                console.log(event.target?.result)
+                let result: string | undefined = undefined
+                {
+                  let res = event.target?.result
+                  if (res !== undefined)
+                    result = res as string
+                  else
+                    throw Error("failed to read file")
+                }
+
+                // set backend state
+                let st = setProgramJsonString(result, editor.state.backendState)
+                if (st !== undefined)
+                  editor.setBackendState(st)
+                else
+                  throw Error("failed to setProgramJsonString")
+              });
+              reader.readAsText(file);
+            }}
+          />
+        </label>
+
+        <div className="toolbar-item"
+          onClick={e => {
+            let str = getProgramJsonString(editor.state.backendState)
+            console.log(str)
+            if (str !== undefined) {
+              let file = new File([str as string], "program.pg", { type: "text/plain;charset=utf-8" })
+              saveAs(file)
+            } else {
+              throw Error("during save: failed to encode program as json string")
+            }
+          }}
+        >
+          save
+        </div>
+      </div>,
+      <div className="program">
+        {prog_jsx}
+      </div>
+    ]
   }
-
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
 

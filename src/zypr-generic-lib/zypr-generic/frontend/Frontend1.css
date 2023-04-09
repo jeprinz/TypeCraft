@@ -560,7 +560,7 @@
   cursor: text;
 }
 
-.cursorable > .bnd-inner {
+.cursorable>.bnd-inner {
   cursor: text;
 }
 
@@ -584,8 +584,8 @@
   display: inline;
   margin-left: 0.1rem;
   padding: 0 0.2rem;
-  box-shadow: 
-    0 0 0 2px purple inset, 
+  box-shadow:
+    0 0 0 2px purple inset,
     0 0 2px 1px black inset,
     0 0 5px 0 rgb(93, 93, 93);
 }
@@ -657,4 +657,27 @@
   to {
     background-color: unset;
   }
+}
+
+/* toolbar */
+
+.toolbar {
+  display: block;
+  margin-bottom: 2rem;
+  padding: 0.5rem;
+  box-shadow: 0 0 0 1px black;
+
+  font-size: 10pt;
+}
+
+.toolbar-item {
+  display: inline-block;
+  cursor: pointer;
+  /* background-color: rgb(224, 224, 255); */
+  padding: 0.2rem;
+  margin-right: 1rem;
+}
+
+#open-program {
+  display: none;
 }
