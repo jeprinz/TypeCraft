@@ -1,19 +1,28 @@
 # creates GrammarGeneric.purs
 
 def createInstance_Generic(name):
-  return f'derive instance generic{name} :: Generic {name} _\n'
+  return f"derive instance generic{name} :: Generic {name} _"
+
+def createInstance_EncodeJson(name):
+  return f"instance encode{name} :: EncodeJson {name} where encodeJson x = genericEncodeJson x"
+
+def createInstance_DecodeJson(name):
+  return f"instance decode{name} :: DecodeJson {name} where decodeJson x = genericDecodeJson x"
 
 def createInstance_Show(name):
-  return f'instance show{name} :: Show {name} where\n  show x = genericShow x\n'
+  return f"instance show{name} :: Show {name} where show x = genericShow x"
 
 def createInstance_Eq(name):
-  return f'instance eq{name} :: Eq {name} where\n  eq x = genericEq x\n'
+  return f"instance eq{name} :: Eq {name} where eq x = genericEq x"
 
 def createInstances(name):
   return "\n".join([
     createInstance_Generic(name), 
+    createInstance_EncodeJson(name),
+    createInstance_DecodeJson(name),
     createInstance_Eq(name),
-    createInstance_Show(name)
+    createInstance_Show(name),
+    ""
   ])
 
 names = [
@@ -31,7 +40,10 @@ names = [
   "VarChange",
   "ChangeParam",
   "KindChange",
-  "Tooth"
+  "Tooth",
+  "TypeVar",
+  "SubChange",
+  "CTypeVar"
 ]
 
 def createAllInstances():

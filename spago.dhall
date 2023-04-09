@@ -1,6 +1,9 @@
 { name = "pantograph"
 , dependencies =
-  [ "arrays"
+  [ "argonaut"
+  , "argonaut-codecs"
+  , "argonaut-generic"
+  , "arrays"
   , "console"
   , "control"
   , "debug"
@@ -19,7 +22,6 @@
   , "transformers"
   , "tuples"
   , "uuid"
-  , "variant"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
