@@ -320,6 +320,7 @@ requireCursorMode st = case st.mode of
 
 undo :: State -> Maybe State
 undo st = do
+  traceM "ModifyState.undo"
   { head, tail } <- uncons st.history
   if Array.length st.history > 1 then
     pure $ st { mode = head, history = tail, future = st.mode : st.future }

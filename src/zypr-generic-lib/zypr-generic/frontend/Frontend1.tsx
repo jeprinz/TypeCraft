@@ -390,7 +390,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           assert(node.metadata !== undefined && node.metadata.case === 'tm var', `node.metadata.case was expected to be 'tm var', but it actually was ${node.metadata?.case}`)
           return go(node, rndCtx, ["tm_var"], [renderLabel(node.metadata.label), kid()].flat(), indentationLevel)
         
-          case 'tm let': {
+        case 'tm let': {
           let kid_body = node.kids[4]
           switch (kid_body.indentation) {
             case 'newline': return go(node, rndCtx, ["tm_let"], [[Punc.let_], kid(), kid(), [Punc.colon_shortFront], kid(), [Punc.assign], kid(), kid()].flat(), indentationLevel)
