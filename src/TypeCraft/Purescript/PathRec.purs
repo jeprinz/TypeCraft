@@ -6,7 +6,7 @@ import Prim hiding (Type)
 
 import TypeCraft.Purescript.Grammar
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange, invertVarChange)
+import TypeCraft.Purescript.TypeChangeAlgebra (alterCtxVarChange, invertVarChange, alterMDCtxVarChange)
 import TypeCraft.Purescript.MD
 import Data.List (List, (:))
 import TypeCraft.Purescript.Context (AllContext, addDataToCtx, removeDataFromCtx, tyBindsWrapType)
@@ -101,7 +101,7 @@ recTermPath args {ctxs, ty, term, termPath: (TypeBoundary1 md c {-Term-}) : up} 
     if not (ty == fst (getEndpoints c)) then unsafeThrow ("shouldn't happen recTerm typebound. c is: " <> show c <> "and ty is: " <> show ty) else
     args.typeBoundary1 {ctxs, ty: (snd (getEndpoints c)), term: TypeBoundary md c term, termPath: up} md c
 recTermPath args {ctxs, ty, term, termPath: (ContextBoundary1 md x c) : up} =
-    let ctxs' = ctxs{ctx = alterCtxVarChange ctxs.ctx x (invertVarChange c)} in
+    let ctxs' = ctxs{ctx = alterCtxVarChange ctxs.ctx x (invertVarChange c), mdctx = alterMDCtxVarChange ctxs.mdctx x (invertVarChange c)} in
     args.contextBoundary1 {ctxs: ctxs', ty: ty, term: ContextBoundary md x c term, termPath: up} md x c
 recTermPath args {ctxs, ty, term, termPath: (TLet4 md tyBind@(TypeBind _ x) tyBinds def {-Term-} bodyTy) : up} =
     if not (bodyTy == ty) then unsafeThrow "dynamic type error detected 7" else
