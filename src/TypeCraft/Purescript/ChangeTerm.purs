@@ -51,6 +51,7 @@ chTerm kctx ctx c t =
         case c /\ t of
             cin /\ (App md t1 t2 argTy outTy) ->
                 let c1 /\ t1' = chTerm kctx ctx (CArrow (tyInject argTy) cin) t1 in
+                trace ("c1 was: " <> show c1) \_ ->
                 case c1 of
                 (Minus _ c1') ->
                     let ct2 /\ t2' = chTerm kctx ctx (tyInject argTy) t2 in
@@ -161,8 +162,9 @@ chTerm kctx ctx c t =
             c /\ TypeBoundary md ch body ->
                 let ch' = composeChange ch c in
                 let tyChInside = tyInject (fst (getEndpoints ch)) in
+                let tyChOutside = tyInject (snd (getEndpoints c)) in
                 let chBackUp /\ body' = chTerm kctx ctx tyChInside body in
-                tyChInside /\ TypeBoundary md (composeChange (invert chBackUp) ch') body'
+                tyChOutside /\ TypeBoundary md (composeChange (invert chBackUp) ch') body'
             c /\ ContextBoundary md x vCh body ->
                  case vCh /\ (lookup x ctx) of
                      (VarInsert _name1 ty1) /\ (Just (VarInsert _name2 ty2)) ->

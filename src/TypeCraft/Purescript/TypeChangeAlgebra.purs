@@ -53,8 +53,9 @@ tyInjectWithSub (THole _ id w s) sub = CHole id w (union' (map (\ty -> SubTypeCh
 composeChange :: Change -> Change -> Change
 composeChange (CArrow a1 b1) (CArrow a2 b2) = CArrow (composeChange a1 a2) (composeChange b1 b2)
 composeChange (CHole x w s) (CHole y _ _) | x == y = CHole x w s
-composeChange (Minus tooth a) b = Minus tooth (composeChange a b)
+composeChange (Minus t1 a) (Plus t2 b) | t1 == t2 = CArrow (tyInject t1) (composeChange a b)
 composeChange a (Plus tooth b) = Plus tooth (composeChange a b)
+composeChange (Minus tooth a) b = Minus tooth (composeChange a b)
 composeChange (Plus t1 a) (Minus t2 b) | t1 == t2 = composeChange a b
 composeChange (Plus t a) (CArrow c b) =
     if not (tyInject t == c) then unsafeThrow "shouldn't happen in composeChange 1" else
@@ -62,7 +63,6 @@ composeChange (Plus t a) (CArrow c b) =
 composeChange (CArrow c a) (Minus t b) =
     if not (tyInject t == c) then unsafeThrow "shouldn't happen in composeChange 2" else
     Minus t (composeChange a b)
-composeChange (Minus t1 a) (Plus t2 b) | t1 == t2 = CArrow (tyInject t1) (composeChange a b)
 composeChange (CNeu x1 args1) (CNeu x2 args2) | x1 == x2 =
     CNeu x1 (composeParamChanges args1 args2)
 -- TODO: It should be possible to compose changes more generally. Come back to this!
