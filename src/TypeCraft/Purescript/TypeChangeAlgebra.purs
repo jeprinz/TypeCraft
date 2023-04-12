@@ -481,7 +481,7 @@ generalizeChange ch =
     else case ch of
             (CArrow change1 change2) -> CArrow (generalizeChange change1) (generalizeChange change2)
             (CHole holeId w s) -> CHole holeId w s
-            (Replace t1 t2) -> Replace t2 t1
+            (Replace t1 t2) -> Replace t1 t2 -- Replace t2 t1
             (Plus t change) -> Plus t (generalizeChange change)
             (Minus t change) -> Minus t (generalizeChange change)
             (CNeu varId params) -> CNeu varId (map invertParam params)

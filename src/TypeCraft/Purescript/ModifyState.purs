@@ -24,7 +24,7 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Debug (trace, traceM)
 import Debug as Debug
 import Effect.Exception.Unsafe (unsafeThrow)
-import TypeCraft.Purescript.Alpha (applySubType, subAllCtx, subTermPath, subInsideHolePath, subTerm)
+import TypeCraft.Purescript.Alpha (applySubType, subAllCtx, subTermPath, subInsideHolePath, subTerm, applySubChange)
 import TypeCraft.Purescript.Alpha (convertSub)
 import TypeCraft.Purescript.Alpha (subTypePath)
 import TypeCraft.Purescript.ChangePath (chListCtrParamPath, chListCtrPath, chListTypeBindPath, chTermPath, chTypePath)
@@ -434,8 +434,8 @@ pasteImpl st = case st.clipboard of
       TermCursor ctxsPreSub tyPreSub tmPathPreSub tmPreSub -> do
         -- STEP 1: we need to generalize the inside and outside types of tmPath'
         traceM "STEP 1 of termPath paste: generalize the path"
-        let originalCh = termPathToChange ty2'PreSub pastePathPreSub
-        let genCh = generalizeChange originalCh
+        let originalChPreSub = termPathToChange ty2'PreSub pastePathPreSub
+        let genCh = generalizeChange originalChPreSub
         let innerGenTy = fst (getEndpoints genCh)
         -- the inner generalized type is what must unify with the type of the term that the cursor is on
         case runUnify (normThenUnify ctxsPreSub.actx innerGenTy tyPreSub) of
@@ -444,6 +444,7 @@ pasteImpl st = case st.clipboard of
           Right (newTy /\ sub) -> do
             -- some of the holes getting subbed essentially don't exist, and were only created by generalizeChange. However, some are real holes in the program, and
                 -- Those actually need to get substituted everywhere.
+            traceM ("beginning substitutions for termPath paste. sub is: " <> show sub)
             let pastePath = subTermPath sub pastePathPreSub
             let ctxs1' = subAllCtx sub ctxs1'PreSub
             let ctxs2' = subAllCtx sub ctxs2'PreSub
@@ -452,6 +453,7 @@ pasteImpl st = case st.clipboard of
             let ty = applySubType sub tyPreSub
             let tmPath = subTermPath sub tmPathPreSub
             let tm = subTerm sub tmPreSub
+            let originalCh = applySubChange sub originalChPreSub
             -- STEP 2: get the ctx changes describing what variables have been removed or changed, and apply them to tmPath'Changed
             traceM "STEP 2 of termPath paste: get context diff"
             let kctxDiff1 = getKindChangeCtx ctxs1'.kctx ctxs.kctx ctxs1'.actx ctxs.actx ctxs1'.mdkctx ctxs.mdkctx
