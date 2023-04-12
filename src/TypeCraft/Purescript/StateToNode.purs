@@ -136,7 +136,10 @@ cursorModeToNode cursorMode =
 --        trace ("Rendering cursor mode. term is: "<> show term) \_ ->
 --        trace ("And termPath is: "<> show termPath) \_ ->
         termPathToNode true Nil (BISelect Nil term ctxs ty) { ctxs, term, termPath, ty }
-    TypeCursor ctxs typePath ty -> typePathToNode true Nil (BISelect Nil ty ctxs unit) { ctxs, ty, typePath }
+    TypeCursor ctxs typePath ty ->
+--        trace ("Rendering type cursor mode. ty is: "<> show ty) \_ ->
+--        trace ("And typePath is: "<> show typePath) \_ ->
+        typePathToNode true Nil (BISelect Nil ty ctxs unit) { ctxs, ty, typePath }
     TypeBindCursor ctxs typeBindPath tyBind -> typeBindPathToNode true Nil { ctxs, typeBindPath, tyBind }
     TermBindCursor ctxs termBindPath tBind -> termBindPathToNode true Nil { ctxs, tBind, termBindPath }
     --    TypeArgListCursor ctxs listTypeArgPath tyArgs -> typeArgListPathToNode true Nil BITerm { ctxs, listTypeArgPath, tyArgs } -- BITerm upPath

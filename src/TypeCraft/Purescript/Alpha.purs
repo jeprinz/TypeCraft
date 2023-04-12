@@ -160,6 +160,9 @@ subSubChangeGen sub subChange =
 subCTypeVarGen :: CSub -> CTypeVar -> Maybe Change
 subCTypeVarGen sub (CTypeVar x) = case Map.lookup x sub.subTypeVars of
     Just (SubTypeChange c) -> Just c
+    Just (SubDelete t) ->
+--        Just $ Replace (TNeu defaultTNeuMD (TypeVar x) List.Nil) t
+        Just $ Replace t (TNeu defaultTNeuMD (TypeVar x) List.Nil)
     Nothing -> Nothing
     _ -> unsafeThrow "shouldn't happen subCTypeVarGen 1"
 subCTypeVarGen sub (CCtxBoundaryTypeVar k mtv name x) = case Map.lookup x sub.subTypeVars of
@@ -176,7 +179,9 @@ subCTypeVarGen sub (MinusCtxBoundaryTypeVar k mtv name x) = case Map.lookup x su
     _ -> unsafeThrow "shouldn't happen subCTypeVarGen 4"
 
 applySubChangeGen :: CSub -> Change -> Change
-applySubChangeGen sub = case _ of
+applySubChangeGen sub ch =
+--  trace ("applySubChangeGen called. ch is: " <> show ch) \_ ->
+  case ch of
   CArrow ty1 ty2 -> CArrow (applySubChangeGen sub ty1) (applySubChangeGen sub ty2)
   (CHole hid w s) -> maybe (\_ -> CHole hid w (union' (map (subSubChangeGen sub) s) sub.subTypeVars))
         (\c _ -> applySubChangeGen {subTHoles: Map.empty, subTypeVars: s} c)

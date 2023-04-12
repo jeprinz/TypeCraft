@@ -213,18 +213,14 @@ submitCompletion cursorMode compl = case cursorMode.cursorLocation of
   TypeCursor ctxs path ty -> case compl of
     CompletionType ty' sub ->
       -- TODO: This should really be in the InsideTypeHoleCursor case!!!!!!!!!!!!!!!
-      let
-        path' = subTypePath sub path
-      in
-        let
-          ctxs' = subAllCtx sub ctxs
-        in
+      let path' = subTypePath sub path in
+      let ctxs' = subAllCtx sub ctxs in
           --      let (kctx' /\ ctx') /\ path' = chTypePath (Replace ty ty') { ctxs, ty, typePath: path } in
           --      let ctxs' = ctxs { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') } in
-          pure
-            { cursorLocation: stepCursorNextHolelike (TypeCursor ctxs' path' ty')
-            , query: emptyQuery
-            }
+      pure
+        { cursorLocation: stepCursorNextHolelike (TypeCursor ctxs' path' ty')
+        , query: emptyQuery
+        }
     CompletionTypePath pathNew ch ->
       let
         (kctx' /\ ctx') /\ path' = chTypePath ch { ctxs, ty: ty, typePath: path }

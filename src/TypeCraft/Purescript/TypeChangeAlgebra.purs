@@ -149,7 +149,7 @@ invertTypeVar (MinusCtxBoundaryTypeVar k mtd name x) = PlusCtxBoundaryTypeVar k 
 
 invert :: Change -> Change
 invert (CArrow change1 change2) = CArrow (invert change1) (invert change2)
-invert (CHole holeId w s) = CHole holeId w s
+invert (CHole holeId w s) = CHole holeId w (map invertSubChange s)
 invert (Replace t1 t2) = Replace t2 t1
 invert (Plus t change) = Minus t (invert change)
 invert (Minus t change) = Plus t (invert change)
