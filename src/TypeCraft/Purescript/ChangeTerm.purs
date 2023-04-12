@@ -173,7 +173,8 @@ chTerm kctx ctx c t =
                         c' /\ body'
                      (VarInsert _name ty) /\ Nothing -> let c' /\ body' = chTerm kctx (insert x (VarTypeChange (pTyInject ty)) ctx) c body in
                                 c' /\ ContextBoundary md x vCh body'
-                     _ -> unsafeThrow "I don't think this should happen in ContextBoundary case of chTerm (or I need to support things other than VarInsert in ContextBoundary)"
+                     thing -> unsafeThrow ("I don't think this should happen in ContextBoundary case of chTerm (or I need to support things other than VarInsert in ContextBoundary)"
+                                        <> "\n got: " <> show thing)
             cin /\ t -> tyInject (snd (getEndpoints cin)) /\ TypeBoundary defaultTypeBoundaryMD cin t
         )
     in
