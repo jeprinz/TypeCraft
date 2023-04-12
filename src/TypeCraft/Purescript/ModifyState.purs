@@ -478,7 +478,9 @@ pasteImpl st = case st.clipboard of
             --                      let tm' = chTermBoundary kctxCh ctxCh (tyInject newTy) tm in
             --                      trace ("ctxCh2 is: " <> show ctxCh2) \_ ->
             traceM "STEP 4.5"
-            let (kctxCh2bottom /\ ctxCh2bottom) /\ pastePath3 = chTermPath (tyInject newTy) { ctxs: ctxs2', ty: newTy, term: Hole defaultHoleMD, termPath: pastePath2 } (Just (kctxCh2 /\ ctxCh2))
+            let (kctxCh2bottom /\ ctxCh2bottom) /\ pastePath3 = chTermPath (tyInject newTy){ ctxs: ctxs2'{ctx= snd (getCtxEndpoints ctx'),
+                kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx')} {-technically this doesn't update mdctx and mdkctx, but I think its fine?-},
+                ty: newTy, term: Hole defaultHoleMD, termPath: pastePath2 } (Just (kctxCh2 /\ ctxCh2))
             traceM ("ctxCh2bottom is: " <> show ctxCh2bottom)
             let fullKCtxCh = (composeKCtx kctxCh kctxCh2bottom)
             let fullCtxCh = (composeCtxs ctxCh ctxCh2bottom)
