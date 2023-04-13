@@ -23,7 +23,8 @@ This file will contain possible states for the editor
 -}
 -- state of the editor
 type State
-  = { mode :: Mode
+  = { name :: String
+    , mode :: Mode
     , clipboard :: Clipboard
     , history :: Array Mode
     , future :: Array Mode
@@ -98,7 +99,8 @@ makeSelectMode select = SelectMode { select }
 
 initState :: State
 initState =
-  { mode
+  { name: "program"
+  , mode
   , clipboard: EmptyClip
   , history: [ mode ]
   , future: []
@@ -217,8 +219,12 @@ selectToCursorLocation = case _ of
       TypeBindListCursor ctxs1 path1 tyBinds1
 
 
-data Program = Program Type Term
+type Program = {
+  name :: String,
+  type_:: Type,
+  term:: Term
+}
 
-derive instance genericProgram :: Generic Program _
-instance encodeProgram :: EncodeJson Program where encodeJson x = genericEncodeJson x
-instance decodeProgram :: DecodeJson Program where decodeJson x = genericDecodeJson x
+-- derive instance genericProgram :: Generic Program _
+-- instance encodeProgram :: EncodeJson Program where encodeJson x = genericEncodeJson x
+-- instance decodeProgram :: DecodeJson Program where decodeJson x = genericDecodeJson x

@@ -38,7 +38,8 @@ testAllCompletions (tm /\ ty) = do
   let
     toState :: CursorLocation -> State
     toState loc =
-      { clipboard: EmptyClip
+      { name: "program"
+      , clipboard: EmptyClip
       , future: []
       , history: []
       , mode: CursorMode (toCursorMode loc)

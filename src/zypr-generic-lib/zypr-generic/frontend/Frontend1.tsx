@@ -7,7 +7,7 @@ import assert from 'assert';
 import { fromBackendState, toBackendState } from '../../../TypeCraft/Typescript/State';
 import { logTimeDiffs, timestampBegin, timestampEnd } from '../../Timestamp';
 import { saveAs } from 'file-saver';
-import { getProgramJsonString, setProgramJsonString } from '../../../TypeCraft/Typescript/ModifyState';
+import { getName, getProgramJsonString, setName, setProgramJsonString } from '../../../TypeCraft/Typescript/ModifyState';
 
 type RenderContext = { isInsideCursor: boolean, steps: number[] }
 
@@ -15,6 +15,10 @@ const emptyRenderContext: RenderContext = { isInsideCursor: false, steps: [] }
 
 function nextRenderContext(step: number, isCursor: boolean, rndCtx: RenderContext): RenderContext {
   return { isInsideCursor: isCursor || rndCtx.isInsideCursor, steps: rndCtx.steps.concat(step) }
+}
+
+function getProgramNameHTMLInputElement(): HTMLInputElement {
+  return document.getElementById('program-name') as HTMLInputElement
 }
 
 function hashString(str: string): number {
@@ -490,24 +494,32 @@ export default function makeFrontend(backend: Backend): JSX.Element {
                     throw Error("failed to read file")
                 }
 
-                // set backend state
+                // parse json
                 let st = setProgramJsonString(result, editor.state.backendState)
-                if (st !== undefined)
-                  editor.setBackendState(st)
-                else
+                if (st !== undefined) {
+                  // set backend state
+                  editor.setBackendState(st);
+                  // set program-name input
+                  getProgramNameHTMLInputElement().value = getName(st)
+                } else
                   throw Error("failed to setProgramJsonString")
               });
               reader.readAsText(file);
             }}
           />
         </label>
-
         <div className="toolbar-item"
           onClick={e => {
-            let str = getProgramJsonString(editor.state.backendState)
-            console.log(str)
-            if (str !== undefined) {
-              let file = new File([str as string], "program.pg", { type: "text/plain;charset=utf-8" })
+            // get the program name
+            let program_name = getProgramNameHTMLInputElement().value
+            // set the program name in backend state
+            let st = setName(program_name, editor.state.backendState)
+            console.log(`st.name == ${getName(st)}`)
+            // serialize
+            let json_str = getProgramJsonString(st)
+            // console.log(json_str)
+            if (json_str !== undefined) {
+              let file = new File([json_str as string], `${program_name}.pg`, { type: "text/plain;charset=utf-8" })
               saveAs(file)
             } else {
               throw Error("during save: failed to encode program as json string")
@@ -515,6 +527,10 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           }}
         >
           save
+        </div>
+        <br />
+        <div className='toolbar-item'>
+          <input type='text' id='program-name' />.pg
         </div>
       </div>,
       <div className="program">
@@ -524,27 +540,28 @@ export default function makeFrontend(backend: Backend): JSX.Element {
   }
 
   function handleKeyboardEvent(editor: Editor, event: KeyboardEvent) {
+    if (event.target == document.body) {
+      // always capture these events
+      if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter", "p", "t"].includes(event.key) && !(event.metaKey || event.ctrlKey)) event.preventDefault()
 
-    // always capture these events
-    if (["Tab", "ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Enter", "p", "t"].includes(event.key) && !(event.metaKey || event.ctrlKey)) event.preventDefault()
+      // always ignore these events
+      if (keys_ignore.includes(event.key)) return
 
-    // always ignore these events
-    if (keys_ignore.includes(event.key)) return
+      // log timediffs
+      if (event.key == "t" && (event.ctrlKey || event.metaKey)) {
+        logTimeDiffs()
+      }
 
-    // log timediffs
-    if (event.key == "t" && (event.ctrlKey || event.metaKey)) {
-      logTimeDiffs()
+      const backendState = editor.props.backend.handleKeyboardEvent(event)(editor.state.backendState)
+
+      if (backendState === undefined) {
+        // backend state said that update fails (not an error) e.g. move right
+        // when there's nowhere rightwards to move to
+        return
+      }
+
+      editor.setBackendState(backendState)
     }
-
-    const backendState = editor.props.backend.handleKeyboardEvent(event)(editor.state.backendState)
-
-    if (backendState === undefined) {
-      // backend state said that update fails (not an error) e.g. move right
-      // when there's nowhere rightwards to move to
-      return
-    }
-
-    editor.setBackendState(backendState)
   }
 
   const initState = backend.state

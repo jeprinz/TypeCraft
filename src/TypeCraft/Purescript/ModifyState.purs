@@ -563,16 +563,16 @@ escape st = case st.mode of
     pure $ st { mode = makeCursorMode (selectToCursorLocation selectMode.select) }
 
 setProgram :: Program -> State -> Maybe State
-setProgram (Program ty tm) st = do
-  let loc = TermCursor emptyAllContext ty mempty tm
-  pure st { mode = CursorMode { cursorLocation: loc, query: emptyQuery } }
+setProgram prog st = do
+  let loc = TermCursor emptyAllContext prog.type_ mempty prog.term
+  pure st { name = prog.name, mode = CursorMode { cursorLocation: loc, query: emptyQuery } }
 
 getProgram :: State -> Maybe Program
 getProgram st = case st.mode of 
   CursorMode cursorMode -> do
     case goTop cursorMode.cursorLocation of
       TermCursor _ctxs ty up tm | List.length up == 0 -> do
-        pure $ Program ty tm
+        pure {name: st.name, type_: ty, term: tm}
       _ -> unsafeThrow "saveProgram: after going to top of program, shouldn't still have steps in the path"
   SelectMode _ -> getProgram =<< escape st
 
@@ -591,3 +591,9 @@ getProgramJsonString :: State -> Maybe String
 getProgramJsonString st = do
   prog <- getProgram st 
   pure $ toJsonString $ encodeJson prog
+
+setName :: String -> State -> State 
+setName str st = st { name = str }
+
+getName :: State -> String 
+getName st = st.name

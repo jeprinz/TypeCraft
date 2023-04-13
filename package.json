@@ -21,7 +21,7 @@
     "build-backend": "spago build --purs-args \"-o src/TypeCraft/Purescript/output\"",
     "build-frontend": "react-scripts build",
     "build": "npm run build-backend && npm run build-frontend",
-    "serve": "serve -s build",
+    "launch-prod": "serve -s build",
     "launch-frontend": "npm run start",
     "launch": "npm run build-backend && npm run start",
     "start": "react-scripts start",

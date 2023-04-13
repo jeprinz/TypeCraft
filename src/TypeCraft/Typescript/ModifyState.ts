@@ -66,3 +66,10 @@ export function setProgramJsonString(str: string, st: BackendState): BackendStat
   return toBackendStateNullable(Nullable.fromMaybe(ModifyState.setProgramJsonString(str)(fromBackendState(st))))
 }
 
+export function setName(str: string, st: BackendState): BackendState {
+  return toBackendState(ModifyState.setName(str)(fromBackendState(st)))
+}
+
+export function getName(st: BackendState): string {
+  return ModifyState.getName(fromBackendState(st))
+}
