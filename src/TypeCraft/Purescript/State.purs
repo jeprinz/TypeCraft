@@ -14,9 +14,10 @@ import Data.Show.Generic (genericShow)
 import Data.String as String
 import Data.Tuple.Nested ((/\))
 import TypeCraft.Purescript.Alpha (Sub)
-import TypeCraft.Purescript.Context (AllContext, emptyAllContext)
+import TypeCraft.Purescript.Context (AllContext)
 import TypeCraft.Purescript.Grammar (Change, Constructor, CtrParam, ListCtrChange, ListCtrParamChange, ListTypeBindChange, Term, TermBind, Type, TypeBind, UpPath)
 import TypeCraft.Purescript.ShallowEmbed (exampleProg1)
+import TypeCraft.Purescript.Prelude (preludeContexts)
 
 {-
 This file will contain possible states for the editor
@@ -110,7 +111,7 @@ initState =
 
   mode =
     CursorMode
-      { cursorLocation: TermCursor emptyAllContext ty Nil tm
+      { cursorLocation: TermCursor preludeContexts ty Nil tm
       , query: emptyQuery
       }
 

@@ -14,11 +14,11 @@ import Effect.Exception.Unsafe (unsafeThrow)
 import Test.Example.Example1 as Examples
 import Test.Logging (logBlock, logSectionEnd, logSectionStart)
 import TypeCraft.Purescript.Completions (calculateCompletionGroups)
-import TypeCraft.Purescript.Context (emptyAllContext)
 import TypeCraft.Purescript.CursorMovement (getCursorChildren)
 import TypeCraft.Purescript.Grammar (Term, Type)
 import TypeCraft.Purescript.ModifyState (submitCompletion)
 import TypeCraft.Purescript.State (Clipboard(..), Completion, CursorLocation(..), CursorMode, Mode(..), State, emptyQuery)
+import TypeCraft.Purescript.Prelude (preludeContexts)
 
 main :: Effect Unit
 main =
@@ -68,7 +68,7 @@ testAllCompletions (tm /\ ty) = do
             _ -> false
         $ getCursorChildren loc
 
-    locTop = TermCursor emptyAllContext ty Nil tm
+    locTop = TermCursor preludeContexts ty Nil tm
   go locTop
 
 testCompletion :: State -> Completion -> Effect Unit

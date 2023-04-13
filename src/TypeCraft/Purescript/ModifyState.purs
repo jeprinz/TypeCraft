@@ -28,7 +28,6 @@ import TypeCraft.Purescript.Alpha (applySubType, subAllCtx, subTermPath, subInsi
 import TypeCraft.Purescript.Alpha (convertSub)
 import TypeCraft.Purescript.Alpha (subTypePath)
 import TypeCraft.Purescript.ChangePath (chListCtrParamPath, chListCtrPath, chListTypeBindPath, chTermPath, chTypePath)
-import TypeCraft.Purescript.Context (emptyAllContext)
 import TypeCraft.Purescript.CursorMovement (cursorLocationToSelect, getCursorChildren, goTop, goUp_n, moveSelectLeft, moveSelectRight, stepCursorBackwards, stepCursorForwards)
 import TypeCraft.Purescript.CursorMovementHoles (stepCursorNextHolelike, stepCursorPrevHolelike)
 import TypeCraft.Purescript.Dentist (downPathToCtxChange, termPathToChange, typeBindPathToChange, typePathToChange)
@@ -40,6 +39,7 @@ import TypeCraft.Purescript.PathRec (recInsideHolePath)
 import TypeCraft.Purescript.SmallStep.Freshen (freshenTerm, freshenTermPath)
 import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Program(..), Query, Select(..), State, botSelectOrientation, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
 import TypeCraft.Purescript.Unification (runUnify, normThenUnify)
+import TypeCraft.Purescript.Prelude (preludeContexts)
 
 handleKey :: Key -> State -> Maybe State
 handleKey key st
@@ -564,7 +564,7 @@ escape st = case st.mode of
 
 setProgram :: Program -> State -> Maybe State
 setProgram prog st = do
-  let loc = TermCursor emptyAllContext prog.type_ mempty prog.term
+  let loc = TermCursor preludeContexts prog.type_ mempty prog.term
   pure st { name = prog.name, mode = CursorMode { cursorLocation: loc, query: emptyQuery } }
 
 getProgram :: State -> Maybe Program
