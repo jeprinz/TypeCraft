@@ -533,7 +533,8 @@ delete st0 =
             change = termPathToChange ty2 tmPath2
             (kctx' /\ ctx') /\ tmPath1' = chTermPath (invert change) { term: tm1, ty: ty1, ctxs: ctxs1, termPath: tmPath1 } Nothing
             (ctx /\ kctx /\ _mdctx /\ _mdkctx) = downPathToCtxChange ctxs1 (List.reverse tmPath2)
-            tm2' = chTermBoundary (invertKCtx kctx) (invertCtx ctx) (tyInject ty2) tm2
+            -- TODO: should these compositions go the other way around?
+            tm2' = chTermBoundary (composeKCtx (invertKCtx kctx) kctx') (composeCtxs (invertCtx ctx) ctx') (tyInject ty2) tm2
 
             ctxs' = ctxs1 { ctx = snd (getCtxEndpoints ctx'), kctx = snd (getKCtxTyEndpoints kctx'), actx = snd (getKCtxAliasEndpoints kctx') }
           pure $ st { mode = makeCursorMode $ TermCursor ctxs' ty2 tmPath1' tm2' }
