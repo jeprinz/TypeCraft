@@ -338,6 +338,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
       let classNames: string[] = []
       switch (node.tag) {
         case 'ty arr': return go(node, rndCtx, ["ty_arr"], [kid(), [Punc.arrowR], kid()].flat(), indentationLevel)
+        // !TODO render child thole-inner
         case 'ty hol':
           assert(node.metadata !== undefined && node.metadata.case === 'ty hol', `node.metadata.case was expected to be 'ty hol', but it actually was ${node.metadata?.case}`)
           return go(node, rndCtx, ["ty_hol"], [
@@ -451,7 +452,7 @@ export default function makeFrontend(backend: Backend): JSX.Element {
         case 'select-mode-wrapper': return go(node, rndCtx, ["select-mode-wrapper"], kid(), indentationLevel)
         // hole
         case 'hole-inner': return go(node, rndCtx, ["hole-inner"], [<span>?</span>], indentationLevel)
-        // case 'hole-inner': return go(node, rndCtx, ["hole-inner"], [], indentationLevel)
+        case 'thole-inner': return go(node, rndCtx, ["thole-inner"], [<span>?</span>], indentationLevel)
       }
     }
 
