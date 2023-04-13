@@ -123,9 +123,9 @@ chTerm kctx ctx c t =
                 if not (bodyTy == fst (getEndpoints c)) then unsafeThrow "shouldn't happen 4" else
                 let c2' /\ t' = chTerm kctx (insert x (VarDelete varName (PType ty2)) ctx) c t in
                 c2' /\ t'
-            (Minus ty c) /\ t ->
-                let c' /\ t' = chTerm kctx ctx c t in
-                (CArrow (tyInject ty) c') /\ App defaultAppMD t' (Hole defaultHoleMD) ty (snd (getEndpoints c))
+--            (Minus ty c) /\ t -> -- TODO: is this case behaviour that we want?
+--                let c' /\ t' = chTerm kctx ctx (CArrow (tyInject ty) c) t in
+--                (CArrow (tyInject ty) c') /\ App defaultAppMD t' (Hole defaultHoleMD) ty (snd (getEndpoints c))
             (Plus ty c) /\ t ->
                 let tBind@(TermBind {varName} x) = (freshTermBind Nothing) in
                 let ctx' = insert x (VarInsert varName (PType ty)) ctx in
@@ -133,7 +133,7 @@ chTerm kctx ctx c t =
                 (CArrow (tyInject ty) c') /\ Lambda defaultLambdaMD tBind ty t' (snd (getEndpoints c'))
             c /\ Let md tBind@(TermBind _ x) binds t1 ty t2 tyBody ->
                 -- TODO: need to include the binds into the kctx for some things I think?
-                if not (fst (getEndpoints c) == tyBody) then unsafeThrow "shouldn't happen 5" else
+                if not (fst (getEndpoints c) == tyBody) then unsafeThrow ("shouldn't happen 5. c is: " <> show c <> " and tyBody is: " <> show tyBody) else
                 let kctx' = addLetToKCCtx kctx binds in
                 let ty' /\ tyCh = chType kctx' ty in
 --                let ctx' = addLetToCCtx ctx tBind binds ty' in
