@@ -514,7 +514,6 @@ export default function makeFrontend(backend: Backend): JSX.Element {
             let program_name = getProgramNameHTMLInputElement().value
             // set the program name in backend state
             let st = setName(program_name, editor.state.backendState)
-            console.log(`st.name == ${getName(st)}`)
             // serialize
             let json_str = getProgramJsonString(st)
             // console.log(json_str)
