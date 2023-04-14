@@ -387,9 +387,9 @@ export default function makeFrontend(backend: Backend): JSX.Element {
           switch (kid_body.tag) {
             case 'tm lam':
               // if kid_body is a lambda, then use space rather than mapsto
-              return go(node, rndCtx, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.space], kid()].flat(), indentationLevel)
+              return go(node, rndCtx, ["tm_lam"], [[Punc.lambda], kid(), [<span className="tm_lam-dom_wrapper">{Punc.colon}<span className="tm_lam-dom">{kid()}</span></span>], [Punc.space], kid()].flat(), indentationLevel)
             default:
-              return go(node, rndCtx, ["tm_lam"], [[Punc.lambda], kid(), [Punc.colon], kid(), [Punc.mapsto], kid()].flat(), indentationLevel)
+              return go(node, rndCtx, ["tm_lam"], [[Punc.lambda], kid(), [<span className="tm_lam-dom_wrapper">{Punc.colon}<span className="tm_lam-dom">{kid()}</span></span>], [Punc.mapsto], kid()].flat(), indentationLevel)
           }
         }
 

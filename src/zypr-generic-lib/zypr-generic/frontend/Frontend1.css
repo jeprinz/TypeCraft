@@ -590,6 +590,19 @@
     0 0 5px 0 rgb(93, 93, 93);
 }
 
+/* hiding/showing tm_lam-dom */
+
+.tm_lam-dom_wrapper {
+}
+
+.tm_lam-dom {
+  display: none;
+}
+
+.tm_lam-dom_wrapper:hover > .tm_lam-dom {
+  display: inline;
+}
+
 /* misc */
 
 .apologize {
