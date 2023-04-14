@@ -14,6 +14,7 @@ import Data.Argonaut.Encode (toJsonString)
 import Data.Array ((:), uncons)
 import Data.Array as Array
 import Data.Either (Either(..))
+import Data.Int as Int
 import Data.List (length)
 import Data.List as List
 import Data.Map as Map
@@ -36,10 +37,10 @@ import TypeCraft.Purescript.ManipulateQuery (manipulateQuery)
 import TypeCraft.Purescript.ManipulateString (manipulateString)
 import TypeCraft.Purescript.ModifyIndentation (toggleIndentation)
 import TypeCraft.Purescript.PathRec (recInsideHolePath)
+import TypeCraft.Purescript.Prelude (preludeContexts)
 import TypeCraft.Purescript.SmallStep.Freshen (freshenTerm, freshenTermPath)
 import TypeCraft.Purescript.State (Clipboard(..), Completion(..), CursorLocation(..), CursorMode, Mode(..), Program(..), Query, Select(..), State, botSelectOrientation, emptyQuery, getCompletion, makeCursorMode, selectToCursorLocation, topSelectOrientation)
 import TypeCraft.Purescript.Unification (runUnify, normThenUnify)
-import TypeCraft.Purescript.Prelude (preludeContexts)
 
 handleKey :: Key -> State -> Maybe State
 handleKey key st
@@ -124,7 +125,11 @@ submitQuery st0 = case st0.mode of
   CursorMode cursorMode -> do
     let
       st = checkpoint st0 { mode = CursorMode cursorMode { query { string = "" } } }
-    compl <- getCompletion cursorMode.query
+    compl <- 
+      case Int.fromString cursorMode.query.string of
+        -- !TODO implement integer literals
+        Just _i -> Nothing -- Just $ CompletionTerm ?a ?a
+        Nothing -> getCompletion cursorMode.query
     cursorMode' <- submitCompletion cursorMode compl
     -- checkpoints the pre-submission mode with a cleared query string
     pure $ st { mode = CursorMode cursorMode' }
